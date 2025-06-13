@@ -29,8 +29,7 @@ function Note() {
   const recentNotes = Array.from({ length: 5 }, (_, i) => ({
     id: (i + 1).toString(),
     title: 'Moment of Inertia',
-    date: 'Apr 18, 12:56 PM',
-    thumbnail: '/workspace/note-thumbnail.png' // You'll need to add this image
+    date: 'Apr 18, 12:56 PM'
   }));
 
   // Sample all notes data
@@ -121,54 +120,35 @@ function Note() {
             Recent
           </h2>
           
-          <div className="flex gap-6 overflow-x-auto pb-4">
+          <div className="flex gap-4 overflow-x-auto pb-4">
             {recentNotes.map((note) => (
               <div key={note.id} className="flex-shrink-0">
-                <Card className="w-[200px] h-[280px] bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-0">
-                    {/* Date header */}
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <span className="text-xs font-medium text-gray-500 font-['Inter',Helvetica]">
-                        {note.date}
-                      </span>
+                {/* Card matching the exact SVG structure - NO OVERLAP */}
+                <div className="w-[191px] h-[248px] bg-white border-2 border-[#AFD7FF] rounded-[10px] overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative">
+                  
+                  {/* Header tab - positioned at the very top, only covers left half */}
+                  <div className="absolute top-0 left-0 w-[95px] h-[24px] bg-white border-2 border-[#AFD7FF] border-b-0 rounded-t-[8px] flex items-center justify-center z-10">
+                    <span className="text-black font-['Inter',Helvetica] text-sm font-normal">
+                      {note.date}
+                    </span>
+                  </div>
+                  
+                  {/* Main content area - starts EXACTLY at 24px from top (no overlap) */}
+                  <div className="absolute top-[24px] left-0 right-0 bottom-[40px] bg-white flex items-center justify-center">
+                    {/* Document preview content */}
+                    <div className="text-center">
+                      <FileTextIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <span className="text-xs text-gray-400">Document Preview</span>
                     </div>
-                    
-                    {/* Note preview */}
-                    <div className="p-4 h-[200px] bg-gray-50 flex items-center justify-center">
-                      <div className="w-full h-full bg-white rounded border border-gray-200 flex flex-col">
-                        {/* Mock document header */}
-                        <div className="flex items-center gap-2 p-2 border-b border-gray-100">
-                          <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
-                            <FileTextIcon className="w-4 h-4 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-xs font-medium text-black">Class Notes</div>
-                            <div className="text-xs text-gray-500">PHYS 2211 MECHANICS</div>
-                          </div>
-                        </div>
-                        
-                        {/* Mock content lines */}
-                        <div className="p-2 space-y-1">
-                          <div className="h-2 bg-gray-200 rounded w-full"></div>
-                          <div className="h-2 bg-gray-200 rounded w-3/4"></div>
-                          <div className="h-2 bg-gray-200 rounded w-1/2"></div>
-                          <div className="mt-2 space-y-1">
-                            <div className="h-1.5 bg-gray-100 rounded w-full"></div>
-                            <div className="h-1.5 bg-gray-100 rounded w-5/6"></div>
-                            <div className="h-1.5 bg-gray-100 rounded w-2/3"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Note title */}
-                    <div className="px-4 py-3">
-                      <h3 className="font-medium text-black text-sm font-['Inter',Helvetica]">
-                        {note.title}
-                      </h3>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  
+                  {/* Footer section with title */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[40px] bg-[#ECF1F6] flex items-center justify-center">
+                    <span className="text-black font-['Inter',Helvetica] text-base font-normal">
+                      {note.title}
+                    </span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -176,44 +156,45 @@ function Note() {
 
         {/* All Notes Section */}
         <div className="w-full">
-          {/* All Notes header and controls */}
+          {/* All Notes header and controls - matching Document Chat style */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-semibold text-black text-xl font-['Inter',Helvetica]">
               All Notes
             </h2>
             
-            <div className="flex items-center gap-3">
-              {/* Search bar */}
-              <div className="relative w-[280px]">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-2">
+              {/* Search bar - with ECF1F6 background */}
+              <div className="w-[200px] h-[32px] bg-[#ECF1F6] rounded-lg flex items-center px-3">
+                <SearchIcon className="w-4 h-4 text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search for notes..."
-                  className="w-full h-10 pl-10 pr-4 border border-gray-300 rounded-lg text-sm font-['Inter',Helvetica] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="ml-2 bg-transparent border-none outline-none text-gray-500 font-['Inter',Helvetica] text-xs flex-1"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               
-              {/* Sort dropdown */}
-              <Button
-                variant="outline"
-                className="h-10 px-4 border-gray-300 rounded-lg flex items-center gap-2 font-['Inter',Helvetica] text-sm"
+              {/* Sort dropdown - with ECF1F6 background */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-[32px] bg-[#ECF1F6] border-none rounded-lg flex items-center justify-center px-3"
               >
-                <span className="text-gray-700">{sortBy}</span>
-                <ChevronDownIcon className="w-4 h-4 text-gray-500" />
+                <span className="text-gray-600 font-['Inter',Helvetica] text-xs font-medium">{sortBy}</span>
+                <ChevronDownIcon className="w-3 h-3 text-gray-500 ml-1" />
               </Button>
               
-              {/* New button */}
-              <Button className="h-10 px-4 bg-black text-white rounded-lg flex items-center gap-2 font-['Inter',Helvetica] text-sm hover:bg-gray-800">
+              {/* New button - keeping black background */}
+              <Button className="h-[32px] bg-black text-white rounded-lg flex items-center gap-2 font-['Inter',Helvetica] text-xs px-3 hover:bg-gray-800">
                 <PlusIcon className="w-4 h-4" />
                 New
               </Button>
               
-              {/* Upload button */}
+              {/* Upload button - with ECF1F6 background */}
               <Button
                 variant="outline"
-                className="h-10 px-4 border-gray-300 rounded-lg flex items-center gap-2 font-['Inter',Helvetica] text-sm"
+                className="h-[32px] bg-[#ECF1F6] border-none rounded-lg flex items-center gap-2 font-['Inter',Helvetica] text-xs text-gray-600 px-3 hover:bg-[#e2e8f0]"
               >
                 <UploadIcon className="w-4 h-4" />
                 Upload
@@ -222,20 +203,20 @@ function Note() {
           </div>
 
           {/* Table */}
-          <div className="w-full bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="w-full bg-white">
             {/* Table header */}
-            <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200">
-              <div className="col-span-4">
-                <span className="font-medium text-gray-700 text-sm font-['Inter',Helvetica]">Name</span>
+            <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-200">
+              <div className="col-span-3">
+                <span className="font-medium text-black text-base font-['Inter',Helvetica]">Name</span>
               </div>
               <div className="col-span-3">
-                <span className="font-medium text-gray-700 text-sm font-['Inter',Helvetica]">Date Created</span>
+                <span className="font-medium text-black text-base font-['Inter',Helvetica]">Date Created</span>
               </div>
               <div className="col-span-3">
-                <span className="font-medium text-gray-700 text-sm font-['Inter',Helvetica]">Last Modified</span>
+                <span className="font-medium text-black text-base font-['Inter',Helvetica]">Last Modified</span>
               </div>
-              <div className="col-span-2">
-                <span className="font-medium text-gray-700 text-sm font-['Inter',Helvetica]">Owner</span>
+              <div className="col-span-3">
+                <span className="font-medium text-black text-base font-['Inter',Helvetica]">Owner</span>
               </div>
             </div>
 
@@ -244,27 +225,30 @@ function Note() {
               {allNotes.map((note) => (
                 <div
                   key={note.id}
-                  className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors group"
+                  className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="col-span-4 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
-                      <FileTextIcon className="w-4 h-4 text-blue-600" />
+                  <div className="col-span-3 flex items-center gap-3">
+                    {/* Note icon matching the selected element style */}
+                    <div className="w-5 h-5 flex-shrink-0">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
                     </div>
-                    <span className="font-medium text-gray-900 text-sm font-['Inter',Helvetica]">
+                    <span className="font-normal text-black text-base font-['Inter',Helvetica]">
                       {note.name}
                     </span>
                   </div>
                   <div className="col-span-3 flex items-center">
-                    <span className="text-gray-600 text-sm font-['Inter',Helvetica]">
+                    <span className="text-black text-base font-['Inter',Helvetica]">
                       {note.dateCreated}
                     </span>
                   </div>
                   <div className="col-span-3 flex items-center">
-                    <span className="text-gray-600 text-sm font-['Inter',Helvetica]">
+                    <span className="text-black text-base font-['Inter',Helvetica]">
                       {note.lastModified}
                     </span>
                   </div>
-                  <div className="col-span-2 flex items-center justify-between">
+                  <div className="col-span-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Avatar className="w-6 h-6">
                         <AvatarImage src={note.ownerAvatar} alt={note.owner} />
@@ -272,17 +256,17 @@ function Note() {
                           {note.owner.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-gray-600 text-sm font-['Inter',Helvetica]">
+                      <span className="text-black text-base font-['Inter',Helvetica]">
                         {note.owner}
                       </span>
                     </div>
                     
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Action buttons - always visible */}
+                    <div className="flex items-center gap-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="h-8 w-16 text-xs font-['Inter',Helvetica] text-gray-600 hover:text-gray-900"
+                        className="h-8 px-3 bg-gray-100 border-none rounded text-xs font-['Inter',Helvetica] text-gray-600 hover:bg-gray-200"
                       >
                         OPEN
                       </Button>
