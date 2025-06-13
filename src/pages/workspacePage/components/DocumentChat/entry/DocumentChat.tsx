@@ -6,7 +6,9 @@ import {
   X, 
   ChevronDownIcon,
   SearchIcon,
-  LightbulbIcon
+  LightbulbIcon,
+  UserIcon,
+  PlusIcon
 } from 'lucide-react';
 
 interface DocumentTag {
@@ -57,22 +59,28 @@ function DocumentChat() {
       case 'pdf':
         return (
           <div className="w-4 h-4 bg-red-500 rounded-sm flex items-center justify-center">
-            <span className="text-white text-xs font-bold">PDF</span>
+            <span className="text-white text-[10px] font-bold">PDF</span>
           </div>
         );
       case 'doc':
         return (
           <div className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center">
-            <span className="text-white text-xs font-bold">DOC</span>
+            <span className="text-white text-[10px] font-bold">DOC</span>
           </div>
         );
       default:
         return (
           <div className="w-4 h-4 bg-gray-500 rounded-sm flex items-center justify-center">
-            <span className="text-white text-xs font-bold">FILE</span>
+            <span className="text-white text-[10px] font-bold">FILE</span>
           </div>
         );
     }
+  };
+
+  // Get card background color based on column index
+  const getCardBackgroundColor = (index: number) => {
+    const colors = ['#E5F6FF', '#ECF4F4', '#ECF1F6', '#DEEEFF'];
+    return colors[index % 4];
   };
 
   return (
@@ -97,69 +105,79 @@ function DocumentChat() {
           </div>
         </div>
 
-        {/* Main content area */}
-        <div className="flex gap-8 mb-12">
-          {/* Upload area */}
-          <div className="flex-1">
-            <Card className="w-full h-[200px] border-2 border-dashed border-blue-300 bg-blue-50/30 rounded-lg">
-              <CardContent className="flex flex-col items-center justify-center h-full p-6">
-                <UploadIcon className="w-12 h-12 text-gray-400 mb-4" strokeWidth={1.5} />
-                <p className="text-gray-600 font-['Inter',Helvetica] text-base font-medium text-center">
-                  Upload or choose your sources to<br />Start Chat
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Main content area - constrained to match history width */}
+        <div className="w-full max-w-5xl mx-auto mb-6">
+          <div className="flex gap-8 relative">
+            {/* Upload area - made smaller */}
+            <div className="w-[350px]">
+              <Card className="w-full h-[200px] border-2 border-dashed border-blue-300 bg-blue-50/30 rounded-lg">
+                <CardContent className="flex flex-col items-center justify-center h-full p-6">
+                  <UploadIcon className="w-12 h-12 text-gray-400 mb-4" strokeWidth={1.5} />
+                  <p className="text-gray-600 font-['Inter',Helvetica] text-base font-medium text-center">
+                    Upload or choose your sources to<br />Start Chat
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Right panel with selected documents */}
-          <div className="w-[400px]">
-            <Card className="w-full h-[200px] bg-gray-50 rounded-lg border border-gray-200">
-              <CardContent className="p-4 h-full flex flex-col">
-                {/* Selected documents */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {selectedDocuments.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5"
-                    >
-                      {getDocumentIcon(doc.type)}
-                      <span className="text-sm font-['Inter',Helvetica] text-gray-700">
-                        {doc.name}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="w-4 h-4 p-0 hover:bg-gray-200 rounded-full"
-                        onClick={() => removeDocument(doc.id)}
+            {/* Right panel with selected documents - expanded to fill remaining space */}
+            <div className="flex-1">
+              <Card className="w-full h-[200px] bg-white rounded-lg border border-[#B3B3B3]">
+                <CardContent className="p-4 h-full flex flex-col">
+                  {/* Selected documents */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {selectedDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center gap-2 bg-[#ECF1F6] border border-[#88ABFF] rounded-lg px-3 py-1.5"
                       >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                        {getDocumentIcon(doc.type)}
+                        <span className="text-sm font-['Inter',Helvetica] text-gray-700">
+                          {doc.name}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-4 h-4 p-0 hover:bg-gray-200 rounded-full"
+                          onClick={() => removeDocument(doc.id)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
 
-                {/* Bottom controls */}
-                <div className="mt-auto flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2 bg-white border-gray-300 rounded-lg px-3 py-2"
-                  >
-                    <div className="w-4 h-4 bg-gray-400 rounded-sm"></div>
-                    <span className="text-sm font-['Inter',Helvetica] text-gray-600">Profile</span>
-                    <ChevronDownIcon className="w-4 h-4 text-gray-600" />
-                  </Button>
-
-                  <Button className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-4 py-2">
-                    <span className="text-sm font-['Inter',Helvetica]">+ Create New Chat</span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  {/* Bottom controls */}
+                  <div className="mt-auto flex items-center justify-start">
+                    {/* Profile button - matching Problem Solver style */}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-[81px] h-[25px] bg-[#EDF2F7] border-none rounded-lg flex items-center justify-center gap-1 p-0 hover:bg-[#e2e8f0]"
+                    >
+                      <UserIcon className="w-3 h-3 text-[#6B6B6B]" />
+                      <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Profile</span>
+                      <ChevronDownIcon className="w-3 h-3 text-[#6B6B6B]" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
 
-        {/* History section */}
-        <div className="w-full">
+        {/* Create New Chat Button Section - much closer to search */}
+        <div className="w-full max-w-5xl mx-auto mb-4">
+          <div className="flex justify-end">
+            <Button className="bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-lg px-6 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm">
+              <PlusIcon className="w-4 h-4" />
+              Create New Chat
+            </Button>
+          </div>
+        </div>
+
+        {/* History section - matching the same max width */}
+        <div className="w-full max-w-5xl mx-auto">
           {/* History header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-black font-['Inter',Helvetica] text-xl font-semibold">
@@ -193,28 +211,32 @@ function DocumentChat() {
             </div>
           </div>
 
-          {/* History grid */}
-          <div className="grid grid-cols-4 gap-4 mb-8">
-            {getCurrentPageItems().map((item) => (
+          {/* History grid - adjusted card dimensions and spacing */}
+          <div className="grid grid-cols-4 gap-6 mb-8">
+            {getCurrentPageItems().map((item, index) => (
               <Card
                 key={item.id}
-                className="w-full h-[140px] bg-blue-50 rounded-lg border border-blue-200 hover:shadow-md transition-shadow cursor-pointer"
+                className="w-[90%] h-[154px] rounded-lg border-none hover:shadow-md transition-shadow cursor-pointer mx-auto"
+                style={{ 
+                  backgroundColor: getCardBackgroundColor(index),
+                  boxShadow: '0px 3px 60px 1px rgba(72, 111, 207, 0.13)'
+                }}
               >
                 <CardContent className="p-4 h-full flex flex-col">
                   {/* Lightbulb icon and file count */}
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-6">
                     <LightbulbIcon className="w-6 h-6 text-orange-500 fill-orange-500" />
                     <span className="text-xs font-['Inter',Helvetica] text-gray-600">
                       {item.fileCount} Files
                     </span>
                   </div>
 
-                  {/* Title */}
-                  <h3 className="font-['Inter',Helvetica] font-medium text-black text-sm mb-2 line-clamp-2 flex-1">
+                  {/* Title - moved down */}
+                  <h3 className="font-['Inter',Helvetica] font-medium text-black text-sm mb-3 line-clamp-2 flex-1">
                     {item.title}
                   </h3>
 
-                  {/* Date */}
+                  {/* Date - moved down */}
                   <p className="font-['Inter',Helvetica] font-normal text-gray-600 text-xs mt-auto">
                     {item.date}
                   </p>
