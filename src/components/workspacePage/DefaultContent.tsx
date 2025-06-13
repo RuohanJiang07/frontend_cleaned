@@ -12,7 +12,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { Progress } from "../ui/progress";
-import DeepLearn from "../../pages/workspacePage/components/DeepLearn";
+import DeepLearn from "../../pages/workspacePage/components/DeepLearn/entry/DeepLearn";
 import ProblemSolver from "../../pages/workspacePage/components/ProblemHelp/entry/ProblemSolver";
 import DocumentChat from "../../pages/workspacePage/components/DocumentChat/entry/DocumentChat";
 import Note from "../../pages/workspacePage/components/Note/entry/Note";

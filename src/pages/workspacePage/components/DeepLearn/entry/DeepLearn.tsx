@@ -1,8 +1,8 @@
 import { Tabs, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { GlobeIcon, PaperclipIcon, FolderIcon } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Card, CardContent } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
+import { Button } from '../../../../../components/ui/button';
+import { Card, CardContent } from '../../../../../components/ui/card';
+import { Input } from '../../../../../components/ui/input';
 const learningCards = [
   {
     id: 1,
