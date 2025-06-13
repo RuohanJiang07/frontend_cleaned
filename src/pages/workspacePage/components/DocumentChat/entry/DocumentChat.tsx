@@ -10,6 +10,7 @@ import {
   UserIcon,
   PlusIcon
 } from 'lucide-react';
+import DocumentChatResponse from '../response/DocumentChatResponse';
 
 interface DocumentTag {
   id: string;
@@ -32,6 +33,7 @@ function DocumentChat() {
   ]);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [showResponse, setShowResponse] = useState(false);
   const itemsPerPage = 8;
 
   // Sample history data
@@ -82,6 +84,19 @@ function DocumentChat() {
     const colors = ['#E5F6FF', '#ECF4F4', '#ECF1F6', '#DEEEFF'];
     return colors[index % 4];
   };
+
+  const handleCreateNewChat = () => {
+    setShowResponse(true);
+  };
+
+  const handleBackToEntry = () => {
+    setShowResponse(false);
+  };
+
+  // Show response page if showResponse is true
+  if (showResponse) {
+    return <DocumentChatResponse onBack={handleBackToEntry} />;
+  }
 
   return (
     <div className="h-full overflow-y-auto">
@@ -169,7 +184,10 @@ function DocumentChat() {
         {/* Create New Chat Button Section - much closer to search */}
         <div className="w-full max-w-5xl mx-auto mb-4">
           <div className="flex justify-end">
-            <Button className="bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-lg px-6 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm">
+            <Button 
+              className="bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-lg px-6 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm"
+              onClick={handleCreateNewChat}
+            >
               <PlusIcon className="w-4 h-4" />
               Create New Chat
             </Button>
@@ -221,6 +239,7 @@ function DocumentChat() {
                   backgroundColor: getCardBackgroundColor(index),
                   boxShadow: '0px 3px 60px 1px rgba(72, 111, 207, 0.13)'
                 }}
+                onClick={handleCreateNewChat}
               >
                 <CardContent className="p-4 h-full flex flex-col">
                   {/* Lightbulb icon and file count */}
