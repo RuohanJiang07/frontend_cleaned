@@ -9,10 +9,12 @@ import {
   Search,
   SettingsIcon,
   UploadIcon,
+  MessageSquare,
 } from "lucide-react";
 import { Progress } from "../ui/progress";
 import DeepLearn from "../../pages/workspacePage/components/DeepLearn";
 import ProblemSolver from "../../pages/workspacePage/components/ProblemHelp/entry/ProblemSolver";
+import DocumentChat from "../../pages/workspacePage/components/DocumentChat/entry/DocumentChat";
 
 interface DefaultContentProps {
   tabId: string;
@@ -37,10 +39,10 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
       component: "smart-note"
     },
     {
-      title: "Summary Help",
-      icon: "/file-text.svg",
-      description: "place holder place holder\nplace holder place holder",
-      component: "summary-help"
+      title: "Document Chat",
+      icon: 'message-square',
+      description: "answer questions based\non your documents",
+      component: "document-chat"
     },
     {
       title: "Problem Help",
@@ -93,6 +95,10 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
     return <ProblemSolver />;
   }
 
+  if (activeView === "document-chat") {
+    return <DocumentChat />;
+  }
+
   // Default view
   return (
     <div className="flex flex-col items-center w-full px-8">
@@ -124,8 +130,8 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
                 {tool.icon === "pen-tool" && (
                   <PenTool className="w-[35px] h-[35px] mb-3" />
                 )}
-                {tool.icon === "/file-text.svg" && (
-                  <FileText className="w-[30px] h-[30px] mb-3" />
+                {tool.icon === "message-square" && (
+                  <MessageSquare className="w-[35px] h-[35px] mb-3" />
                 )}
                 {!tool.icon && tool.title === "Problem Help" && (
                   <span className="text-3xl font-medium mb-3">?</span>
