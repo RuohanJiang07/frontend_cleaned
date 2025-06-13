@@ -3,6 +3,9 @@ import { GlobeIcon, PaperclipIcon, FolderIcon } from 'lucide-react';
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { Input } from '../../../../../components/ui/input';
+import { useState } from 'react';
+import DeepLearnResponse from '../response/DeepLearnResponse';
+
 const learningCards = [
   {
     id: 1,
@@ -61,7 +64,23 @@ const learningCards = [
     image: "/image-23.png",
   },
 ];
+
 function DeepLearn() {
+  const [showResponse, setShowResponse] = useState(false);
+
+  const handleCardClick = (cardId: number) => {
+    setShowResponse(true);
+  };
+
+  const handleBackToEntry = () => {
+    setShowResponse(false);
+  };
+
+  // Show response page if showResponse is true
+  if (showResponse) {
+    return <DeepLearnResponse onBack={handleBackToEntry} />;
+  }
+
   return (
     <main className="flex-1 p-6 lg:p-12 max-w-7xl mx-auto">
       {/* Logo and title */}
@@ -194,7 +213,8 @@ function DeepLearn() {
         {learningCards.map((card) => (
           <Card
             key={card.id}
-            className="w-full max-w-[203px] mx-auto rounded-[10px] shadow-[0px_3px_60px_1px_#476fcf21] overflow-hidden hover:shadow-lg transition-shadow duration-200"
+            className="w-full max-w-[203px] mx-auto rounded-[10px] shadow-[0px_3px_60px_1px_#476fcf21] overflow-hidden hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+            onClick={() => handleCardClick(card.id)}
           >
             <CardContent className="p-0">
               {card.image && (
