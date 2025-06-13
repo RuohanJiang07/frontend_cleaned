@@ -122,19 +122,19 @@ function Note() {
           
           <div className="flex gap-4 overflow-x-auto pb-4">
             {recentNotes.map((note) => (
-              <div key={note.id} className="flex-shrink-0">
-                {/* Card matching the exact SVG structure - NO OVERLAP */}
-                <div className="w-[191px] h-[248px] bg-white border-2 border-[#AFD7FF] rounded-[10px] overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative">
+              <div key={note.id} className="flex-shrink-0 relative">
+                {/* Date tab - positioned OUTSIDE and ABOVE the main card, 20% wider, moved down 1px, NO BOTTOM BORDER */}
+                <div className="absolute top-[1px] left-0 w-[114px] h-[24px] bg-white border-2 border-[#AFD7FF] border-b-0 rounded-t-[8px] flex items-center justify-center z-20">
+                  <span className="text-black font-['Inter',Helvetica] text-sm font-normal">
+                    {note.date}
+                  </span>
+                </div>
+                
+                {/* Main card - positioned 25px down, removed upper left corner radius */}
+                <div className="w-[191px] h-[248px] bg-white border-2 border-[#AFD7FF] rounded-[0px_10px_10px_10px] overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative mt-[25px]">
                   
-                  {/* Header tab - positioned at the very top, only covers left half */}
-                  <div className="absolute top-0 left-0 w-[95px] h-[24px] bg-white border-2 border-[#AFD7FF] border-b-0 rounded-t-[8px] flex items-center justify-center z-10">
-                    <span className="text-black font-['Inter',Helvetica] text-sm font-normal">
-                      {note.date}
-                    </span>
-                  </div>
-                  
-                  {/* Main content area - starts EXACTLY at 24px from top (no overlap) */}
-                  <div className="absolute top-[24px] left-0 right-0 bottom-[40px] bg-white flex items-center justify-center">
+                  {/* Main content area - full height minus footer */}
+                  <div className="absolute top-0 left-0 right-0 bottom-[40px] bg-white flex items-center justify-center">
                     {/* Document preview content */}
                     <div className="text-center">
                       <FileTextIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
