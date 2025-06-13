@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 
@@ -11,6 +11,8 @@ import {
   UploadIcon,
 } from "lucide-react";
 import { Progress } from "../ui/progress";
+import DeepLearn from "../../pages/workspacePage/components/DeepLearn";
+import ProblemSolver from "../../pages/workspacePage/components/ProblemHelp/entry/ProblemSolver";
 
 interface DefaultContentProps {
   tabId: string;
@@ -18,27 +20,33 @@ interface DefaultContentProps {
 }
 
 export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
+  const [activeView, setActiveView] = useState<string | null>(null);
+
   // Data for AI tools
   const aiTools = [
     {
       title: "Deep Learn",
       icon: "/search.svg",
       description: "place holder place holder\nplace holder place holder",
+      component: "deep-learn"
     },
     {
       title: "Smart Note",
       icon: 'pen-tool',
       description: "place holder place holder\nplace holder place holder",
+      component: "smart-note"
     },
     {
       title: "Summary Help",
       icon: "/file-text.svg",
       description: "place holder place holder\nplace holder place holder",
+      component: "summary-help"
     },
     {
       title: "Problem Help",
       icon: null,
       description: "place holder place holder\nplace holder place holder",
+      component: "problem-help"
     },
   ];
 
@@ -68,6 +76,24 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
     },
   ];
 
+  const handleToolClick = (component: string) => {
+    setActiveView(component);
+  };
+
+  const handleBackToDefault = () => {
+    setActiveView(null);
+  };
+
+  // Render specific component based on activeView
+  if (activeView === "deep-learn") {
+    return <DeepLearn />;
+  }
+
+  if (activeView === "problem-help") {
+    return <ProblemSolver />;
+  }
+
+  // Default view
   return (
     <div className="flex flex-col items-center w-full px-8">
       <div className={`${isSplit ? 'w-full' : 'max-w-[800px]'} pt-[70px]`}>
@@ -88,7 +114,8 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
           {aiTools.map((tool, index) => (
             <Card
               key={index}
-              className={`${isSplit ? 'w-[140px]' : 'w-[158px]'} h-[138px] bg-[#ecf1f6] rounded-lg border-none`}
+              className={`${isSplit ? 'w-[140px]' : 'w-[158px]'} h-[138px] bg-[#ecf1f6] rounded-lg border-none cursor-pointer hover:shadow-md transition-shadow`}
+              onClick={() => handleToolClick(tool.component)}
             >
               <CardContent className="flex flex-col items-center justify-center h-full p-2 pt-5 pb-4">
                 {tool.icon === "/search.svg" && (
@@ -206,8 +233,6 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
             </span>
           </div>
         </div>
-
-
       </div>
     </div >
   );
