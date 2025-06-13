@@ -15,6 +15,8 @@ import { Progress } from "../ui/progress";
 import DeepLearn from "../../pages/workspacePage/components/DeepLearn";
 import ProblemSolver from "../../pages/workspacePage/components/ProblemHelp/entry/ProblemSolver";
 import DocumentChat from "../../pages/workspacePage/components/DocumentChat/entry/DocumentChat";
+import Note from "../../pages/workspacePage/components/Note/entry/Note";
+import Drive from "../../pages/workspacePage/components/Drive/Drive";
 
 interface DefaultContentProps {
   tabId: string;
@@ -86,6 +88,10 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
     setActiveView(null);
   };
 
+  const handleOpenDrive = () => {
+    setActiveView("drive");
+  };
+
   // Render specific component based on activeView
   if (activeView === "deep-learn") {
     return <DeepLearn />;
@@ -97,6 +103,14 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
 
   if (activeView === "document-chat") {
     return <DocumentChat />;
+  }
+
+  if (activeView === "smart-note") {
+    return <Note />;
+  }
+
+  if (activeView === "drive") {
+    return <Drive />;
   }
 
   // Default view
@@ -200,6 +214,7 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
               <Button
                 variant="ghost"
                 className="h-[29px] bg-[#e8e8e8] rounded-lg px-2 py-1.5 flex items-center gap-2"
+                onClick={handleOpenDrive}
               >
                 <CloudIcon className="w-4 h-4" />
                 <span className="font-normal text-sm text-black font-outfit">
