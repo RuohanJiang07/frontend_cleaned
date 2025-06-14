@@ -7,6 +7,11 @@ export default {
   ],
   theme: {
   	extend: {
+      fontFamily: {
+        'inter': ['Inter', 'sans-serif'],
+        'quicksand': ['Quicksand', 'sans-serif'],
+        'outfit': ['Outfit', 'sans-serif'],
+      },
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',

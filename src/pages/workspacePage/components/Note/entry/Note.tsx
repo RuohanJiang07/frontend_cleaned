@@ -11,6 +11,7 @@ import {
   TrashIcon,
   FileTextIcon
 } from 'lucide-react';
+import NoteEditor from '../response/NoteEditor';
 
 interface NoteItem {
   id: string;
@@ -24,6 +25,7 @@ interface NoteItem {
 function Note() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('By Name');
+  const [showEditor, setShowEditor] = useState(false);
 
   // Sample recent notes data
   const recentNotes = Array.from({ length: 5 }, (_, i) => ({
@@ -92,6 +94,19 @@ function Note() {
     }
   ];
 
+  const handleNoteClick = () => {
+    setShowEditor(true);
+  };
+
+  const handleBackToNotes = () => {
+    setShowEditor(false);
+  };
+
+  // Show editor if showEditor is true
+  if (showEditor) {
+    return <NoteEditor onBack={handleBackToNotes} />;
+  }
+
   return (
     <div className="h-full overflow-y-auto bg-white">
       <main className="flex-1 p-12 max-w-7xl mx-auto">
@@ -131,7 +146,10 @@ function Note() {
                 </div>
                 
                 {/* Main card - positioned 25px down, removed upper left corner radius */}
-                <div className="w-[191px] h-[248px] bg-white border-2 border-[#AFD7FF] rounded-[0px_10px_10px_10px] overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative mt-[25px]">
+                <div 
+                  className="w-[191px] h-[248px] bg-white border-2 border-[#AFD7FF] rounded-[0px_10px_10px_10px] overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer relative mt-[25px]"
+                  onClick={handleNoteClick}
+                >
                   
                   {/* Main content area - full height minus footer */}
                   <div className="absolute top-0 left-0 right-0 bottom-[40px] bg-white flex items-center justify-center">
@@ -186,7 +204,10 @@ function Note() {
               </Button>
               
               {/* New button - keeping black background */}
-              <Button className="h-[32px] bg-black text-white rounded-lg flex items-center gap-2 font-['Inter',Helvetica] text-xs px-3 hover:bg-gray-800">
+              <Button 
+                className="h-[32px] bg-black text-white rounded-lg flex items-center gap-2 font-['Inter',Helvetica] text-xs px-3 hover:bg-gray-800"
+                onClick={handleNoteClick}
+              >
                 <PlusIcon className="w-4 h-4" />
                 New
               </Button>
@@ -225,7 +246,8 @@ function Note() {
               {allNotes.map((note) => (
                 <div
                   key={note.id}
-                  className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
+                  className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={handleNoteClick}
                 >
                   <div className="col-span-3 flex items-center gap-3">
                     {/* Note icon matching the selected element style */}
@@ -267,6 +289,10 @@ function Note() {
                         variant="outline"
                         size="sm"
                         className="h-8 px-3 bg-gray-100 border-none rounded text-xs font-['Inter',Helvetica] text-gray-600 hover:bg-gray-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNoteClick();
+                        }}
                       >
                         OPEN
                       </Button>
@@ -274,6 +300,7 @@ function Note() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <EditIcon className="w-4 h-4" />
                       </Button>
@@ -281,6 +308,7 @@ function Note() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-gray-400 hover:text-red-600"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <TrashIcon className="w-4 h-4" />
                       </Button>
