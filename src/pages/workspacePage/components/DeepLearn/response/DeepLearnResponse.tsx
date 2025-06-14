@@ -165,79 +165,89 @@ function DeepLearnResponse({ onBack }: DeepLearnResponseProps) {
         </div>
 
         {/* Fixed Right Sidebar - Related Contents */}
-        <div className="fixed top-16 right-4 w-[320px] h-[calc(100vh-140px)] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="bg-[#E8F0FF] rounded-lg p-4 mb-4">
-            {/* Related Contents Header */}
-            <div className="flex items-center gap-2 mb-2">
-              <SearchIcon className="w-4 h-4 text-[#4A90E2]" />
-              <h3 className="font-semibold text-sm text-black">Related Contents</h3>
+        <div className="fixed top-16 right-4 w-[320px] h-[calc(50vh-80px)] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            {/* Blue Header Section */}
+            <div className="bg-[#E8F0FF] p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <SearchIcon className="w-4 h-4 text-[#4A90E2]" />
+                <h3 className="font-semibold text-sm text-black">Related Contents</h3>
+              </div>
+              <p className="text-sm text-[#4A90E2]">See more on this topic</p>
             </div>
-            <p className="text-sm text-[#4A90E2] mb-4">See more on this topic</p>
 
-            {/* Related Videos */}
-            <div className="mb-4">
-              <h4 className="font-medium text-sm text-black mb-3">Related Videos</h4>
-              <div className="bg-white rounded-lg overflow-hidden">
-                <div className="w-full h-32 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
-                  <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                  <div className="text-center z-10">
-                    <div className="text-yellow-300 font-bold text-lg mb-1">QUANTUM</div>
-                    <div className="flex items-center justify-center mb-1">
-                      <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center mr-2">
-                        <div className="w-4 h-4 bg-black rounded-full"></div>
+            {/* White Content Section */}
+            <div className="bg-white p-4">
+              {/* Related Videos */}
+              <div className="mb-6">
+                <h4 className="font-medium text-sm text-black mb-3">Related Videos</h4>
+                <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                  <div className="w-full h-32 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                    <div className="text-center z-10">
+                      <div className="text-yellow-300 font-bold text-lg mb-1">QUANTUM</div>
+                      <div className="flex items-center justify-center mb-1">
+                        <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center mr-2">
+                          <div className="w-4 h-4 bg-black rounded-full"></div>
+                        </div>
+                        <div className="text-blue-400">⚡ ⚡</div>
                       </div>
-                      <div className="text-blue-400">⚡ ⚡</div>
+                      <div className="text-white font-bold text-lg">ENTANGLEMENT</div>
                     </div>
-                    <div className="text-white font-bold text-lg">ENTANGLEMENT</div>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-xs text-black mb-1 font-medium">Quantum Entanglement: Explained in REALLY SIMPLE Words</p>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                      <p className="text-xs text-red-600 font-medium">Science ABC</p>
+                    </div>
                   </div>
                 </div>
-                <div className="p-2">
-                  <p className="text-xs text-black mb-1">Quantum Entanglement: Explained in REALLY SIMPLE Words</p>
-                  <p className="text-xs text-red-600">🔴 Science ABC</p>
-                </div>
               </div>
-            </div>
 
-            {/* Related Webpages */}
-            <div className="mb-4">
-              <h4 className="font-medium text-sm text-black mb-3">Related Webpages</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-[#F0F0F0] rounded-lg p-3">
-                  <div className="text-xs font-medium text-black mb-2">ScienceDirect discusses quantum entanglement.</div>
-                  <div className="text-xs text-gray-600 mb-2">Explore the phenomenon crucial for quantum information processing applications.</div>
-                  <div className="text-xs text-black mb-1">Quantum Entanglement - an o...</div>
-                  <div className="text-xs text-orange-600">📄 ScienceDirect.com</div>
-                </div>
-                <div className="bg-[#F0F0F0] rounded-lg p-3">
-                  <div className="text-xs font-medium text-black mb-2">NASA's take entanglement</div>
-                  <div className="text-xs text-gray-600 mb-2">Learn about nature of par common orig</div>
-                  <div className="text-xs text-black mb-1">What is Qua</div>
-                  <div className="text-xs text-blue-600">🌐 NASA Sc</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Related Concepts */}
-            <div className="mb-4">
-              <h4 className="font-medium text-sm text-black mb-3">Related Concepts</h4>
-              <div className="space-y-3">
-                <div>
-                  <div className="text-xs font-medium text-black mb-2">Understand the fundamental principles of quantum entanglement.</div>
-                  <div className="bg-[#D5EBF3] text-[#1e40af] px-2 py-1 rounded text-xs inline-block">
-                    Interconnected Fate
+              {/* Related Webpages */}
+              <div className="mb-6">
+                <h4 className="font-medium text-sm text-black mb-3">Related Webpages</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-[#F0F0F0] rounded-lg p-3">
+                    <div className="text-xs font-medium text-black mb-2">ScienceDirect discusses quantum entanglement.</div>
+                    <div className="text-xs text-gray-600 mb-2">Explore the phenomenon crucial for quantum information processing applications.</div>
+                    <div className="text-xs text-black mb-1">Quantum Entanglement - an o...</div>
+                    <div className="text-xs text-orange-600">📄 ScienceDirect.com</div>
+                  </div>
+                  <div className="bg-[#F0F0F0] rounded-lg p-3">
+                    <div className="text-xs font-medium text-black mb-2">NASA's take entanglement</div>
+                    <div className="text-xs text-gray-600 mb-2">Learn about nature of par common orig</div>
+                    <div className="text-xs text-black mb-1">What is Qua</div>
+                    <div className="text-xs text-blue-600">🌐 NASA Sc</div>
                   </div>
                 </div>
-                <div className="bg-[#E8D5F3] text-[#6b21a8] px-2 py-1 rounded text-xs inline-block">
-                  Instantaneous Correlation
-                </div>
-                <div className="bg-[#D5F3E8] text-[#059669] px-2 py-1 rounded text-xs inline-block">
-                  Randomness
+              </div>
+
+              {/* Related Concepts */}
+              <div>
+                <h4 className="font-medium text-sm text-black mb-3">Related Concepts</h4>
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs font-medium text-black mb-2">Understand the fundamental principles of quantum entanglement.</div>
+                    <div className="bg-[#D5EBF3] text-[#1e40af] px-2 py-1 rounded text-xs inline-block">
+                      Interconnected Fate
+                    </div>
+                  </div>
+                  <div className="bg-[#E8D5F3] text-[#6b21a8] px-2 py-1 rounded text-xs inline-block">
+                    Instantaneous Correlation
+                  </div>
+                  <div className="bg-[#D5F3E8] text-[#059669] px-2 py-1 rounded text-xs inline-block">
+                    Randomness
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Concept Map */}
+        {/* Fixed Right Sidebar - Concept Map */}
+        <div className="fixed top-[calc(50vh+20px)] right-4 w-[320px] h-[calc(50vh-120px)] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="bg-[#F0F0F0] rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <MapIcon className="w-4 h-4 text-[#4A90E2]" />
