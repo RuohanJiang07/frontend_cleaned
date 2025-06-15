@@ -7,6 +7,7 @@ import {
   SearchIcon,
   UploadIcon
 } from 'lucide-react';
+import ProblemHelpResponse from '../response/ProblemHelpResponse';
 
 interface ProblemHistoryItem {
   id: number;
@@ -20,6 +21,7 @@ function ProblemSolver() {
   const [selectedModel, setSelectedModel] = useState('GPT-4o');
   const [selectedMode, setSelectedMode] = useState<'step-by-step' | 'solution'>('step-by-step');
   const [sortBy, setSortBy] = useState('Date/Type');
+  const [showResponse, setShowResponse] = useState(false);
 
   // Sample history data
   const historyItems: ProblemHistoryItem[] = [
@@ -76,6 +78,19 @@ function ProblemSolver() {
     const endIndex = startIndex + itemsPerPage;
     return historyItems.slice(startIndex, endIndex);
   };
+
+  const handleHistoryItemClick = (item: ProblemHistoryItem) => {
+    setShowResponse(true);
+  };
+
+  const handleBackToEntry = () => {
+    setShowResponse(false);
+  };
+
+  // Show response page if showResponse is true
+  if (showResponse) {
+    return <ProblemHelpResponse onBack={handleBackToEntry} />;
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -222,6 +237,7 @@ function ProblemSolver() {
                   <div
                     key={item.id}
                     className="grid grid-cols-12 gap-4 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => handleHistoryItemClick(item)}
                   >
                     <div className="col-span-6 flex items-center gap-3 px-4">
                       <PaperclipIcon className="w-4 h-4 text-gray-600 flex-shrink-0" />
