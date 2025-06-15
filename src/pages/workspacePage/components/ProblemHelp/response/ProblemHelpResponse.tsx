@@ -192,7 +192,7 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
               {/* Concept Cards - 35% */}
               <div className="w-[35%] space-y-4">
                 {/* Kinetic Friction Card */}
-                <div className="bg-[#D5EBF3] rounded-lg p-4">
+                <div className="bg-[#f2f7ff] rounded-lg p-4 border-l-4 border-[#90BBFF]">
                   <h4 className="font-semibold text-sm text-black font-['Inter',Helvetica] mb-2">
                     Kinetic Friction
                   </h4>
@@ -202,7 +202,7 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
                 </div>
 
                 {/* Free-body Diagram Card */}
-                <div className="bg-[#D5EBF3] rounded-lg p-4">
+                <div className="bg-[#f2f7ff] rounded-lg p-4 border-l-4 border-[#90BBFF]">
                   <h4 className="font-semibold text-sm text-black font-['Inter',Helvetica] mb-2">
                     Free-body Diagram (FBD)
                   </h4>
@@ -212,7 +212,7 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
                 </div>
 
                 {/* Applied Force Card */}
-                <div className="bg-[#D5EBF3] rounded-lg p-4">
+                <div className="bg-[#f2f7ff] rounded-lg p-4 border-l-4 border-[#90BBFF]">
                   <h4 className="font-semibold text-sm text-black font-['Inter',Helvetica] mb-2">
                     Applied Force
                   </h4>
@@ -229,35 +229,34 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
         </div>
       </div>
 
-      {/* Fixed Bottom Input Area - textarea height matches container height, hidden scrollbar */}
-      <div className="p-4 bg-white">
+      {/* Fixed Bottom Input Area - Redesigned to match the image, NO TOP BORDER */}
+      <div className="p-6 bg-white">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white border border-gray-300 rounded-2xl p-4 h-24">
-            <div className="relative h-full">
-              <textarea
-                className="w-full h-full border-0 rounded-lg p-3 pr-20 resize-none outline-none bg-white font-['Inter',Helvetica] text-sm placeholder:text-gray-500 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                placeholder="Continue to ask; provide more details for step 2..."
-                value={followUpQuestion}
-                onChange={(e) => setFollowUpQuestion(e.target.value)}
-              />
-              
-              {/* Icons in bottom right corner */}
-              <div className="absolute right-3 bottom-3 flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-6 h-6 p-0 text-gray-400 hover:text-gray-600"
-                >
-                  <PaperclipIcon className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-6 h-6 p-0 text-gray-400 hover:text-gray-600"
-                >
-                  <FolderIcon className="w-4 h-4" />
-                </Button>
-              </div>
+          {/* Input container with proper height and styling */}
+          <div className="relative bg-white border border-gray-300 rounded-2xl h-32 p-4">
+            <textarea
+              className="w-full h-full border-0 resize-none outline-none bg-transparent font-['Inter',Helvetica] text-sm placeholder:text-gray-500 pr-16 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+              placeholder="Continue to ask; provide more details for step 2..."
+              value={followUpQuestion}
+              onChange={(e) => setFollowUpQuestion(e.target.value)}
+            />
+            
+            {/* Icons positioned in bottom right corner */}
+            <div className="absolute bottom-4 right-4 flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-6 h-6 p-0 text-gray-400 hover:text-gray-600"
+              >
+                <PaperclipIcon className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-6 h-6 p-0 text-gray-400 hover:text-gray-600"
+              >
+                <FolderIcon className="w-5 h-5" />
+              </Button>
             </div>
           </div>
         </div>
