@@ -1,17 +1,16 @@
 .landing-page {
   display: flex;
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: #f7f6f6;
 }
 
 /* Main Content Styles */
 .main-content {
-   position: relative;
+  position: relative;
   z-index: 0;
-  overflow: hidden; 
+  overflow: hidden;
   flex-grow: 1;
   padding: 0 2vw;
-  
   height: 100vh;
   overflow-y: auto;
 }
@@ -38,16 +37,105 @@
 
 .header-actions {
   width: 100%;
-  justify-content:space-between;
+  justify-content: space-between;
   display: flex;
   align-items: center;
   margin-right: 35px;
 }
 
-
 .translate-button:hover,
 .login-button:hover {
   color: #1a1a1a;
+}
+
+/* Dropdown Styles */
+.dropdown-content {
+  @apply z-50 min-w-[8rem] max-w-[200px] overflow-hidden rounded-md border bg-white p-1 text-popover-foreground shadow-md;
+  @apply data-[state=open]:animate-in data-[state=closed]:animate-out;
+  @apply data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0;
+  @apply data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95;
+  @apply data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2;
+  @apply data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2;
+}
+
+.dropdown-item {
+  @apply relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none;
+  @apply transition-colors focus:bg-accent focus:text-accent-foreground;
+  @apply data-[disabled]:pointer-events-none data-[disabled]:opacity-50;
+  @apply [&>svg]:size-4 [&>svg]:shrink-0;
+  @apply whitespace-nowrap overflow-hidden text-ellipsis;
+}
+
+/* Tab Styles */
+.tab-container {
+  position: relative;
+  display: flex;
+  height: auto;
+  padding: 0.75rem;
+  border-radius: 1.5rem;
+  background-color: transparent;
+  padding-left: 0.5rem;
+  backdrop-filter: blur(4px);
+}
+
+.tab-underline {
+  position: absolute;
+  bottom: 0;
+  top: 0;
+  z-index: -10;
+  display: flex;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  padding: 0.5rem 0;
+  transition: all 300ms;
+}
+
+.tab-underline-inner {
+  height: 100%;
+  width: 100%;
+  border-radius: 1.5rem;
+  background-color: #D9D9D9;
+}
+
+.tab-button {
+  margin: auto;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 9999px;
+  padding: 0 1rem;
+  text-align: center;
+  font-family: 'IBM Plex Sans', Helvetica;
+  color: black;
+  font-size: 0.875rem;
+}
+
+/* Search Input Styles */
+.search-container {
+  position: relative;
+  height: 29px;
+  width: 219px;
+}
+
+.search-input {
+  height: 100%;
+  width: 100%;
+  background-color: white;
+  border: 1px solid #949494;
+  border-radius: 0.5rem;
+  padding-left: 2rem;
+  padding-right: 0.5rem;
+  font-size: 0.875rem;
+  color: #4B5563;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: #9CA3AF;
 }
 
 .hero-section {
@@ -215,21 +303,4 @@
   color: #64748b;
   font-size: 1.1rem;
   font-weight: 500;
-}
-
-.dropdown-content {
-  @apply z-50 min-w-[8rem] max-w-[200px] overflow-hidden rounded-md border bg-white p-1 text-popover-foreground shadow-md;
-  @apply data-[state=open]:animate-in data-[state=closed]:animate-out;
-  @apply data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0;
-  @apply data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95;
-  @apply data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2;
-  @apply data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2;
-}
-
-.dropdown-item {
-  @apply relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none;
-  @apply transition-colors focus:bg-accent focus:text-accent-foreground;
-  @apply data-[disabled]:pointer-events-none data-[disabled]:opacity-50;
-  @apply [&>svg]:size-4 [&>svg]:shrink-0;
-  @apply whitespace-nowrap overflow-hidden text-ellipsis;
 }
