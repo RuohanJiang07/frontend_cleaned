@@ -94,7 +94,7 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
 
   // Render specific component based on activeView
   if (activeView === "deep-learn") {
-    return <DeepLearn />;
+    return <DeepLearn isSplit={isSplit} />;
   }
 
   if (activeView === "problem-help") {
@@ -115,7 +115,7 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
 
   // Default view
   return (
-    <div className="flex flex-col items-center w-full px-8">
+    <div className="flex flex-col items-center w-full px-8 h-[calc(100vh-183px)] overflow-y-auto">
       <div className={`${isSplit ? 'w-full' : 'max-w-[800px]'} pt-[70px]`}>
         {/* Header with title and icon */}
         <div className="flex items-center mb-8 w-full -ml-[20px]">

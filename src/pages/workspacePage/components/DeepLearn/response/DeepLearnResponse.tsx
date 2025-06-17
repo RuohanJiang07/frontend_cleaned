@@ -15,14 +15,15 @@ import {
 
 interface DeepLearnResponseProps {
   onBack: () => void;
+  isSplit?: boolean;
 }
 
-function DeepLearnResponse({ onBack }: DeepLearnResponseProps) {
+function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) {
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [selectedTopic, setSelectedTopic] = useState('New Topic');
 
   return (
-    <div className="h-[calc(100vh-183px)] flex flex-col bg-white">
+    <div className={`${isSplit ? 'h-full' : 'h-[calc(100vh-183px)]'} flex flex-col bg-white`}>
       {/* Header - No border */}
       <div className="flex items-center justify-between p-4 bg-white">
         <div className="flex items-center gap-4">
@@ -69,7 +70,7 @@ function DeepLearnResponse({ onBack }: DeepLearnResponseProps) {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-y-auto">
         {/* Main Content - Scrollable */}
         <div className="flex-1 overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="max-w-3xl mx-auto px-8">
@@ -88,9 +89,9 @@ function DeepLearnResponse({ onBack }: DeepLearnResponseProps) {
             {/* AI Response */}
             <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed">
               {/* Question with Deep Learn tag - aligned horizontally */}
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-lg font-medium text-black">黑洞信息悖论如何解决？</h2>
-                <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">Deep Learn</span>
+              <div className="flex items-center gap-3 ">
+                <h2 className="text-lg font-medium text-black m-2">黑洞信息悖论如何解决？</h2>
+                <span className="flex items-center bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">Deep Learn</span>
               </div>
 
               {/* Gray line separator */}
@@ -155,11 +156,13 @@ function DeepLearnResponse({ onBack }: DeepLearnResponseProps) {
                   <p className="mb-4">
                     有理论提出，信息本身不是先天固有的，而是后天生成的，物质与信息相互关联。落入黑洞的物质信息会转化为热辐射、热熵等量子态，通过量子信息科学和经典热力学的结合，信息得以
                   </p>
+                  <div className='w-full h-[15px]'></div>
                 </div>
+
               </div>
 
               {/* Bottom Input Box */}
-              <div className="fixed bottom-0 w-full max-w-3xl mx-auto bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between">
+              <div className={`fixed bottom-6 ${isSplit ? 'w-[calc(50%-100px)]' : 'w-full max-w-3xl'} mx-auto bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between`}>
                 <div className="flex items-center justify-between ">
                   <div className="flex items-center gap-4">
                     <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
@@ -215,22 +218,21 @@ function DeepLearnResponse({ onBack }: DeepLearnResponseProps) {
             </div>
           </div>
         </div>
-
-        {/* Fixed Right Sidebar - Related Contents */}
-        <div>
-          <div className=" w-[320px] h-[calc(50vh-80px)] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              {/* Blue Header Section */}
-              <div className="bg-[#E8F0FF] p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <SearchIcon className="w-4 h-4 text-[#4A90E2]" />
-                  <h3 className="font-semibold text-sm text-black">Related Contents</h3>
-                </div>
-                <p className="text-sm text-[#4A90E2]">See more on this topic</p>
+        <div className={`${isSplit ? 'w-[220px]' : 'w-[320px]'} grid grid-rows-5 h-[calc(100vh-255px)] mr-[100px] gap-4`}>
+          {/* Fixed Right Sidebar - Related Contents */}
+          <div className='border-solid border-[#4980ff38] border rounded-lg flex flex-col row-span-3'>
+            {/* Fixed Blue Header Section */}
+            <div className="bg-[#E8F0FF] p-4 rounded-t-lg flex-shrink-0">
+              <div className="flex items-center gap-2 mb-2">
+                <SearchIcon className="w-4 h-4 text-[#4A90E2]" />
+                <h3 className="font-semibold text-sm text-black">Related Contents</h3>
               </div>
+              <p className="text-sm text-[#4A90E2]">See more on this topic</p>
+            </div>
 
-              {/* White Content Section */}
-              <div className="bg-white p-4">
+            {/* Scrollable Content Section */}
+            <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <div className="bg-white m-4">
                 {/* Related Videos */}
                 <div className="mb-6">
                   <h4 className="font-medium text-sm text-black mb-3">Related Videos</h4>
@@ -278,7 +280,7 @@ function DeepLearnResponse({ onBack }: DeepLearnResponseProps) {
                 </div>
 
                 {/* Related Concepts */}
-                <div>
+                <div >
                   <h4 className="font-medium text-sm text-black mb-3">Related Concepts</h4>
                   <div className="space-y-3">
                     <div>
@@ -300,16 +302,20 @@ function DeepLearnResponse({ onBack }: DeepLearnResponseProps) {
           </div>
 
           {/* Fixed Right Sidebar - Concept Map */}
-          <div className=" w-[320px] h-[calc(50vh-120px)] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <div className="bg-[#F0F0F0] rounded-lg p-4">
+          <div className="flex flex-col border border-solid border-[#E2E1E8] w-[320px] row-span-2 bg-[#F0F0F0] rounded-lg overflow-hidden">
+            {/* Fixed Header Section */}
+            <div className="flex-shrink-0 px-4 pt-3 pb-1 bg-[#F0F0F0]">
               <div className="flex items-center gap-2 mb-2">
                 <MapIcon className="w-4 h-4 text-[#4A90E2]" />
                 <h3 className="font-semibold text-sm text-black">Concept Map</h3>
               </div>
               <p className="text-sm text-black mb-4">Your Learning Roadmap</p>
+            </div>
 
+            {/* Scrollable Content Section */}
+            <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-0 rounded-0">
               {/* Concept Map Visualization */}
-              <div className="bg-white rounded-lg p-4 h-64 relative">
+              <div className="bg-white rounded-0  h-64 relative">
                 <div className="absolute inset-0 flex items-center justify-center">
                   {/* Central node */}
                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">

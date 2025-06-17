@@ -5,6 +5,10 @@ import { Card, CardContent } from '../../../../../components/ui/card';
 import { useState } from 'react';
 import DeepLearnResponse from '../response/DeepLearnResponse';
 
+interface DeepLearnProps {
+  isSplit?: boolean;
+}
+
 const learningCards = [
   {
     id: 1,
@@ -64,7 +68,7 @@ const learningCards = [
   },
 ];
 
-function DeepLearn() {
+function DeepLearn({ isSplit = false }: DeepLearnProps) {
   const [showResponse, setShowResponse] = useState(false);
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [selectedTab, setSelectedTab] = useState<'trending' | 'history'>('trending');
@@ -81,7 +85,7 @@ function DeepLearn() {
 
   // Show response page if showResponse is true
   if (showResponse) {
-    return <DeepLearnResponse onBack={handleBackToEntry} />;
+    return <DeepLearnResponse onBack={handleBackToEntry} isSplit={isSplit} />;
   }
 
   return (
@@ -109,16 +113,15 @@ function DeepLearn() {
         {/* Network icon + Deep Learn/Quick Search toggle - 与input box右对齐 */}
         <div className="w-full max-w-4xl mx-auto flex justify-end items-center gap-3 mb-4">
           <GlobeIcon className="w-6 h-6 text-gray-600" />
-          
+
           {/* Deep Learn / Quick Search 可选择切换 */}
           <div
             className="w-[200px] h-[35px] bg-[#ECF1F6] rounded-[17.5px] flex items-center cursor-pointer relative"
             onClick={() => setSelectedMode(selectedMode === 'deep-learn' ? 'quick-search' : 'deep-learn')}
           >
-            <div 
-              className={`absolute top-1 w-[90px] h-[27px] bg-white rounded-[13.5px] transition-all duration-300 ease-in-out z-10 shadow-sm ${
-                selectedMode === 'deep-learn' ? 'left-1' : 'left-[108px]'
-              }`} 
+            <div
+              className={`absolute top-1 w-[90px] h-[27px] bg-white rounded-[13.5px] transition-all duration-300 ease-in-out z-10 shadow-sm ${selectedMode === 'deep-learn' ? 'left-1' : 'left-[108px]'
+                }`}
             />
             <div className="absolute left-4 h-full flex items-center z-20">
               <span className="font-['Inter',Helvetica] font-medium text-[#898989] text-xs">
@@ -182,12 +185,11 @@ function DeepLearn() {
         {/* Trending/History tabs - 与input box左对齐 */}
         <div className="w-full max-w-4xl mx-auto flex justify-start mb-8">
           <div className="w-[140px] h-[32px] bg-[#ECF1F6] rounded-lg flex items-center relative cursor-pointer">
-            <div 
-              className={`absolute top-1 w-[65px] h-[24px] bg-white rounded transition-all duration-300 ease-in-out z-10 shadow-sm ${
-                selectedTab === 'trending' ? 'left-1' : 'left-[72px]'
-              }`} 
+            <div
+              className={`absolute top-1 w-[65px] h-[24px] bg-white rounded transition-all duration-300 ease-in-out z-10 shadow-sm ${selectedTab === 'trending' ? 'left-1' : 'left-[72px]'
+                }`}
             />
-            <div 
+            <div
               className="absolute left-3 h-full flex items-center z-20 cursor-pointer"
               onClick={() => setSelectedTab('trending')}
             >
@@ -195,7 +197,7 @@ function DeepLearn() {
                 Trending
               </span>
             </div>
-            <div 
+            <div
               className="absolute right-3 h-full flex items-center z-20 cursor-pointer"
               onClick={() => setSelectedTab('history')}
             >
