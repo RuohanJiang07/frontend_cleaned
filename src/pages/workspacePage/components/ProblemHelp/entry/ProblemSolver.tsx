@@ -96,8 +96,8 @@ function ProblemSolver() {
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto">
         <main className="flex-1 p-12 max-w-7xl mx-auto">
-          {/* Header with icon and title */}
-          <div className="flex items-center justify-center mb-12">
+          {/* Header */}
+          <div className="flex items-center justify-center mb-[55px]">
             <div className="flex items-center gap-4">
               <img
                 className="w-12 h-10"
