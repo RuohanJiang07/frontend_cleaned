@@ -319,7 +319,7 @@ function WorkspacePage() {
 
         <div className="absolute w-full top-[53px] left-1.5">
           <div className="absolute w-full h-auto  top-0 left-0">
-            <div className="absolute w-[calc(100%-38px)] pb-[95px] h-auto top-0 left-9 bg-white rounded-[8px_0px_0px_0px] border border-solid border-[#e2e2e2] border-b-0">
+            <div className="absolute w-[calc(100%-38px)]  h-auto top-0 left-9 bg-white rounded-[8px_0px_0px_0px] border border-solid border-[#e2e2e2] border-b-0">
               {windows.map((window) => (
                 <div key={window.id} className={`${window.isActive ? 'block' : 'hidden'}`}>
                   <div className={`flex h-full ${window.panels.length === 2 ? 'divide-x divide-[#e2e2e2]' : ''}`}>

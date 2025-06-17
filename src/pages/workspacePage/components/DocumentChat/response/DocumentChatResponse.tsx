@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
-import { 
+import {
   ArrowLeftIcon,
   ShareIcon,
   ThumbsUpIcon,
@@ -59,7 +59,7 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-white">
+    <div className=" flex flex-col bg-white">
       {/* Fixed Header - No border */}
       <div className="flex items-center justify-between p-4 bg-white z-10">
         <div className="flex items-center gap-4">
@@ -75,7 +75,7 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
             Learning Journey: Exploration of Black Hole and its Related Concepts
           </h1>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button className="bg-[#6B94E4] hover:bg-[#5a82d1] text-white rounded-lg px-4 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm">
             Publish to Community
@@ -94,7 +94,7 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
             className="p-2"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 9l6 6 6-6"/>
+              <path d="M6 9l6 6 6-6" />
             </svg>
           </Button>
         </div>
@@ -158,7 +158,7 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
         </div>
 
         {/* Main Chat Area - moved even further in from right edge */}
-        <div className="flex-1 flex flex-col mr-16">
+        <div className="flex flex-col  h-[calc(100vh-200px)] mr-16">
           {/* User Question - Time above message */}
           <div className="flex flex-col items-end mb-6 pt-6">
             <span className="text-xs text-gray-500 font-['Inter',Helvetica] mb-2">
@@ -180,11 +180,20 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
                   <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
                     Based on the provided sources, Chen Duxiu did not write a "book" discussed in these excerpts, but rather an article titled "On Theater" <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span>. This article was written under his pen name, <strong>Sanai</strong>, and was first published in <strong>1904</strong> <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span>.
                   </p>
-                  
+
                   <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
                     The article "On Theater" is primarily about Chen Duxiu's views on the <strong>importance and potential of theater as a tool for social change and education</strong> in China <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span> <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He considered theater to be an <strong>important didactic tool</strong> <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span>. In his view, "theater is in fact a great big school for all the people under heaven; theater workers are in fact influential teachers of the people" <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span> <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>.
                   </p>
 
+                  <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
+                    Chen Duxiu argued that theater is an art form that people love and that can easily reach their minds and hearts, having the power to strongly influence their thoughts and emotions quickly <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He contrasted this view with that of "pedantic and stuffy scholars" who looked down upon theater and actors, considering them vulgar, bawdy, licentious, wasteful, and useless <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. Chen argued that judging a person based on their profession rather than moral character is prejudiced <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. He noted that in Western countries, actors were considered equals to the learned, as theater was believed important for fostering morals and values <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>.
+                  </p>
+                  <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
+                    Chen Duxiu argued that theater is an art form that people love and that can easily reach their minds and hearts, having the power to strongly influence their thoughts and emotions quickly <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He contrasted this view with that of "pedantic and stuffy scholars" who looked down upon theater and actors, considering them vulgar, bawdy, licentious, wasteful, and useless <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. Chen argued that judging a person based on their profession rather than moral character is prejudiced <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. He noted that in Western countries, actors were considered equals to the learned, as theater was believed important for fostering morals and values <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>.
+                  </p>
+                  <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
+                    Chen Duxiu argued that theater is an art form that people love and that can easily reach their minds and hearts, having the power to strongly influence their thoughts and emotions quickly <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He contrasted this view with that of "pedantic and stuffy scholars" who looked down upon theater and actors, considering them vulgar, bawdy, licentious, wasteful, and useless <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. Chen argued that judging a person based on their profession rather than moral character is prejudiced <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. He noted that in Western countries, actors were considered equals to the learned, as theater was believed important for fostering morals and values <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>.
+                  </p>
                   <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
                     Chen Duxiu argued that theater is an art form that people love and that can easily reach their minds and hearts, having the power to strongly influence their thoughts and emotions quickly <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He contrasted this view with that of "pedantic and stuffy scholars" who looked down upon theater and actors, considering them vulgar, bawdy, licentious, wasteful, and useless <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. Chen argued that judging a person based on their profession rather than moral character is prejudiced <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. He noted that in Western countries, actors were considered equals to the learned, as theater was believed important for fostering morals and values <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>.
                   </p>
@@ -197,7 +206,7 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
                     className="bg-[#E8F4FD] hover:bg-[#d1e9f8] text-gray-700 rounded-full px-6 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm border-none"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                     </svg>
                     Save to Notes
                   </Button>
@@ -251,7 +260,7 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
               />
-              
+
               {/* Suggestion Buttons Inside Input Box */}
               <div className="absolute bottom-3 left-3 flex gap-2">
                 <Button
