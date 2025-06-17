@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  SearchIcon, 
+import { Button } from '../../../../components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '../../../../components/ui/avatar';
+import {
+  SearchIcon,
   ChevronDownIcon,
   PlusIcon,
   UploadIcon,
@@ -26,7 +26,11 @@ interface FileItem {
   ownerAvatar: string;
 }
 
-function Drive() {
+interface DriveProps {
+  onBack?: () => void;
+}
+
+function Drive({ onBack }: DriveProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('By Name');
 
@@ -255,7 +259,7 @@ function Drive() {
             <div className="text-sm text-gray-600 font-['Inter',Helvetica]">
               My Drive / Workspace: PHYS 2801
             </div>
-            
+
             <div className="flex items-center gap-3">
               {/* Search bar */}
               <div className="relative w-[280px]">
@@ -268,7 +272,7 @@ function Drive() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              
+
               {/* Sort dropdown */}
               <Button
                 variant="outline"
@@ -277,13 +281,13 @@ function Drive() {
                 <span className="text-gray-700">{sortBy}</span>
                 <ChevronDownIcon className="w-4 h-4 text-gray-500" />
               </Button>
-              
+
               {/* New button */}
               <Button className="h-9 px-3 bg-black text-white rounded-lg flex items-center gap-2 font-['Inter',Helvetica] text-sm hover:bg-gray-800">
                 <PlusIcon className="w-4 h-4" />
                 New
               </Button>
-              
+
               {/* Upload button */}
               <Button
                 variant="outline"
@@ -367,7 +371,7 @@ function Drive() {
                         {file.owner}
                       </span>
                     </div>
-                    
+
                     {/* Action buttons */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button

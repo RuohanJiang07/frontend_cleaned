@@ -22,7 +22,11 @@ interface NoteItem {
   ownerAvatar: string;
 }
 
-function Note() {
+interface NoteProps {
+  onBack?: () => void;
+}
+
+function Note({ onBack }: NoteProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('By Name');
   const [showEditor, setShowEditor] = useState(false);
@@ -99,7 +103,11 @@ function Note() {
   };
 
   const handleBackToNotes = () => {
-    setShowEditor(false);
+    if (onBack) {
+      onBack();
+    } else {
+      setShowEditor(false);
+    }
   };
 
   // Show editor if showEditor is true

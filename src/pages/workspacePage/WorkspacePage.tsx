@@ -20,6 +20,7 @@ import { DefaultContent } from '../../components/workspacePage/DefaultContent';
 interface TabData {
   id: string;
   title: string;
+  activeView?: string | null; // Track which view is active for this tab
 }
 
 interface PanelData {
@@ -39,17 +40,32 @@ function WorkspacePage() {
   const [searchParams] = useSearchParams();
   const [workspaceTitle, setWorkspaceTitle] = useState("WORKSPACE NAME");
   const [dragOverPanelId, setDragOverPanelId] = useState<string | null>(null);
-  const [windows, setWindows] = useState<WindowData[]>([
-    {
+  const [windows, setWindows] = useState<WindowData[]>(() => {
+    // Load from localStorage on initial render
+    const saved = localStorage.getItem('workspaceState');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved workspace state:', e);
+      }
+    }
+    // Default state
+    return [{
       id: Date.now().toString(),
       panels: [{
         id: Date.now().toString(),
-        tabs: [{ id: "1", title: "New tab" }],
+        tabs: [{ id: "1", title: "New tab", activeView: null }],
         activeTabId: "1"
       }],
       isActive: true
-    }
-  ]);
+    }];
+  });
+
+  // Save to localStorage whenever windows state changes
+  useEffect(() => {
+    localStorage.setItem('workspaceState', JSON.stringify(windows));
+  }, [windows]);
 
   useEffect(() => {
     const title = searchParams.get('title');
@@ -88,6 +104,7 @@ function WorkspacePage() {
               const newTab = {
                 id: Date.now().toString(),
                 title: "New tab",
+                activeView: null,
               };
               return {
                 ...panel,
@@ -161,7 +178,7 @@ function WorkspacePage() {
               window.panels[0],
               {
                 id: Date.now().toString(),
-                tabs: [{ id: Date.now().toString(), title: "New tab" }],
+                tabs: [{ id: Date.now().toString(), title: "New tab", activeView: null }],
                 activeTabId: Date.now().toString()
               }
             ]
@@ -282,6 +299,34 @@ function WorkspacePage() {
     }));
   };
 
+  const updateTabView = (windowId: string, panelId: string, tabId: string, activeView: string | null) => {
+    setWindows(windows.map(window => {
+      if (window.id === windowId) {
+        return {
+          ...window,
+          panels: window.panels.map(panel => {
+            if (panel.id === panelId) {
+              return {
+                ...panel,
+                tabs: panel.tabs.map(tab => {
+                  if (tab.id === tabId) {
+                    return {
+                      ...tab,
+                      activeView
+                    };
+                  }
+                  return tab;
+                })
+              };
+            }
+            return panel;
+          })
+        };
+      }
+      return window;
+    }));
+  };
+
   return (
     <div className="bg-white flex flex-row justify-center w-full">
       <div className="bg-white overflow-hidden w-[calc(100%-38px)] h-auto">
@@ -392,7 +437,12 @@ function WorkspacePage() {
                               </div>
                             </div>
                           )}
-                          <DefaultContent tabId={panel.activeTabId} isSplit={window.panels.length === 2} />
+                          <DefaultContent
+                            tabId={panel.activeTabId}
+                            isSplit={window.panels.length === 2}
+                            activeView={panel.tabs.find(tab => tab.id === panel.activeTabId)?.activeView || null}
+                            onViewChange={(view) => updateTabView(window.id, panel.id, panel.activeTabId, view)}
+                          />
 
                         </div>
                       </div>

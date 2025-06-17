@@ -24,9 +24,10 @@ interface HistoryItem {
 
 interface DocumentChatProps {
   isSplit?: boolean;
+  onBack?: () => void;
 }
 
-function DocumentChat({ isSplit = false }: DocumentChatProps) {
+function DocumentChat({ isSplit = false, onBack }: DocumentChatProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<DocumentTag[]>([
     { id: '1', name: 'Introduction to Me...', type: 'pdf' },
     { id: '2', name: 'Cosmology and Its...', type: 'pdf' },
@@ -105,7 +106,11 @@ function DocumentChat({ isSplit = false }: DocumentChatProps) {
   };
 
   const handleBackToEntry = () => {
-    setShowResponse(false);
+    if (onBack) {
+      onBack();
+    } else {
+      setShowResponse(false);
+    }
   };
 
   if (showResponse) {

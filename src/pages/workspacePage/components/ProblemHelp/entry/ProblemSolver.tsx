@@ -16,7 +16,11 @@ interface ProblemHistoryItem {
   type: 'Step-by-step' | 'Solution';
 }
 
-function ProblemSolver() {
+interface ProblemSolverProps {
+  onBack?: () => void;
+}
+
+function ProblemSolver({ onBack }: ProblemSolverProps) {
   const [problemText, setProblemText] = useState('');
   const [selectedModel, setSelectedModel] = useState('GPT-4o');
   const [selectedMode, setSelectedMode] = useState<'step-by-step' | 'solution'>('step-by-step');
@@ -84,7 +88,11 @@ function ProblemSolver() {
   };
 
   const handleBackToEntry = () => {
-    setShowResponse(false);
+    if (onBack) {
+      onBack();
+    } else {
+      setShowResponse(false);
+    }
   };
 
   // Show response page if showResponse is true
@@ -252,8 +260,8 @@ function ProblemSolver() {
                     <div className="col-span-3 flex items-center px-4">
                       <span
                         className={`inline-block px-3 py-1 rounded-lg text-sm font-medium font-['Inter',Helvetica] ${item.type === 'Step-by-step'
-                            ? 'bg-[#D5EBF3] text-[#1e40af]'
-                            : 'bg-[#D5DAF3] text-[#6b21a8]'
+                          ? 'bg-[#D5EBF3] text-[#1e40af]'
+                          : 'bg-[#D5DAF3] text-[#6b21a8]'
                           }`}
                       >
                         {item.type}
@@ -270,8 +278,8 @@ function ProblemSolver() {
                 <div
                   key={page}
                   className={`w-8 h-8 flex items-center justify-center cursor-pointer text-sm font-['Inter',Helvetica] ${page === currentPage
-                      ? 'bg-[#ECF1F6] text-black rounded'
-                      : 'text-gray-600 hover:bg-gray-100 rounded'
+                    ? 'bg-[#ECF1F6] text-black rounded'
+                    : 'text-gray-600 hover:bg-gray-100 rounded'
                     }`}
                   onClick={() => setCurrentPage(page)}
                 >

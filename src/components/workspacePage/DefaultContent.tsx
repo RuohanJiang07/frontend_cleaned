@@ -21,11 +21,11 @@ import Drive from "../../pages/workspacePage/components/Drive/Drive";
 interface DefaultContentProps {
   tabId: string;
   isSplit: boolean;
+  activeView?: string | null;
+  onViewChange?: (view: string | null) => void;
 }
 
-export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
-  const [activeView, setActiveView] = useState<string | null>(null);
-
+export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit, activeView, onViewChange }) => {
   // Data for AI tools
   const aiTools = [
     {
@@ -81,36 +81,36 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
   ];
 
   const handleToolClick = (component: string) => {
-    setActiveView(component);
+    onViewChange?.(component);
   };
 
   const handleBackToDefault = () => {
-    setActiveView(null);
+    onViewChange?.(null);
   };
 
   const handleOpenDrive = () => {
-    setActiveView("drive");
+    onViewChange?.("drive");
   };
 
   // Render specific component based on activeView
   if (activeView === "deep-learn") {
-    return <DeepLearn isSplit={isSplit} />;
+    return <DeepLearn isSplit={isSplit} onBack={handleBackToDefault} />;
   }
 
   if (activeView === "problem-help") {
-    return <ProblemSolver />;
+    return <ProblemSolver onBack={handleBackToDefault} />;
   }
 
   if (activeView === "document-chat") {
-    return <DocumentChat isSplit={isSplit} />;
+    return <DocumentChat isSplit={isSplit} onBack={handleBackToDefault} />;
   }
 
   if (activeView === "smart-note") {
-    return <Note />;
+    return <Note onBack={handleBackToDefault} />;
   }
 
   if (activeView === "drive") {
-    return <Drive />;
+    return <Drive onBack={handleBackToDefault} />;
   }
 
   // Default view
