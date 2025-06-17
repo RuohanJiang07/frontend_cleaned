@@ -2,6 +2,7 @@
   display: flex;
   min-height: 100vh;
   background-color: #f7f6f6;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 /* Main Content Styles */
@@ -13,6 +14,7 @@
   padding: 0 2vw;
   height: 100vh;
   overflow-y: auto;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .header {
@@ -21,6 +23,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .logo-container {
@@ -28,6 +31,7 @@
   padding: 0.5vh 1.5vw;
   display: flex;
   align-items: center;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .header-logo {
@@ -41,6 +45,7 @@
   display: flex;
   align-items: center;
   margin-right: 35px;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .translate-button:hover,
@@ -56,6 +61,7 @@
   @apply data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95;
   @apply data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2;
   @apply data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .dropdown-item {
@@ -64,6 +70,7 @@
   @apply data-[disabled]:pointer-events-none data-[disabled]:opacity-50;
   @apply [&>svg]:size-4 [&>svg]:shrink-0;
   @apply whitespace-nowrap overflow-hidden text-ellipsis;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 /* Tab Styles */
@@ -76,6 +83,7 @@
   background-color: transparent;
   padding-left: 0.5rem;
   backdrop-filter: blur(4px);
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .tab-underline {
@@ -104,7 +112,7 @@
   border-radius: 9999px;
   padding: 0 1rem;
   text-align: center;
-  font-family: 'IBM Plex Sans', Helvetica;
+  font-family: 'IBM Plex Sans', sans-serif;
   color: black;
   font-size: 0.875rem;
 }
@@ -114,6 +122,7 @@
   position: relative;
   height: 29px;
   width: 219px;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .search-input {
@@ -126,6 +135,7 @@
   padding-right: 0.5rem;
   font-size: 0.875rem;
   color: #4B5563;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .search-icon {
@@ -136,6 +146,11 @@
   width: 1rem;
   height: 1rem;
   color: #9CA3AF;
+}
+
+/* Global text styles */
+p, span, button, input, select, textarea {
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .hero-section {
@@ -175,6 +190,7 @@
   background-color: white;
   border-radius: 2vh;
   margin-top: 2vh;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .workspace-header {
@@ -182,17 +198,20 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 3vh;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .workspace-header h2 {
   font-size: 1.8rem;
   font-weight: 600;
   color: #1a1a1a;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .workspace-actions {
   display: flex;
   gap: 1vw;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .btn-new-folder,
@@ -204,6 +223,7 @@
   cursor: pointer;
   transition: background-color 0.2s;
   font-size: 0.9rem;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .btn-create-workspace {
@@ -216,6 +236,7 @@
   border: none;
   background: none;
   cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 /* Workspace Cards */
@@ -224,6 +245,7 @@
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 3vh 2vw;
   padding-bottom: 2vh;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .workspace-card {
@@ -232,6 +254,7 @@
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
   background-color: white;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .workspace-card:hover {
@@ -247,6 +270,7 @@
 
 .card-content {
   padding: 2vh;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .card-header {
@@ -254,12 +278,14 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1vh;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .card-header h3 {
   margin: 0;
   font-size: 1.25rem;
   color: #1a1a1a;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .card-more-button {
@@ -269,6 +295,7 @@
   cursor: pointer;
   padding: 0.5vh;
   transition: color 0.2s;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .card-more-button:hover {
@@ -278,6 +305,7 @@
 .description {
   color: #718096;
   margin: 0;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .new-project-card {
@@ -288,6 +316,7 @@
   height: 100%;
   cursor: pointer;
   background-color: #f8fafc;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .new-project-card:hover {
@@ -303,4 +332,5 @@
   color: #64748b;
   font-size: 1.1rem;
   font-weight: 500;
+  font-family: 'IBM Plex Sans', sans-serif;
 }

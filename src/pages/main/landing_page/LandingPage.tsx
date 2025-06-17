@@ -79,7 +79,7 @@ function LandingPage() {
       <Sidebar />
       <main className="flex-1 flex flex-col">
         <header className="h-14 px-6 flex items-center justify-between border-b border-gray-100">
-          <p className="font-['IBM_Plex_Sans',Helvetica] text-lg ml-4">My Workspaces</p>
+          <p className="font-['IBM_Plex_Sans'] text-lg ml-4">My Workspaces</p>
           <div className='flex items-center gap-3'>
             <button className="p-1.5 hover:scale-105 transition-transform">
               <Languages className="w-5 h-5" />
@@ -99,7 +99,7 @@ function LandingPage() {
                       />
                       <AvatarFallback>JD</AvatarFallback>
                     </Avatar>
-                    <span className="font-['IBM_Plex_Sans',Helvetica] text-sm">
+                    <span className="font-['IBM_Plex_Sans'] text-sm">
                       John Doe
                     </span>
                     <ChevronDownIcon className="w-3.5 h-3.5" />
@@ -122,14 +122,14 @@ function LandingPage() {
                 className="absolute bottom-0 top-0 -z-10 flex overflow-hidden rounded-3xl py-2 transition-all duration-300"
                 style={{ left: tabUnderlineLeft, width: tabUnderlineWidth }}
               >
-                <span className="h-full w-full rounded-3xl bg-[#D9D9D9]" />
+                <span className="h-full w-full rounded-3xl bg-[#ECF1F6]" />
               </span>
               {allTabs.map((tab, index) => {
                 return (
                   <button
                     key={index}
                     ref={(el) => (tabsRef.current[index] = el)}
-                    className={`my-auto cursor-pointer select-none rounded-full px-4 text-center font-['IBM_Plex_Sans',Helvetica] text-black text-sm`}
+                    className={`my-auto cursor-pointer select-none rounded-full px-4 text-center font-['IBM_Plex_Sans'] text-black text-sm`}
                     onClick={() => setActiveTabIndex(index)}
                   >
                     {tab.name}
@@ -207,7 +207,6 @@ function LandingPage() {
                   { title: "New Folder", onClick: () => console.log("New Folder") },
                   { title: "New Document", onClick: () => console.log("New Document") }
                 ]}
-                className="[&>button]:bg-[#0064A2]"
               />
             </div>
           </div>
