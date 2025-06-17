@@ -102,7 +102,7 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
   }
 
   if (activeView === "document-chat") {
-    return <DocumentChat />;
+    return <DocumentChat isSplit={isSplit} />;
   }
 
   if (activeView === "smart-note") {

@@ -13,9 +13,10 @@ import {
 
 interface DocumentChatResponseProps {
   onBack: () => void;
+  isSplit?: boolean;
 }
 
-function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
+function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseProps) {
   const [question, setQuestion] = useState('');
 
   // Sample uploaded files
@@ -101,9 +102,9 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
       </div>
 
       {/* Main Content Area - with doubled side margins for even more centered content */}
-      <div className="flex-1 flex overflow-hidden px-32">
+      <div className={`flex-1 flex overflow-hidden ${isSplit ? 'px-8' : 'px-32'}`}>
         {/* Left Sidebar - No border, moved even further in from edge */}
-        <div className="w-[280px] p-4 bg-white flex-shrink-0 ml-16">
+        <div className={`${isSplit ? 'w-[200px]' : 'w-[280px]'} p-4 bg-white flex-shrink-0 ${isSplit ? 'ml-0' : 'ml-16'}`}>
           {/* Upload Buttons */}
           <div className="space-y-2 mb-6">
             <Button
@@ -111,32 +112,32 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
               className="w-full h-10 bg-[#ECF1F6] border-[#ADADAD] text-[#ADADAD] rounded-lg flex items-center justify-center gap-2 font-['Inter',Helvetica] text-sm hover:bg-[#e2e8f0]"
             >
               <FolderIcon className="w-4 h-4" />
-              Select From Drive
+              {isSplit ? "Select" : "Select From Drive"}
             </Button>
             <Button
               variant="outline"
               className="w-full h-10 bg-[#ECF1F6] border-[#ADADAD] text-[#ADADAD] rounded-lg flex items-center justify-center gap-2 font-['Inter',Helvetica] text-sm hover:bg-[#e2e8f0]"
             >
               <UploadIcon className="w-4 h-4" />
-              Upload from Device
+              {isSplit ? "Upload" : "Upload from Device"}
             </Button>
             <Button
               variant="outline"
               className="w-full h-10 bg-[#ECF1F6] border-[#ADADAD] text-[#ADADAD] rounded-lg flex items-center justify-center gap-2 font-['Inter',Helvetica] text-sm hover:bg-[#e2e8f0]"
             >
               <PlusIcon className="w-4 h-4" />
-              Explore New Source
+              {isSplit ? "Explore" : "Explore New Source"}
             </Button>
           </div>
 
           {/* Files Uploaded Section */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-sm text-black font-['Inter',Helvetica]">
+              <h3 className={`font-medium text-black font-['Inter',Helvetica] ${isSplit ? 'text-xs' : 'text-sm'}`}>
                 Files Uploaded
               </h3>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-600 font-['Inter',Helvetica]">Select All</span>
+                <span className={`text-gray-600 font-['Inter',Helvetica] ${isSplit ? 'text-[10px]' : 'text-xs'}`}>Select All</span>
                 <input type="checkbox" className="w-4 h-4" />
               </div>
             </div>
@@ -146,8 +147,8 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
                 <div key={file.id} className="flex items-center justify-between p-2">
                   <div className="flex items-center gap-3">
                     {getFileIcon(file.type)}
-                    <span className="text-sm text-black font-['Inter',Helvetica]">
-                      {file.name}
+                    <span className={`text-black font-['Inter',Helvetica] ${isSplit ? 'text-xs' : 'text-sm'}`}>
+                      {isSplit ? file.name.substring(0, 15) + '...' : file.name}
                     </span>
                   </div>
                   <input type="checkbox" className="w-4 h-4" />
@@ -158,7 +159,7 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
         </div>
 
         {/* Main Chat Area - moved even further in from right edge */}
-        <div className="flex flex-col  h-[calc(100vh-200px)] mr-16">
+        <div className={`flex flex-col h-[calc(100vh-200px)] ${isSplit ? 'w-full ml-4' : 'mr-16'}`}>
           {/* User Question - Time above message */}
           <div className="flex flex-col items-end mb-6 pt-6">
             <span className="text-xs text-gray-500 font-['Inter',Helvetica] mb-2">
@@ -262,22 +263,22 @@ function DocumentChatResponse({ onBack }: DocumentChatResponseProps) {
               />
 
               {/* Suggestion Buttons Inside Input Box */}
-              <div className="absolute bottom-3 left-3 flex gap-2">
+              <div className={`absolute bottom-3 left-3 flex gap-2 ${isSplit ? 'flex-wrap' : ''}`}>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs text-gray-600 border-gray-300 rounded-full px-3 py-1 font-['Inter',Helvetica] hover:bg-gray-50"
+                  className={`text-xs text-gray-600 border-gray-300 rounded-full px-3 py-1 font-['Inter',Helvetica] hover:bg-gray-50 ${isSplit ? 'text-[10px] px-2' : ''}`}
                   onClick={() => handleSuggestionClick("What's the content of this file?")}
                 >
-                  What's the content of this file?
+                  {isSplit ? "What's in this file?" : "What's the content of this file?"}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs text-gray-600 border-gray-300 rounded-full px-3 py-1 font-['Inter',Helvetica] hover:bg-gray-50"
+                  className={`text-xs text-gray-600 border-gray-300 rounded-full px-3 py-1 font-['Inter',Helvetica] hover:bg-gray-50 ${isSplit ? 'text-[10px] px-2' : ''}`}
                   onClick={() => handleSuggestionClick("Tell me more about Black Holes.")}
                 >
-                  Tell me more about Black Holes.
+                  {isSplit ? "Tell me about Black Holes" : "Tell me more about Black Holes."}
                 </Button>
               </div>
             </div>
