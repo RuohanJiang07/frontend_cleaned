@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
+import ForceGraph2D, { LinkObject, NodeObject } from 'react-force-graph-2d';
 import {
   ArrowLeftIcon,
   ShareIcon,
@@ -18,9 +19,37 @@ interface DeepLearnResponseProps {
   isSplit?: boolean;
 }
 
+interface CustomNode extends NodeObject {
+  id: string;
+  x?: number;
+  y?: number;
+  color?: string;
+  __bckgDimensions?: [number, number];
+}
+
+const myData: { nodes: CustomNode[]; links: LinkObject[] } = {
+  nodes: [
+    { id: 'Black Hole' },
+    { id: 'White dwarf' },
+    { id: 'Type I Supernova' },
+    { id: 'Gravity Wave' },
+    { id: 'Stretched Horizon' },
+    { id: 'Cosmology' },
+  ],
+  links: [
+    { source: 'Black Hole', target: 'White dwarf' },
+    { source: 'Black Hole', target: 'Type I Supernova' },
+    { source: 'Type I Supernova', target: 'White dwarf' },
+    { source: 'Type I Supernova', target: 'Gravity Wave' },
+    { source: 'Black Hole', target: 'Stretched Horizon' },
+    { source: 'Black Hole', target: 'Cosmology' },
+  ],
+};
+
 function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) {
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [selectedTopic, setSelectedTopic] = useState('New Topic');
+  const [hoverNode, setHoverNode] = useState<CustomNode | null>(null);
 
   return (
     <div className={`${isSplit ? 'h-[calc(100vh-183px)]' : 'h-[calc(100vh-183px)]'} flex flex-col bg-white`}>
@@ -157,6 +186,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                     有理论提出，信息本身不是先天固有的，而是后天生成的，物质与信息相互关联。落入黑洞的物质信息会转化为热辐射、热熵等量子态，通过量子信息科学和经典热力学的结合，信息得以
                   </p>
                   <div className='w-full h-[15px]'></div>
+
                 </div>
 
               </div>
@@ -315,48 +345,60 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             {/* Scrollable Content Section */}
             <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-0 rounded-0">
               {/* Concept Map Visualization */}
-              <div className="bg-white rounded-0  h-64 relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  {/* Central node */}
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="w-16 h-8 bg-gray-800 text-white rounded text-xs flex items-center justify-center">
-                      Black Hole
-                    </div>
-                  </div>
+              <div className='w-full  mb-12 bg-white'>
+                <ForceGraph2D
+                  graphData={myData}
+                  width={320}
+                  height={200}
+                  nodeAutoColorBy="group"
+                  onNodeHover={(node: NodeObject | null) => {
+                    setHoverNode(node as CustomNode | null);
+                  }}
+                  nodeCanvasObject={(node: CustomNode, ctx, globalScale) => {
+                    const label = node.id;
+                    const fontSize = 12 / globalScale;
+                    ctx.font = `${fontSize}px Sans-Serif`;
 
-                  {/* Connected concepts */}
-                  <div className="absolute top-4 right-4">
-                    <div className="w-12 h-6 bg-blue-200 text-blue-800 rounded text-xs flex items-center justify-center">
-                      Type I Supernova
-                    </div>
-                  </div>
+                    const textWidth = ctx.measureText(label).width;
+                    const bckgDimensions: [number, number] = [
+                      textWidth + fontSize * 0.2,
+                      fontSize + fontSize * 0.2,
+                    ];
+                    const x = node.x ?? 0;
+                    const y = node.y ?? 0;
 
-                  <div className="absolute top-4 left-4">
-                    <div className="w-12 h-6 bg-purple-200 text-purple-800 rounded text-xs flex items-center justify-center">
-                      White Dwarf
-                    </div>
-                  </div>
+                    if (hoverNode?.id === node.id) {
+                      ctx.save();
+                      ctx.shadowColor = node.color || '#4f46e5';
+                      ctx.shadowBlur = 15;
+                      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                      ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
+                      ctx.restore();
+                    } else {
 
-                  <div className="absolute bottom-8 left-8">
-                    <div className="w-16 h-6 bg-green-200 text-green-800 rounded text-xs flex items-center justify-center">
-                      Stretched Horizon Cosmology
-                    </div>
-                  </div>
+                      ctx.fillStyle = 'rgba(255, 255, 255, 0)';
+                      ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
+                    }
 
-                  <div className="absolute bottom-4 right-8">
-                    <div className="w-12 h-6 bg-yellow-200 text-yellow-800 rounded text-xs flex items-center justify-center">
-                      Gravity Wave
-                    </div>
-                  </div>
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = node.color ?? '#000';
+                    ctx.fillText(label, x, y);
 
-                  {/* Connection lines */}
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                    <line x1="50%" y1="50%" x2="80%" y2="20%" stroke="#ccc" strokeWidth="1" />
-                    <line x1="50%" y1="50%" x2="20%" y2="20%" stroke="#ccc" strokeWidth="1" />
-                    <line x1="50%" y1="50%" x2="25%" y2="75%" stroke="#ccc" strokeWidth="1" />
-                    <line x1="50%" y1="50%" x2="75%" y2="80%" stroke="#ccc" strokeWidth="1" />
-                  </svg>
-                </div>
+                    node.__bckgDimensions = bckgDimensions;
+                  }}
+                  nodePointerAreaPaint={(node: CustomNode, color, ctx) => {
+                    const bckg = node.__bckgDimensions;
+                    if (bckg) {
+                      ctx.fillStyle = color;
+                      ctx.fillRect(
+                        (node.x ?? 0) - bckg[0] / 2,
+                        (node.y ?? 0) - bckg[1] / 2,
+                        ...bckg
+                      );
+                    }
+                  }}
+                />
               </div>
             </div>
           </div>
