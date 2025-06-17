@@ -10,7 +10,7 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
   const [followUpQuestion, setFollowUpQuestion] = useState('');
 
   return (
-    <div className="h-screen flex flex-col bg-white">
+    <div className=" flex flex-col bg-white">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-white">
         <div className="flex items-center gap-4">
@@ -26,7 +26,7 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
             Learning Journey: Exploration of Black Hole and its Related Concepts
           </h1>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button className="bg-[#6B94E4] hover:bg-[#5a82d1] text-white rounded-lg px-4 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm">
             Publish to Community
@@ -57,8 +57,8 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
       </div>
 
       {/* Main Content Area - Remove scrollbar styling, use white background */}
-      <div className="flex-1 overflow-y-auto bg-white">
-        <div className="max-w-6xl mx-auto px-8 py-6">
+      <div className="flex flex-col h-[calc(100vh-320px)] bg-white">
+        <div className=" flex-1 overflow-y-auto max-w-6xl mx-auto px-8 py-6">
           {/* User Question - Full Width */}
           <div className="flex flex-col items-end mb-6">
             <span className="text-xs text-gray-500 font-['Inter',Helvetica] mb-2">
@@ -148,15 +148,15 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
                       <CheckIcon className="w-3 h-3 mr-1" />
                       Check Answer
                     </Button>
-                    
+
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-8 px-3 bg-[#ECF1F6] text-xs text-gray-600 hover:bg-[#e2e8f0] font-['Inter',Helvetica] rounded-lg"
                     >
                       <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
                       </svg>
                       Regenerate
                     </Button>
@@ -223,14 +223,11 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
               </div>
             </div>
           </div>
-
-          {/* Extra spacing for scrolling */}
-          <div className="h-32"></div>
         </div>
       </div>
 
       {/* Fixed Bottom Input Area - Redesigned to match the image, NO TOP BORDER */}
-      <div className="p-6 bg-white">
+      <div className=" bg-white">
         <div className="max-w-4xl mx-auto">
           {/* Input container with proper height and styling */}
           <div className="relative bg-white border border-gray-300 rounded-2xl h-32 p-4">
@@ -240,7 +237,7 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
               value={followUpQuestion}
               onChange={(e) => setFollowUpQuestion(e.target.value)}
             />
-            
+
             {/* Icons positioned in bottom right corner */}
             <div className="absolute bottom-4 right-4 flex items-center gap-3">
               <Button

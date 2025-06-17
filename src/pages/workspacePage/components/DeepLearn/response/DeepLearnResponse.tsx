@@ -387,7 +387,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
 
                     node.__bckgDimensions = bckgDimensions;
                   }}
-                  nodePointerAreaPaint={(node: CustomNode, color, ctx) => {
+                  linkPointerAreaPaint={(node: CustomNode, color, ctx) => {
                     const bckg = node.__bckgDimensions;
                     if (bckg) {
                       ctx.fillStyle = color;
