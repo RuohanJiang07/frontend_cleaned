@@ -115,8 +115,8 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
 
   // Default view
   return (
-    <div className="flex flex-col items-center w-full px-8 h-[calc(100vh-183px)] overflow-y-auto">
-      <div className={`${isSplit ? 'w-full' : 'max-w-[800px]'} pt-[70px]`}>
+    <div className="flex flex-col items-center w-full px-8 h-[calc(100vh-88px)] overflow-y-auto">
+      <div className={`${isSplit ? 'w-full pt-0' : 'max-w-[800px]'} pt-[30px]`}>
         {/* Header with title and icon */}
         <div className="flex items-center mb-8 w-full -ml-[20px]">
           <img
@@ -130,7 +130,7 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
         </div>
 
         {/* AI Tools section */}
-        <div className="flex flex-wrap gap-4 mb-10">
+        <div className="flex flex-wrap gap-4 mb-10 justify-center">
           {aiTools.map((tool, index) => (
             <Card
               key={index}
@@ -225,12 +225,12 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit }) => {
           </div>
 
           {/* File grid */}
-          <div className={`grid ${isSplit ? 'grid-cols-2' : 'grid-cols-3'} gap-x-4 gap-y-4 w-full`}>
+          <div className={`grid grid-cols-3 ${isSplit ? 'w-[90%]' : 'w-full'} gap-x-4 gap-y-4 `}>
             {lectureFiles.map((file, index) => (
               <Button
                 key={index}
                 variant="ghost"
-                className={`h-[37px] bg-[#e7e7e780] ${isSplit ? 'w-[280px]' : 'w-full'} rounded-lg px-3 py-2 flex items-center justify-start gap-2`}
+                className={`h-[37px] bg-[#e7e7e780] ${isSplit ? 'w-[90%]' : 'w-full'} rounded-lg px-3 py-2 flex items-center justify-start gap-2`}
               >
                 <img
                   className="w-6 h-6"

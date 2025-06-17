@@ -113,7 +113,7 @@ function DocumentChat({ isSplit = false }: DocumentChatProps) {
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className=" overflow-y-auto h-[calc(100vh-88px)]">
       <main className="flex-1 p-12 max-w-7xl mx-auto">
 
         {/* Header */}

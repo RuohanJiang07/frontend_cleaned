@@ -108,7 +108,7 @@ function Note() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-white w-full">
+    <div className="h-[calc(100vh-88px)] overflow-y-auto bg-white w-full">
       <main className="flex-1 p-12 max-w-7xl mx-auto">
         {/* Header with icon and title - matching Document Chat style */}
         <div className="flex items-center justify-center mb-4">

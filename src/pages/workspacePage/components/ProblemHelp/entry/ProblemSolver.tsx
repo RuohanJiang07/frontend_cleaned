@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
-import { 
-  ChevronDownIcon, 
-  UserIcon, 
+import {
+  ChevronDownIcon,
+  UserIcon,
   PaperclipIcon,
   SearchIcon,
   UploadIcon
@@ -93,7 +93,7 @@ function ProblemSolver() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-[calc(100vh-88px)] flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto">
         <main className="flex-1 p-12 max-w-7xl mx-auto">
           {/* Header */}
@@ -134,16 +134,16 @@ function ProblemSolver() {
                 value={problemText}
                 onChange={(e) => setProblemText(e.target.value)}
               />
-              
+
               {/* GPT-4o button */}
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="absolute bottom-3 left-3 w-[106px] h-[25px] bg-[rgba(236,241,246,0.63)] border-none rounded-lg flex items-center justify-center gap-1 p-0 hover:bg-[rgba(236,241,246,0.8)]"
               >
                 <div className="w-4 h-4">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M8.00033 10.0001C8.55588 10.0001 9.0281 9.80564 9.41699 9.41675C9.80588 9.02786 10.0003 8.55564 10.0003 8.00008C10.0003 7.44453 9.80588 6.9723 9.41699 6.58341C9.0281 6.19453 8.55588 6.00008 8.00033 6.00008C7.44477 6.00008 6.97255 6.19453 6.58366 6.58341C6.19477 6.9723 6.00033 7.44453 6.00033 8.00008C6.00033 8.55564 6.19477 9.02786 6.58366 9.41675C6.97255 9.80564 7.44477 10.0001 8.00033 10.0001ZM8.00033 11.3334C7.0781 11.3334 6.29199 11.0084 5.64199 10.3584C4.99199 9.70841 4.66699 8.9223 4.66699 8.00008C4.66699 7.07786 4.99199 6.29175 5.64199 5.64175C6.29199 4.99175 7.0781 4.66675 8.00033 4.66675C8.92255 4.66675 9.70866 4.99175 10.3587 5.64175C11.0087 6.29175 11.3337 7.07786 11.3337 8.00008C11.3337 8.9223 11.0087 9.70841 10.3587 10.3584C9.70866 11.0084 8.92255 11.3334 8.00033 11.3334ZM3.33366 8.66675H0.666992V7.33341H3.33366V8.66675ZM15.3337 8.66675H12.667V7.33341H15.3337V8.66675ZM7.33366 3.33341V0.666748H8.66699V3.33341H7.33366ZM7.33366 15.3334V12.6667H8.66699V15.3334H7.33366ZM4.26699 5.16675L2.58366 3.55008L3.53366 2.56675L5.13366 4.23341L4.26699 5.16675ZM12.467 13.4334L10.8503 11.7501L11.7337 10.8334L13.417 12.4501L12.467 13.4334ZM10.8337 4.26675L12.4503 2.58341L13.4337 3.53341L11.767 5.13341L10.8337 4.26675ZM2.56699 12.4667L4.25033 10.8501L5.16699 11.7334L3.55033 13.4167L2.56699 12.4667Z" fill="#6B6B6B"/>
+                    <path d="M8.00033 10.0001C8.55588 10.0001 9.0281 9.80564 9.41699 9.41675C9.80588 9.02786 10.0003 8.55564 10.0003 8.00008C10.0003 7.44453 9.80588 6.9723 9.41699 6.58341C9.0281 6.19453 8.55588 6.00008 8.00033 6.00008C7.44477 6.00008 6.97255 6.19453 6.58366 6.58341C6.19477 6.9723 6.00033 7.44453 6.00033 8.00008C6.00033 8.55564 6.19477 9.02786 6.58366 9.41675C6.97255 9.80564 7.44477 10.0001 8.00033 10.0001ZM8.00033 11.3334C7.0781 11.3334 6.29199 11.0084 5.64199 10.3584C4.99199 9.70841 4.66699 8.9223 4.66699 8.00008C4.66699 7.07786 4.99199 6.29175 5.64199 5.64175C6.29199 4.99175 7.0781 4.66675 8.00033 4.66675C8.92255 4.66675 9.70866 4.99175 10.3587 5.64175C11.0087 6.29175 11.3337 7.07786 11.3337 8.00008C11.3337 8.9223 11.0087 9.70841 10.3587 10.3584C9.70866 11.0084 8.92255 11.3334 8.00033 11.3334ZM3.33366 8.66675H0.666992V7.33341H3.33366V8.66675ZM15.3337 8.66675H12.667V7.33341H15.3337V8.66675ZM7.33366 3.33341V0.666748H8.66699V3.33341H7.33366ZM7.33366 15.3334V12.6667H8.66699V15.3334H7.33366ZM4.26699 5.16675L2.58366 3.55008L3.53366 2.56675L5.13366 4.23341L4.26699 5.16675ZM12.467 13.4334L10.8503 11.7501L11.7337 10.8334L13.417 12.4501L12.467 13.4334ZM10.8337 4.26675L12.4503 2.58341L13.4337 3.53341L11.767 5.13341L10.8337 4.26675ZM2.56699 12.4667L4.25033 10.8501L5.16699 11.7334L3.55033 13.4167L2.56699 12.4667Z" fill="#6B6B6B" />
                   </svg>
                 </div>
                 <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">GPT-4o</span>
@@ -155,10 +155,9 @@ function ProblemSolver() {
                 className="absolute bottom-3 left-[130px] w-[168px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer"
                 onClick={() => setSelectedMode(selectedMode === 'step-by-step' ? 'solution' : 'step-by-step')}
               >
-                <div 
-                  className={`absolute top-1 w-24 h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${
-                    selectedMode === 'step-by-step' ? 'left-1.5' : 'left-[66px]'
-                  }`} 
+                <div
+                  className={`absolute top-1 w-24 h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${selectedMode === 'step-by-step' ? 'left-1.5' : 'left-[66px]'
+                    }`}
                 />
                 <div className="absolute left-4 h-full flex items-center z-20">
                   <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Step-by-step</span>
@@ -167,11 +166,11 @@ function ProblemSolver() {
                   <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Solution</span>
                 </div>
               </div>
-              
+
               {/* Profile selection button */}
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="absolute bottom-3 right-[18px] w-[81px] h-[25px] bg-[#EDF2F7] border-none rounded-lg flex items-center justify-center gap-1 p-0 hover:bg-[#e2e8f0]"
               >
                 <UserIcon className="w-3 h-3 text-[#6B6B6B]" />
@@ -188,26 +187,26 @@ function ProblemSolver() {
               <h3 className="text-black font-['Inter',Helvetica] text-xl font-medium">
                 History
               </h3>
-              
+
               <div className="flex items-center gap-2">
                 {/* DA button */}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="w-[30px] h-[29px] bg-[#ECF1F6] border-none rounded-lg flex items-center justify-center p-0"
                 >
                   <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">DA</span>
                 </Button>
-                
+
                 {/* Sort button */}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="w-[120px] h-[29px] bg-[#ECF1F6] border-none rounded-lg flex items-center justify-center p-0"
                 >
                   <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Date/Type</span>
                 </Button>
-                
+
                 {/* Search bar */}
                 <div className="w-[172px] h-[29px] bg-[#ECF1F6] rounded-lg flex items-center px-2">
                   <SearchIcon className="w-4 h-4 text-[#6B6B6B]" />
@@ -251,12 +250,11 @@ function ProblemSolver() {
                       </span>
                     </div>
                     <div className="col-span-3 flex items-center px-4">
-                      <span 
-                        className={`inline-block px-3 py-1 rounded-lg text-sm font-medium font-['Inter',Helvetica] ${
-                          item.type === 'Step-by-step' 
-                            ? 'bg-[#D5EBF3] text-[#1e40af]' 
+                      <span
+                        className={`inline-block px-3 py-1 rounded-lg text-sm font-medium font-['Inter',Helvetica] ${item.type === 'Step-by-step'
+                            ? 'bg-[#D5EBF3] text-[#1e40af]'
                             : 'bg-[#D5DAF3] text-[#6b21a8]'
-                        }`}
+                          }`}
                       >
                         {item.type}
                       </span>
@@ -271,11 +269,10 @@ function ProblemSolver() {
               {Array.from({ length: Math.min(6, totalPages) }, (_, i) => i + 1).map((page) => (
                 <div
                   key={page}
-                  className={`w-8 h-8 flex items-center justify-center cursor-pointer text-sm font-['Inter',Helvetica] ${
-                    page === currentPage
+                  className={`w-8 h-8 flex items-center justify-center cursor-pointer text-sm font-['Inter',Helvetica] ${page === currentPage
                       ? 'bg-[#ECF1F6] text-black rounded'
                       : 'text-gray-600 hover:bg-gray-100 rounded'
-                  }`}
+                    }`}
                   onClick={() => setCurrentPage(page)}
                 >
                   {page}
