@@ -87,36 +87,36 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onSubmit }: CreateWorkspaceModa
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="relative w-[711px] h-[509px] bg-white rounded-[20px] shadow-lg">
+      <div className="relative w-[780px] h-[540px] bg-white rounded-[20px] shadow-lg">
         {/* Close Button */}
         <button
-          className="absolute top-[28px] right-[37px]"
+          className="absolute top-[30px] right-[40px]"
           onClick={onClose}
         >
           <X className="w-5 h-5 text-black" />
         </button>
 
         {/* Inner Content Frame */}
-        <div className="absolute left-[43px] top-[28px] w-[625px] h-[437px] overflow-y-auto">
+        <div className="absolute left-[46px] top-[30px] w-[688px] h-[465px] overflow-y-auto">
           <div className="flex flex-col items-center">
             <h2 className="mt-[2px] font-['IBM_Plex_Sans'] text-[20px] font-normal text-black leading-normal">
               Create New Workspace
             </h2>
-            <p className="mt-[5px] text-center font-['IBM_Plex_Sans'] text-[15px] font-normal text-[#898989] leading-normal max-w-[485px]">
+            <p className="mt-[5px] text-center font-['IBM_Plex_Sans'] text-[15px] font-normal text-[#898989] leading-normal max-w-[520px]">
               Workspaces are where you have your study materials organized by
               subject, topic, or your interest
             </p>
           </div>
 
           {/* First row with Workspace Name and Tags */}
-          <div className="flex gap-[21px] mt-[15px] mx-auto">
+          <div className="flex gap-[22px] mt-[16px] mx-auto">
             {/* Workspace Name Field */}
             <div className="flex flex-col">
-              <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[17px]">
+              <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[18px]">
                 Workspace Name <span className="text-[#e72a2a]">*</span>
               </label>
               <Input
-                className="w-[295px] h-[43px] flex-shrink-0 rounded-[20px] border-2 border-[#e2e2e2] pl-[17px] font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal placeholder:text-[#898989]"
+                className="w-[320px] h-[46px] flex-shrink-0 rounded-[20px] border-2 border-[#e2e2e2] pl-[18px] font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal placeholder:text-[#898989]"
                 placeholder="Name your workspace"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
@@ -125,11 +125,11 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onSubmit }: CreateWorkspaceModa
 
             {/* Tags Field */}
             <div className="flex flex-col">
-              <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[17px]">
+              <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[18px]">
                 Tags (Optional)
               </label>
               <Input
-                className="w-[295px] h-[43px] flex-shrink-0 rounded-[20px] border-2 border-[#e2e2e2] pl-[17px] font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal placeholder:text-[#898989]"
+                className="w-[320px] h-[46px] flex-shrink-0 rounded-[20px] border-2 border-[#e2e2e2] pl-[18px] font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal placeholder:text-[#898989]"
                 placeholder='Type and press Enter to add tags'
                 value={tagInput}
                 onChange={handleTagInputChange}
@@ -139,12 +139,12 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onSubmit }: CreateWorkspaceModa
           </div>
 
           {/* Collaborator Section */}
-          <div className="mt-[15px] mx-auto">
-            <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[17px]">
+          <div className="mt-[16px] mx-auto">
+            <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[18px]">
               Collaborator (Optional)
             </label>
             <Input
-              className="w-[611px] h-[43px] rounded-[20px] border-2 border-[#e2e2e2] pl-[17px] font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal placeholder:text-[#898989]"
+              className="w-[662px] h-[46px] rounded-[20px] border-2 border-[#e2e2e2] pl-[18px] font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal placeholder:text-[#898989]"
               placeholder="Invite collaborator"
               value={formData.background}
               onChange={(e) => handleInputChange('background', e.target.value)}
@@ -152,13 +152,13 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onSubmit }: CreateWorkspaceModa
           </div>
 
           {/* Workspace Cover Section */}
-          <div className="mt-[15px] mx-auto">
-            <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[17px]">
+          <div className="mt-[16px] mx-auto">
+            <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[18px]">
               Select Workspace Cover
             </label>
 
-            <div className="mt-2 pl-[17px] grid grid-cols-3 gap-x-[25px] gap-y-[14px]">
-              <Card className="w-[182px] h-[122px] flex-shrink-0 bg-[#f4f4f4] rounded-[5px] border-2 border-[#d9d9d9] flex flex-col items-center justify-center">
+            <div className="mt-2 grid grid-cols-3 gap-x-[26px] gap-y-[15px]">
+              <Card className="w-[196px] h-[132px] flex-shrink-0 bg-[#f4f4f4] rounded-[5px] border-2 border-[#d9d9d9] flex flex-col items-center justify-center">
                 <UploadCloudIcon className="w-12 h-12 mb-2" />
                 <p className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal">Upload from computer</p>
               </Card>
@@ -166,7 +166,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onSubmit }: CreateWorkspaceModa
               {coverImages.map((image) => (
                 <div
                   key={image.id}
-                  className="w-[182px] h-[122px] flex-shrink-0 cursor-pointer"
+                  className="w-[196px] h-[132px] flex-shrink-0 cursor-pointer"
                   onClick={() => handleInputChange('coverImage', image.src)}
                 >
                   <img
@@ -182,7 +182,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onSubmit }: CreateWorkspaceModa
 
         {/* Create Button */}
         <button
-          className="absolute right-[37px] bottom-[36px] w-[90px] h-[35px] bg-[#ECF1F6] rounded-[17px] text-black font-['IBM_Plex_Sans'] text-[16px] font-normal leading-normal flex-shrink-0"
+          className="absolute right-[40px] bottom-[38px] w-[95px] h-[36px] bg-[#ECF1F6] rounded-[18px] text-black font-['IBM_Plex_Sans'] text-[16px] font-normal leading-normal flex-shrink-0"
           onClick={handleSubmit}
         >
           Create
