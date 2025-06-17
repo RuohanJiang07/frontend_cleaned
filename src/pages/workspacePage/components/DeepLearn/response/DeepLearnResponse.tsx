@@ -23,7 +23,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
   const [selectedTopic, setSelectedTopic] = useState('New Topic');
 
   return (
-    <div className={`${isSplit ? 'h-full' : 'h-[calc(100vh-183px)]'} flex flex-col bg-white`}>
+    <div className={`${isSplit ? 'h-[calc(100vh-183px)]' : 'h-[calc(100vh-183px)]'} flex flex-col bg-white`}>
       {/* Header - No border */}
       <div className="flex items-center justify-between p-4 bg-white">
         <div className="flex items-center gap-4">
@@ -218,7 +218,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             </div>
           </div>
         </div>
-        <div className={`${isSplit ? 'w-[220px]' : 'w-[320px]'} grid grid-rows-5 h-[calc(100vh-255px)] mr-[100px] gap-4`}>
+        <div className={`${isSplit ? 'w-[220px]' : 'w-[320px]'} grid grid-rows-5  ${isSplit ? 'h-[calc(100vh-315px)]' : 'h-[calc(100vh-255px)]'} mr-[100px] gap-4`}>
           {/* Fixed Right Sidebar - Related Contents */}
           <div className='border-solid border-[#4980ff38] border rounded-lg flex flex-col row-span-3'>
             {/* Fixed Blue Header Section */}
