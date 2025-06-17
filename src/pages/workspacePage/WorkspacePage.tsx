@@ -45,7 +45,10 @@ function WorkspacePage() {
     const saved = localStorage.getItem('workspaceState');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsedData = JSON.parse(saved);
+        // Migrate data to ensure all tabs have activeView field
+        const migratedData = migrateWorkspaceData(parsedData);
+        return migratedData;
       } catch (e) {
         console.error('Failed to parse saved workspace state:', e);
       }
@@ -61,6 +64,20 @@ function WorkspacePage() {
       isActive: true
     }];
   });
+
+  // Data migration function to ensure all tabs have activeView field
+  const migrateWorkspaceData = (data: WindowData[]): WindowData[] => {
+    return data.map(window => ({
+      ...window,
+      panels: window.panels.map(panel => ({
+        ...panel,
+        tabs: panel.tabs.map(tab => ({
+          ...tab,
+          activeView: tab.activeView ?? null
+        }))
+      }))
+    }));
+  };
 
   // Save to localStorage whenever windows state changes
   useEffect(() => {
@@ -79,7 +96,7 @@ function WorkspacePage() {
       id: Date.now().toString(),
       panels: [{
         id: Date.now().toString(),
-        tabs: [{ id: Date.now().toString(), title: "New tab" }],
+        tabs: [{ id: Date.now().toString(), title: "New tab", activeView: null }],
         activeTabId: Date.now().toString()
       }],
       isActive: true
