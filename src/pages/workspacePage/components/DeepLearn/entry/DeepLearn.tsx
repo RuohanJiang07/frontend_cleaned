@@ -7,6 +7,7 @@ import DeepLearnResponse from '../response/DeepLearnResponse';
 
 interface DeepLearnProps {
   isSplit?: boolean;
+  onBack?: () => void;
 }
 
 const learningCards = [
@@ -68,7 +69,7 @@ const learningCards = [
   },
 ];
 
-function DeepLearn({ isSplit = false }: DeepLearnProps) {
+function DeepLearn({ isSplit = false, onBack }: DeepLearnProps) {
   const [showResponse, setShowResponse] = useState(false);
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [selectedTab, setSelectedTab] = useState<'trending' | 'history'>('trending');
@@ -80,7 +81,11 @@ function DeepLearn({ isSplit = false }: DeepLearnProps) {
   };
 
   const handleBackToEntry = () => {
-    setShowResponse(false);
+    if (onBack) {
+      onBack();
+    } else {
+      setShowResponse(false);
+    }
   };
 
   // Show response page if showResponse is true
@@ -89,7 +94,7 @@ function DeepLearn({ isSplit = false }: DeepLearnProps) {
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className=" overflow-y-auto h-[calc(100vh-88px)]">
       <main className="flex-1 p-12 max-w-7xl mx-auto">
         {/* Header with icon and title */}
         <div className="flex items-center justify-center mb-12">
