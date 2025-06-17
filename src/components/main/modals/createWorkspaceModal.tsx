@@ -86,133 +86,107 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onSubmit }: CreateWorkspaceModa
 
   if (!isOpen) return null;
   return (
-    <div className="modal-overlay">
-      <div className="w-full max-w-[800px] h-[500px] pt-4 pb-6 px-6 mx-auto overflow-hidden overflow-y-scroll font-['IBM_Plex_Sans',Helvetica] bg-white rounded-[10px] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-        <button className="w-full flex flex-col " onClick={onClose}><X className="self-end" /></button>
-        <div className="flex flex-col items-center mb-6 ">
-          <h2 className="text-2xl font-normal text-black">
-            Create New Workspace
-          </h2>
-          <p className="text-lg text-[#898989] text-center max-w-[485px] mt-2">
-            Workspaces are where you have your study materials organized by
-            subject, topic, or your interest
-          </p>
-        </div>
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="relative w-[711px] h-[509px] bg-white rounded-[20px] shadow-lg">
+        {/* Close Button */}
+        <button
+          className="absolute top-[28px] right-[37px]"
+          onClick={onClose}
+        >
+          <X className="w-5 h-5 text-black" />
+        </button>
 
-        <div className="grid grid-cols-2 gap-6 px-4">
-          {/* Workspace Name Field */}
-          <div className="space-y-2">
-            <label className="text-lg font-normal">
-              Workspace Name <span className="text-[#e72a2a]">*</span>
+        {/* Inner Content Frame */}
+        <div className="absolute left-[43px] top-[28px] w-[625px] h-[437px] overflow-y-auto">
+          <div className="flex flex-col items-center">
+            <h2 className="mt-[2px] font-['IBM_Plex_Sans'] text-[20px] font-normal text-black leading-normal">
+              Create New Workspace
+            </h2>
+            <p className="mt-[5px] text-center font-['IBM_Plex_Sans'] text-[15px] font-normal text-[#898989] leading-normal max-w-[485px]">
+              Workspaces are where you have your study materials organized by
+              subject, topic, or your interest
+            </p>
+          </div>
+
+          {/* First row with Workspace Name and Tags */}
+          <div className="flex gap-[21px] mt-[15px] mx-auto">
+            {/* Workspace Name Field */}
+            <div className="flex flex-col">
+              <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[17px]">
+                Workspace Name <span className="text-[#e72a2a]">*</span>
+              </label>
+              <Input
+                className="w-[295px] h-[43px] flex-shrink-0 rounded-[20px] border-2 border-[#e2e2e2] pl-[17px] font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal placeholder:text-[#898989]"
+                placeholder="Name your workspace"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+              />
+            </div>
+
+            {/* Tags Field */}
+            <div className="flex flex-col">
+              <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[17px]">
+                Tags (Optional)
+              </label>
+              <Input
+                className="w-[295px] h-[43px] flex-shrink-0 rounded-[20px] border-2 border-[#e2e2e2] pl-[17px] font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal placeholder:text-[#898989]"
+                placeholder='Type and press Enter to add tags'
+                value={tagInput}
+                onChange={handleTagInputChange}
+                onKeyPress={handleTagKeyPress}
+              />
+            </div>
+          </div>
+
+          {/* Collaborator Section */}
+          <div className="mt-[15px] mx-auto">
+            <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[17px]">
+              Collaborator (Optional)
             </label>
             <Input
-              className="h-[50px] rounded-[20px] border-2 border-[#e2e2e2] px-4  placeholder:text-[20px] "
-              placeholder="Name your workspace"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              className="w-[611px] h-[43px] rounded-[20px] border-2 border-[#e2e2e2] pl-[17px] font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal placeholder:text-[#898989]"
+              placeholder="Invite collaborator"
+              value={formData.background}
+              onChange={(e) => handleInputChange('background', e.target.value)}
             />
           </div>
 
-          {/* Select Profile Field */}
-          <div className="space-y-2">
-            <label className="text-lg font-normal">
-              Select Profile <span className="text-[#e72a2a]">*</span>
+          {/* Workspace Cover Section */}
+          <div className="mt-[15px] mx-auto">
+            <label className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-black leading-normal pl-[17px]">
+              Select Workspace Cover
             </label>
-            <div className="">
-              <Select onValueChange={(value) => handleInputChange('description', value)}>
-                <SelectTrigger className="h-[50px] rounded-[20px] border-2 border-[#e2e2e2] flex items-center px-4 text-[20px]">
-                  <SelectValue placeholder=" Create New Profile" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="apple">Apple</SelectItem>
-                    <SelectItem value="banana">Banana</SelectItem>
-                    <SelectItem value="blueberry">Blueberry</SelectItem>
-                    <SelectItem value="grapes">Grapes</SelectItem>
-                    <SelectItem value="pineapple">Pineapple</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+
+            <div className="mt-2 pl-[17px] grid grid-cols-3 gap-x-[25px] gap-y-[14px]">
+              <Card className="w-[182px] h-[122px] flex-shrink-0 bg-[#f4f4f4] rounded-[5px] border-2 border-[#d9d9d9] flex flex-col items-center justify-center">
+                <UploadCloudIcon className="w-12 h-12 mb-2" />
+                <p className="font-['IBM_Plex_Sans'] text-[16px] font-normal text-[#898989] leading-normal">Upload from computer</p>
+              </Card>
+
+              {coverImages.map((image) => (
+                <div
+                  key={image.id}
+                  className="w-[182px] h-[122px] flex-shrink-0 cursor-pointer"
+                  onClick={() => handleInputChange('coverImage', image.src)}
+                >
+                  <img
+                    className="w-full h-full object-cover rounded-[5px]"
+                    alt={image.alt}
+                    src={image.src}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Tags Section */}
-        <div className="mt-6 px-4">
-          <label className="text-lg font-normal block mb-2">
-            Tags (Optional)
-          </label>
-          <Input
-            className="h-[50px] rounded-[20px] border-2 border-[#e2e2e2] px-4 text-xl text-[#898989]"
-            placeholder='Type and press Enter to add tags'
-            value={tagInput}
-            onChange={handleTagInputChange}
-            onKeyPress={handleTagKeyPress}
-          />
-
-          <div className="flex flex-wrap gap-2 mt-4">
-            {formData.tags.map((tag, index) => (
-              <Badge
-                variant="outline"
-                key={index}
-                className={`${tagColors[index % tagColors.length]} text-white text-xl py-1 px-3 h-10 rounded-[20px] cursor-pointer   transition-transform hover:scale-105 `}
-                onClick={() => removeTag(tag)}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {/* Collaborator Section */}
-        <div className="mt-6 px-4">
-          <label className="text-lg font-normal block mb-2">
-            Collaborator (Optional)
-          </label>
-          <Input
-            className="h-[50px] rounded-[20px] border-2 border-[#e2e2e2] px-4 text-xl text-[#898989]"
-            placeholder="Invite collaborator"
-            value={formData.background}
-            onChange={(e) => handleInputChange('background', e.target.value)}
-          />
-        </div>
-
-        {/* Workspace Cover Section */}
-        <div className="mt-6 px-4">
-          <label className="text-lg font-normal block mb-2">
-            Select Workspace Cover
-          </label>
-
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="w-[194px] h-[130px] bg-[#f4f4f4] rounded-[5px] border-2 border-[#d9d9d9] flex flex-col items-center justify-center">
-              <UploadCloudIcon className="w-12 h-12 mb-2" />
-              <p className="text-base text-[#898989]">Upload from computer</p>
-            </Card>
-
-            {coverImages.map((image) => (
-              <div
-                key={image.id}
-                className="w-[194px] h-[130px] cursor-pointer"
-                onClick={() => handleInputChange('coverImage', image.src)}
-              >
-                <img
-                  className="w-full h-full object-cover rounded-[5px]"
-                  alt={image.alt}
-                  src={image.src}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col mt-4">
-          <Button
-            className="bg-[#EDECEC] rounded-[17px] font-['IBM_Plex_Sans',Helvetica] text-[1.2rem] font-normal text-black w-[108px] h-[45px] self-end hover:bg-[#447af0] hover:text-white"
-            onClick={handleSubmit}
-          >
-            Create
-          </Button>
-        </div>
+        {/* Create Button */}
+        <button
+          className="absolute right-[37px] bottom-[36px] w-[90px] h-[35px] bg-[#ECF1F6] rounded-[17px] text-black font-['IBM_Plex_Sans'] text-[16px] font-normal leading-normal flex-shrink-0"
+          onClick={handleSubmit}
+        >
+          Create
+        </button>
       </div>
     </div>
   );
