@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDownIcon, Languages, PlusIcon, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import './LandingPage.css';
 import Sidebar from '../../../components/main/sidebar/Sidebar';
@@ -12,6 +13,7 @@ import { ShiftingDropDown } from '../../../components/main/dropdown/DropDown';
 import CreateWorkspaceModal from '../../../components/main/modals/createWorkspaceModal';
 
 function LandingPage() {
+  const navigate = useNavigate();
   const allTabs = [
     {
       id: "project-directory",
@@ -74,6 +76,10 @@ function LandingPage() {
     setIsModalOpen(false);
   };
 
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
   return (
     <div className="flex bg-[#f7f6f6] min-h-screen">
       <Sidebar />
@@ -90,6 +96,7 @@ function LandingPage() {
                 <Button
                   variant="outline"
                   className="rounded-[20px] border-[#bcbcbc] h-9 px-2"
+                  onClick={handleLoginClick}
                 >
                   <div className="flex items-center gap-2 bg-transparent">
                     <Avatar className="w-6 h-6">
@@ -109,6 +116,7 @@ function LandingPage() {
               <DropdownMenuContent className='dropdown-content'>
                 <DropdownMenuItem className='dropdown-item'>Profile</DropdownMenuItem>
                 <DropdownMenuItem className='dropdown-item'>Settings</DropdownMenuItem>
+                <DropdownMenuItem className='dropdown-item' onClick={handleLoginClick}>Login</DropdownMenuItem>
                 <DropdownMenuItem className='dropdown-item'>Logout</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
