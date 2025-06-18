@@ -2,15 +2,51 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
+import { ToastContainer } from '../../../components/ui/ToastContainer';
+import { useToast } from '../../../hooks/useToast';
+import { loginUser } from '../../../api/auth/login';
+import { saveUserData } from '../../../utils/auth';
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { toasts, removeToast, success, error } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignIn = () => {
-    // Handle sign in logic here
-    navigate('/');
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      error('Please enter both email and password.');
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const response = await loginUser({ email, password });
+      
+      if (response.success && response.data) {
+        // Save user data to localStorage
+        saveUserData(response.data);
+        
+        // Show success message
+        success('Login successful! Welcome back.');
+        
+        // Navigate to landing page after a short delay
+        setTimeout(() => {
+          navigate('/');
+        }, 1500);
+      } else {
+        // Handle login failure
+        const errorMessage = response.error?.message || 'Login failed. Please try again.';
+        error(errorMessage);
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      error('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleSignIn = () => {
@@ -18,8 +54,17 @@ function LoginPage() {
     console.log('Google sign in');
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSignIn();
+    }
+  };
+
   return (
     <div className="min-h-screen flex">
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      
       {/* Left side - Image section with F3F4F6 background - 76% width */}
       <div className="w-[76%] bg-[#F3F4F6] flex flex-col">
         {/* Image container - takes most of the space */}
@@ -91,6 +136,8 @@ function LoginPage() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isLoading}
                 className="w-full h-10 px-3 border border-gray-300 rounded-lg font-['Inter',Helvetica] text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -105,6 +152,8 @@ function LoginPage() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isLoading}
                 className="w-full h-10 px-3 border border-gray-300 rounded-lg font-['Inter',Helvetica] text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -112,16 +161,18 @@ function LoginPage() {
             {/* Sign In button */}
             <Button
               onClick={handleSignIn}
-              className="w-full h-10 bg-black text-white rounded-lg font-['Inter',Helvetica] text-sm font-medium hover:bg-gray-800 transition-colors"
+              disabled={isLoading}
+              className="w-full h-10 bg-black text-white rounded-lg font-['Inter',Helvetica] text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign In
+              {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
 
             {/* Sign in via Google button */}
             <Button
               onClick={handleGoogleSignIn}
+              disabled={isLoading}
               variant="outline"
-              className="w-full h-10 border border-gray-300 bg-white text-gray-700 rounded-lg font-['Inter',Helvetica] text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+              className="w-full h-10 border border-gray-300 bg-white text-gray-700 rounded-lg font-['Inter',Helvetica] text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
