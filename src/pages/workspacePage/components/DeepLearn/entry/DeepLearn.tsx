@@ -8,6 +8,7 @@ import DeepLearnResponse from '../response/DeepLearnResponse';
 interface DeepLearnProps {
   isSplit?: boolean;
   onBack?: () => void;
+  onViewChange?: (view: string | null) => void;
 }
 
 const learningCards = [
@@ -69,30 +70,24 @@ const learningCards = [
   },
 ];
 
-function DeepLearn({ isSplit = false, onBack }: DeepLearnProps) {
-  const [showResponse, setShowResponse] = useState(false);
+function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [selectedTab, setSelectedTab] = useState<'trending' | 'history'>('trending');
   const [inputText, setInputText] = useState('');
   const [additionalComments, setAdditionalComments] = useState('');
 
   const handleCardClick = (cardId: number) => {
-    setShowResponse(true);
+    // Notify parent component to change view to response
+    onViewChange?.('deep-learn-response');
   };
 
   const handleBackToEntry = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      setShowResponse(false);
-    }
+    // Notify parent component to go back to default view
+    onViewChange?.(null);
   };
 
-  // Show response page if showResponse is true
-  if (showResponse) {
-    return <DeepLearnResponse onBack={handleBackToEntry} isSplit={isSplit} />;
-  }
-
+  // If we're in response view, render the response component
+  // This will be handled by the parent component based on activeView
   return (
     <div className=" overflow-y-auto h-[calc(100vh-88px)]">
       <main className="flex-1 p-12 max-w-7xl mx-auto">

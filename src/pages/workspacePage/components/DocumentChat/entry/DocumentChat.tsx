@@ -25,9 +25,10 @@ interface HistoryItem {
 interface DocumentChatProps {
   isSplit?: boolean;
   onBack?: () => void;
+  onViewChange?: (view: string | null) => void;
 }
 
-function DocumentChat({ isSplit = false, onBack }: DocumentChatProps) {
+function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<DocumentTag[]>([
     { id: '1', name: 'Introduction to Me...', type: 'pdf' },
     { id: '2', name: 'Cosmology and Its...', type: 'pdf' },
@@ -35,7 +36,6 @@ function DocumentChat({ isSplit = false, onBack }: DocumentChatProps) {
   ]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [showResponse, setShowResponse] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<HistoryItem[]>([]);
   const itemsPerPage = 8;
@@ -102,21 +102,17 @@ function DocumentChat({ isSplit = false, onBack }: DocumentChatProps) {
   };
 
   const handleCreateNewChat = () => {
-    setShowResponse(true);
+    // Notify parent component to change view to response
+    onViewChange?.('document-chat-response');
   };
 
   const handleBackToEntry = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      setShowResponse(false);
-    }
+    // Notify parent component to go back to default view
+    onViewChange?.(null);
   };
 
-  if (showResponse) {
-    return <DocumentChatResponse onBack={handleBackToEntry} isSplit={isSplit} />;
-  }
-
+  // If we're in response view, render the response component
+  // This will be handled by the parent component based on activeView
   return (
     <div className=" overflow-y-auto h-[calc(100vh-88px)]">
       <main className="flex-1 p-12 max-w-7xl mx-auto">

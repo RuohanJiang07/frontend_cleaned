@@ -488,6 +488,48 @@ function WorkspacePage() {
             >
               <X className="w-6 h-6" />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="p-0 h-auto mr-4"
+              onClick={() => {
+                // Test: Set activeView to deep-learn-response for the first tab
+                const firstWindow = windows[0];
+                const firstPanel = firstWindow.panels[0];
+                const firstTab = firstPanel.tabs[0];
+                updateTabView(firstWindow.id, firstPanel.id, firstTab.id, 'deep-learn-response');
+                console.log('Test: Set activeView to deep-learn-response');
+              }}
+              title="Debug: Test set activeView"
+            >
+              <Plus className="w-6 h-6" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="p-0 h-auto mr-4"
+              onClick={() => {
+                // Test: Cycle through different view states
+                const firstWindow = windows[0];
+                const firstPanel = firstWindow.panels[0];
+                const firstTab = firstPanel.tabs[0];
+                const currentView = firstTab.activeView || null;
+                const views = [
+                  'deep-learn-response',
+                  'document-chat-response',
+                  'problem-help-response',
+                  'smart-note-editor',
+                  null
+                ];
+                const currentIndex = views.indexOf(currentView);
+                const nextView = views[(currentIndex + 1) % views.length];
+                updateTabView(firstWindow.id, firstPanel.id, firstTab.id, nextView);
+                console.log(`Test: Set activeView to ${nextView}`);
+              }}
+              title="Debug: Cycle through view states"
+            >
+              <SearchIcon className="w-6 h-6" />
+            </Button>
             <Button variant="ghost" size="icon" className="p-0 h-auto mr-4">
               <Share2Icon className="w-8 h-8" />
             </Button>
