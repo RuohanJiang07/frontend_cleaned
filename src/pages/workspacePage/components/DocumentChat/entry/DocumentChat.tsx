@@ -193,18 +193,20 @@ function DocumentChat({ isSplit = false, onBack }: DocumentChatProps) {
                   </div>
                 </CardContent>
               </Card>
+
+            </div>
+          </div>
+          {/* Create New Chat */}
+          <div className="w-full mx-auto mt-[15px] mb-4">
+            <div className="flex justify-end">
+              <Button className="w-[132px] h-[28px] mr-[11px] bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-[8px] flex items-center justify-center font-['Inter'] text-[13px] font-semibold leading-normal" onClick={handleCreateNewChat}>
+                + Create New Chat
+              </Button>
             </div>
           </div>
         </div>
 
-        {/* Create New Chat */}
-        <div className="w-[813px] mx-auto mt-[15px] mb-4">
-          <div className="flex justify-end">
-            <Button className="w-[132px] h-[28px] mr-[11px] bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-[8px] flex items-center justify-center font-['Inter'] text-[13px] font-semibold leading-normal" onClick={handleCreateNewChat}>
-              + Create New Chat
-            </Button>
-          </div>
-        </div>
+
 
         {/* History Section */}
         <div className="w-full max-w-5xl mx-auto mt-[40px]">
