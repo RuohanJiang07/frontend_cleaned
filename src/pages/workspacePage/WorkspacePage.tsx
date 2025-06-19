@@ -186,12 +186,13 @@ function WorkspacePage() {
   }, [workspaceTitle]);
 
   const addWindow = () => {
+    const newTabId = generateId();
     const newWindow = {
       id: generateId(),
       panels: [{
         id: generateId(),
-        tabs: [{ id: generateId(), title: "New tab", activeView: null }],
-        activeTabId: generateId()
+        tabs: [{ id: newTabId, title: "New tab", activeView: null }],
+        activeTabId: newTabId
       }],
       isActive: true
     };
@@ -283,14 +284,15 @@ function WorkspacePage() {
     setWindows(windows.map(window => {
       if (window.id === windowId) {
         if (window.panels.length === 1) {
+          const newTabId = generateId();
           return {
             ...window,
             panels: [
               window.panels[0],
               {
                 id: generateId(),
-                tabs: [{ id: generateId(), title: "New tab", activeView: null }],
-                activeTabId: generateId()
+                tabs: [{ id: newTabId, title: "New tab", activeView: null }],
+                activeTabId: newTabId
               }
             ]
           };
