@@ -3,13 +3,6 @@ import { Button } from '../../../../../components/ui/button';
 import ForceGraph2D, { LinkObject, NodeObject } from 'react-force-graph-2d';
 import {
   ArrowLeftIcon,
-  ShareIcon,
-  PrinterIcon,
-  MoreHorizontalIcon,
-  SearchIcon,
-  PlayIcon,
-  ExternalLinkIcon,
-  MapIcon,
   GlobeIcon,
   FolderIcon
 } from 'lucide-react';
@@ -46,367 +39,654 @@ const myData: { nodes: CustomNode[]; links: LinkObject[] } = {
   ],
 };
 
+// 回答标题区域组件 - 学习参考代码的样式
+const AnswerHeader: React.FC<{ title: string; tag: string }> = ({ title, tag }) => (
+  <div style={{ marginTop: 18, width: 649, marginLeft: 'auto', marginRight: 'auto' }}>
+    <div className="flex items-center" style={{ marginLeft: 0 }}>
+      <span
+        style={{
+          color: '#000',
+          fontSize: 13,
+          fontWeight: 500,
+          fontStyle: 'normal',
+          lineHeight: 'normal',
+        }}
+      >
+        {title}
+      </span>
+      <span
+        className="flex items-center justify-center ml-[9px]"
+        style={{
+          width: 61,
+          height: 16,
+          flexShrink: 0,
+          borderRadius: 8,
+          border: '1px solid #D9D9D9',
+          background: '#F9F9F9',
+          color: '#6B6B6B',
+          fontSize: 9,
+          fontWeight: 500,
+          fontStyle: 'normal',
+          lineHeight: 'normal',
+        }}
+      >
+        {tag}
+      </span>
+    </div>
+    <div
+      style={{
+        marginTop: 9,
+        width: 649,
+        height: 1.5,
+        background: '#D9D9D9',
+        borderRadius: 1,
+      }}
+    />
+  </div>
+);
+
+// Source Webpages 区域占位组件 - 学习参考代码的样式
+const SourceWebpagesPlaceholders: React.FC = () => (
+  <div
+    className="flex justify-center"
+    style={{ marginTop: 11, width: 649, marginLeft: 'auto', marginRight: 'auto' }}
+  >
+    {[0, 1, 2, 3].map((i) => (
+      <div
+        key={i}
+        style={{
+          width: 114,
+          height: 73,
+          flexShrink: 0,
+          borderRadius: 8,
+          border: '1px solid rgba(179, 179, 179, 0.58)',
+          background: 'rgba(236, 241, 246, 0.55)',
+          boxShadow: '0px 1px 15px 0px rgba(73, 127, 255, 0.10)',
+          marginRight: i < 3 ? 18 : 0,
+        }}
+      />
+    ))}
+    {/* More 按钮 placeholder */}
+    <div
+      style={{
+        width: 77,
+        height: 73,
+        flexShrink: 0,
+        borderRadius: 8,
+        border: '1px solid rgba(179, 179, 179, 0.58)',
+        background: 'rgba(236, 241, 246, 0.55)',
+        boxShadow: '0px 1px 15px 0px rgba(73, 127, 255, 0.10)',
+        marginLeft: 18,
+      }}
+    />
+  </div>
+);
+
+// 用户提问气泡组件 - 学习参考代码的样式
+const UserQuestionBubble: React.FC<{ content: string; time: string; style?: React.CSSProperties }> = ({ content, time, style }) => (
+  <div className="flex flex-col items-end mb-6" style={{ ...style, width: 649, marginLeft: 'auto', marginRight: 'auto' }}>
+    <span
+      className="font-medium"
+      style={{
+        color: '#636363',
+        fontFamily: 'Inter',
+        fontSize: 10,
+        fontStyle: 'normal',
+        fontWeight: 500,
+        lineHeight: 'normal',
+        marginBottom: 2,
+        alignSelf: 'flex-end',
+      }}
+    >
+      {time}
+    </span>
+    <div
+      className="flex items-center justify-center"
+      style={{
+        width: 163,
+        height: 34,
+        flexShrink: 0,
+        borderRadius: 10,
+        background: '#ECF1F6',
+        alignSelf: 'flex-end',
+      }}
+    >
+      <span
+        style={{
+          color: '#000',
+          fontFamily: 'Inter',
+          fontSize: 13,
+          fontWeight: 500,
+          fontStyle: 'normal',
+          lineHeight: 'normal',
+        }}
+      >
+        {content}
+      </span>
+    </div>
+  </div>
+);
+
+// 正文解释部分组件 - 学习参考代码的样式
+const AnswerBody: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ width: 649, margin: '18px auto 0 auto' }}>
+    <div
+      style={{
+        color: '#000',
+        fontSize: 12,
+        fontWeight: 400,
+        fontStyle: 'normal',
+        lineHeight: 'normal',
+        fontFamily: 'Inter',
+        textAlign: 'left',
+      }}
+    >
+      {children}
+    </div>
+    <div
+      style={{
+        marginTop: 16,
+        width: 649,
+        height: 1.5,
+        background: '#D9D9D9',
+        borderRadius: 1,
+      }}
+    />
+  </div>
+);
+
+// Follow Up Response 组件 - 学习参考代码的样式
+const FollowUpResponse: React.FC<{ time: string }> = ({ time }) => (
+  <div className="flex flex-col" style={{ marginTop: 45, width: 649, marginLeft: 'auto', marginRight: 'auto' }}>
+    {/* Meta 信息行 */}
+    <div className="flex items-center mb-1">
+      <span
+        className="flex items-center justify-center"
+        style={{
+          width: 56,
+          height: 16,
+          flexShrink: 0,
+          borderRadius: 8,
+          border: '1px solid #D9D9D9',
+          background: '#F9F9F9',
+          color: '#6B6B6B',
+          fontFamily: 'Inter',
+          fontSize: 9,
+          fontWeight: 500,
+          lineHeight: 'normal',
+        }}
+      >
+        Follow Up
+      </span>
+      <span
+        style={{
+          marginLeft: 4,
+          color: '#636363',
+          fontFamily: 'Inter',
+          fontSize: 10,
+          fontWeight: 500,
+          lineHeight: 'normal',
+        }}
+      >
+        {time}
+      </span>
+    </div>
+
+    {/* Follow Up 对话框 */}
+    <div
+      style={{
+        width: 649,
+        borderRadius: 10,
+        background: '#ECF1F6',
+        flexShrink: 0,
+        padding: '12px 14px',
+      }}
+    >
+      <div
+        style={{
+          color: '#000',
+          fontFamily: 'Inter',
+          fontSize: 13,
+          fontWeight: 400,
+          fontStyle: 'normal',
+          lineHeight: 'normal',
+        }}
+      >
+        悖论的核心矛盾
+        量子决定性：给定量子系统的当前状态，未来状态可以被唯一确定；反之亦然。
+        可逆性：量子力学演化是幺正的，即信息不会被破坏或丢失。
+        霍金辐射的"无信息"：霍金辐射看似不携带黑洞内部的信息，信息似乎永久丢失。
+
+        解决思路与主要理论
+        2.1 全息原理与AdS/CFT对偶
+        全息原理（Holographic Principle）认为，描述一个空间区域的所有物理信息，可以被编码在该区域的边界上（如黑洞的事件视界）。AdS/CFT对偶是这一原理的数学实现，它指出，一个五维反德西特空间（AdS）中的量子引力理论，等价于其四维边界上的共形场论（CFT）。在这种框架下，黑洞内部的信息可以被"映射"到边界上，从而避免信息丢失。
+
+        全息原理的提出，解决了黑洞信息悖论的部分难题，并提供了新的理论工具。它表明，信息实际上并未丢失，而是以某种方式被"编码"在黑洞边界或外部宇宙中。
+      </div>
+    </div>
+  </div>
+);
+
 function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) {
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
-  const [selectedTopic, setSelectedTopic] = useState('New Topic');
   const [hoverNode, setHoverNode] = useState<CustomNode | null>(null);
 
   return (
     <div className={`${isSplit ? 'h-[calc(100vh-183px)]' : 'h-[calc(100vh-183px)]'} flex flex-col bg-white`}>
-      {/* Header - No border */}
-      <div className="flex items-center justify-between p-4 bg-white">
-        <div className="flex items-center gap-4">
+      {/* Header - 学习参考代码的布局和风格 */}
+      <div className="flex items-center justify-between pt-4 pr-4 pl-4 pb-[18px] bg-white">
+        <div className="flex items-center gap-[13px]">
           <Button
             variant="ghost"
             size="icon"
             onClick={onBack}
-            className="p-2"
+            className="p-0 w-5 h-5 flex-shrink-0"
           >
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
-          <h1 className="font-medium text-base text-black font-['Inter',Helvetica]">
+          <h1 className="font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal">
             Learning Journey: Exploration of Black Hole and its Related Concepts
           </h1>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button className="bg-[#6B94E4] hover:bg-[#5a82d1] text-white rounded-lg px-4 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm">
-            Publish to Community
-            <ShareIcon className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="p-2"
+        <div className="flex items-center" style={{gap: '23px'}}>
+          {/* Publish to Community 按钮 - 学习参考代码的样式 */}
+          <button
+            className="flex items-center justify-between w-[163px] h-[25px] flex-shrink-0 rounded-[8px] bg-[#80A5E4] px-3 py-0"
+            style={{fontFamily: 'Inter', fontSize: 12, fontWeight: 500, color: '#FFF', lineHeight: 'normal'}}
           >
-            <ShareIcon className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="p-2"
+            <span className="whitespace-nowrap">Publish to Community</span>
+            <span className="ml-1 flex items-center">
+              {/* Publish SVG */}
+              <img 
+                src="/workspace/publish_icon.svg" 
+                alt="Publish Icon"
+                style={{ width: '18px', height: '17px' }}
+              />
+            </span>
+          </button>
+
+          {/* 分享按钮 - 学习参考代码的样式 */}
+          <button
+            className="flex items-center justify-center w-[18px] h-[18px] flex-shrink-0"
+            style={{marginRight: '18px'}}
+            aria-label="Share"
           >
-            <PrinterIcon className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="p-2"
+            <img 
+              src="/workspace/share_icon.svg" 
+              alt="Share Icon"
+              style={{ width: '20px', height: '20px' }}
+            />
+          </button>
+
+          {/* 打印按钮 - 学习参考代码的样式 */}
+          <button
+            className="flex items-center justify-center w-[18px] h-[18px] flex-shrink-0 mr-[57px]"
+            aria-label="Print"
           >
-            <MoreHorizontalIcon className="w-5 h-5" />
-          </Button>
+            <img 
+              src="/workspace/print_icon.svg" 
+              alt="Print Icon"
+              style={{ width: '18px', height: '18px' }}
+            />
+          </button>
         </div>
       </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-y-auto">
-        {/* Main Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="max-w-3xl mx-auto px-8">
-            {/* User Question - Following DocumentChatResponse style */}
-            <div className="flex flex-col items-end mb-6">
-              <span className="text-xs text-gray-500 font-['Inter',Helvetica] mb-2">
-                Me, Jun 1, 9:50 PM
-              </span>
-              <div className="bg-gray-100 rounded-lg p-3 max-w-xs">
-                <p className="text-sm text-black font-['Inter',Helvetica]">
-                  黑洞信息悖论如何解决？
-                </p>
-              </div>
-            </div>
+        {/* 整个内容区域居中 */}
+        <div className="flex-1 flex justify-center">
+          <div className="flex gap-[150px]">
+            {/* Main Content - Scrollable */}
+            <div className="w-[649px] overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {/* User Question - 学习参考代码的conversation样式 */}
+              <UserQuestionBubble content="黑洞信息悖论如何解决？" time="Me, Jun 1, 9:50 PM" />
 
-            {/* AI Response */}
-            <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed">
-              {/* Question with Deep Learn tag - aligned horizontally */}
-              <div className="flex items-center gap-3 ">
-                <h2 className="text-lg font-medium text-black m-2">黑洞信息悖论如何解决？</h2>
-                <span className="flex items-center bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">Deep Learn</span>
-              </div>
-
-              {/* Gray line separator */}
-              <div className="w-full h-px bg-gray-300 mb-6"></div>
-
-              {/* Five placeholder boxes */}
-              <div className="grid grid-cols-5 gap-4 mb-8">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="w-full h-20 bg-gray-100 rounded-lg border border-gray-200"></div>
-                ))}
-              </div>
-
-              {/* Main content */}
-              <div className="space-y-6">
-                <div>
-                  <h3 className="font-semibold text-base mb-3">1. 黑洞信息悖论的由来</h3>
-                  <p className="mb-4">
-                    黑洞信息悖论（Black Hole Information Paradox）源于量子力学与广义相对论在黑洞物理中的冲突。根据广义相对论，黑洞是一个引力极强、任何物质和辐射都无法逃逸的时空区域。1970年代，霍金（Stephen Hawking）将量子场论应用于黑洞附近，发现黑洞会通过量子效应向外辐射能量，这被称为"霍金辐射"。
-                  </p>
-                  <p className="mb-4">
-                    霍金的计算表明，霍金辐射的性质仅与黑洞的总质量、电荷和角动量有关，而与黑洞形成时的初始状态（即落入黑洞的物质信息）无关。这意味着，多个不同的初始状态可以演化成相同的最终状态，而这些初始状态的详细信息会在黑洞蒸发过程中"丢失"，这与量子力学中的"信息守恒"原理（即系统的波函数演化是幺正的，信息不会无故消失）相矛盾。
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-base mb-3">2. 悖论的核心矛盾</h3>
-                  <ul className="list-disc pl-6 mb-4 space-y-2">
-                    <li><strong>量子决定性</strong>：给定量子系统的当前状态，未来状态可以被唯一确定；反之亦然。</li>
-                    <li><strong>可逆性</strong>：量子力学演化是幺正的，即信息不会被破坏或丢失。</li>
-                    <li><strong>霍金辐射的"无信息"</strong>：霍金辐射看似不携带黑洞内部的信息，信息似乎永久丢失。</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-base mb-3">解决思路与主要理论</h3>
-
-                  <h4 className="font-medium text-sm mb-2">2.1 全息原理与AdS/CFT对偶</h4>
-                  <p className="mb-4">
-                    全息原理（Holographic Principle）认为，描述一个空间区域的所有物理信息，可以被编码在该区域的边界上（如黑洞的事件视界）。AdS/CFT对偶是这一原理的数学实现，它指出，一个五维反德西特时空（AdS）中的量子引力理论，等价于其四维边界上的共形场论（CFT）。在这种框架下，黑洞内部的信息可以被"映射"到边界上，从而避免信息丢失。
-                  </p>
-                  <p className="mb-4">
-                    全息原理的提出，解决了黑洞信息悖论的部分难题，并提供了新的理论工具。它表明，信息实际上并未丢失，而是以某种方式被"编码"在黑洞边界或外部宇宙中。
-                  </p>
-
-                  <h4 className="font-medium text-sm mb-2">2.2 佩奇曲线与量子纠缠</h4>
-                  <p className="mb-4">
-                    佩奇（Don Page）提出，如果黑洞与外界之间的纠缠随时间变化遵循"佩奇曲线"，则说明信息会从黑洞中释放出来。这条曲线早期随辐射增加而上升，达到峰值（佩奇时间）后下降，最终归零，意味着信息被完整保留。
-                  </p>
-                  <p className="mb-4">
-                    近年来，物理学家通过弦论、全息原理等方法，证明了黑洞的纠缠确实遵循佩奇曲线，信息会随着霍金辐射逐渐释放出来。
-                  </p>
-
-                  <h4 className="font-medium text-sm mb-2">2.3 ER=EPR假想</h4>
-                  <p className="mb-4">
-                    ER=EPR假想将爱因斯坦-罗森桥（ER，即虫洞）与量子纠缠（EPR，爱因斯坦-波多尔斯基-罗森悖论）联系起来，认为黑洞内部和外部的粒子通过虫洞连接，形成量子纠缠。这样，落入黑洞的信息会被保存在外部粒子中，并通过虫洞与内部粒子保持联系，从而避免了信息的丢失或复制。
-                  </p>
-                  <p className="mb-4">
-                    这一假想为信息如何在黑洞内外传递提供了新的视角，但目前尚未被实验证实。
-                  </p>
-
-                  <h4 className="font-medium text-sm mb-2">4. 信息量子热力学</h4>
-                  <p className="mb-4">
-                    有理论提出，信息本身不是先天固有的，而是后天生成的，物质与信息相互关联。落入黑洞的物质信息会转化为热辐射、热熵等量子态，通过量子信息科学和经典热力学的结合，信息得以
-                  </p>
-                  <div className='w-full h-[15px]'></div>
-
-                </div>
-
-              </div>
-
-              {/* Bottom Input Box */}
-              <div className={`fixed bottom-6 ${isSplit ? 'w-[calc(50%-100px)]' : 'w-full max-w-3xl'} mx-auto bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between`}>
-                <div className="flex items-center justify-between ">
-                  <div className="flex items-center gap-4">
-                    <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
-                    <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100">
-                      Follow Up
-                    </button>
-                    <span className="text-gray-500 font-['Inter',Helvetica] text-[12px]">or</span>
-                    <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100">
-                      New Topic
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-0">
-                  <div className="text-sm text-gray-600 font-['Inter',Helvetica]">
-                    Note: If already selected
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600 font-['Inter',Helvetica]">Change to</span>
-                      <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 text-[12px] font-['Inter',Helvetica] hover:bg-gray-100">
-                        New Topic
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <GlobeIcon className="w-4 h-4 text-gray-500" />
-
-                      {/* Deep Learn / Quick Search Toggle */}
-                      <div
-                        className="w-[180px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer relative"
-                        onClick={() => setSelectedMode(selectedMode === 'deep-learn' ? 'quick-search' : 'deep-learn')}
-                      >
-                        <div
-                          className={`absolute top-1 w-[84px] h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${selectedMode === 'deep-learn' ? 'left-1.5' : 'left-[94px]'
-                            }`}
-                        />
-                        <div className="absolute left-4 h-full flex items-center z-20">
-                          <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Deep Learn</span>
-                        </div>
-                        <div className="absolute right-3 h-full flex items-center z-20">
-                          <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Quick Search</span>
-                        </div>
-                      </div>
-
-                      <Button variant="ghost" size="icon" className="w-8 h-8 text-gray-600">
-                        <FolderIcon className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className={`${isSplit ? 'w-[220px]' : 'w-[320px]'} grid grid-rows-6  ${isSplit ? 'h-[calc(100vh-315px)]' : 'h-[calc(100vh-255px)]'} mr-[100px] gap-4`}>
-          {/* Fixed Right Sidebar - Related Contents */}
-          <div className='border-solid border-[#4980ff38] border rounded-lg flex flex-col row-span-4'>
-            {/* Fixed Blue Header Section */}
-            <div className="bg-[#E8F0FF] p-4 rounded-t-lg flex-shrink-0">
-              <div className="flex items-center gap-2 mb-2">
-                <SearchIcon className="w-4 h-4 text-[#4A90E2]" />
-                <h3 className="font-semibold text-sm text-black">Related Contents</h3>
-              </div>
-              <p className="text-sm text-[#4A90E2]">See more on this topic</p>
-            </div>
-
-            {/* Scrollable Content Section */}
-            <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              <div className="bg-white m-4">
-                {/* Related Videos */}
-                <div className="mb-6">
-                  <h4 className="font-medium text-sm text-black mb-3">Related Videos</h4>
-                  <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
-                    <div className="w-full h-32 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
-                      <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                      <div className="text-center z-10">
-                        <div className="text-yellow-300 font-bold text-lg mb-1">QUANTUM</div>
-                        <div className="flex items-center justify-center mb-1">
-                          <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center mr-2">
-                            <div className="w-4 h-4 bg-black rounded-full"></div>
-                          </div>
-                          <div className="text-blue-400">⚡ ⚡</div>
-                        </div>
-                        <div className="text-white font-bold text-lg">ENTANGLEMENT</div>
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <p className="text-xs text-black mb-1 font-medium">Quantum Entanglement: Explained in REALLY SIMPLE Words</p>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-                        <p className="text-xs text-red-600 font-medium">Science ABC</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Related Webpages */}
-                <div className="mb-6">
-                  <h4 className="font-medium text-sm text-black mb-3">Related Webpages</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-[#F0F0F0] rounded-lg p-3">
-                      <div className="text-xs font-medium text-black mb-2">ScienceDirect discusses quantum entanglement.</div>
-                      <div className="text-xs text-gray-600 mb-2">Explore the phenomenon crucial for quantum information processing applications.</div>
-                      <div className="text-xs text-black mb-1">Quantum Entanglement - an o...</div>
-                      <div className="text-xs text-orange-600">📄 ScienceDirect.com</div>
-                    </div>
-                    <div className="bg-[#F0F0F0] rounded-lg p-3">
-                      <div className="text-xs font-medium text-black mb-2">NASA's take entanglement</div>
-                      <div className="text-xs text-gray-600 mb-2">Learn about nature of par common orig</div>
-                      <div className="text-xs text-black mb-1">What is Qua</div>
-                      <div className="text-xs text-blue-600">🌐 NASA Sc</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Related Concepts */}
-                <div >
-                  <h4 className="font-medium text-sm text-black mb-3">Related Concepts</h4>
-                  <div className="space-y-3">
+              {/* AI Response - 学习参考代码的conversation样式 */}
+              <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed">
+                <AnswerHeader title="黑洞信息悖论如何解决？" tag="Deep Learn" />
+                <SourceWebpagesPlaceholders />
+                <AnswerBody>
+                  <div className="space-y-6">
                     <div>
-                      <div className="text-xs font-medium text-black mb-2">Understand the fundamental principles of quantum entanglement.</div>
-                      <div className="bg-[#D5EBF3] text-[#1e40af] px-2 py-1 rounded text-xs inline-block">
-                        Interconnected Fate
-                      </div>
+                      <h3 className="font-semibold text-base mb-3">1. 黑洞信息悖论的由来</h3>
+                      <p className="mb-4">
+                        黑洞信息悖论（Black Hole Information Paradox）源于量子力学与广义相对论在黑洞物理中的冲突。根据广义相对论，黑洞是一个引力极强、任何物质和辐射都无法逃逸的时空区域。1970年代，霍金（Stephen Hawking）将量子场论应用于黑洞附近，发现黑洞会通过量子效应向外辐射能量，这被称为"霍金辐射"。
+                      </p>
+                      <p className="mb-4">
+                        霍金的计算表明，霍金辐射的性质仅与黑洞的总质量、电荷和角动量有关，而与黑洞形成时的初始状态（即落入黑洞的物质信息）无关。这意味着，多个不同的初始状态可以演化成相同的最终状态，而这些初始状态的详细信息会在黑洞蒸发过程中"丢失"，这与量子力学中的"信息守恒"原理（即系统的波函数演化是幺正的，信息不会无故消失）相矛盾。
+                      </p>
                     </div>
-                    <div className="bg-[#E8D5F3] text-[#6b21a8] px-2 py-1 rounded text-xs inline-block">
-                      Instantaneous Correlation
+
+                    <div>
+                      <h3 className="font-semibold text-base mb-3">2. 悖论的核心矛盾</h3>
+                      <ul className="list-disc pl-6 mb-4 space-y-2">
+                        <li><strong>量子决定性</strong>：给定量子系统的当前状态，未来状态可以被唯一确定；反之亦然。</li>
+                        <li><strong>可逆性</strong>：量子力学演化是幺正的，即信息不会被破坏或丢失。</li>
+                        <li><strong>霍金辐射的"无信息"</strong>：霍金辐射看似不携带黑洞内部的信息，信息似乎永久丢失。</li>
+                      </ul>
                     </div>
-                    <div className="bg-[#D5F3E8] text-[#059669] px-2 py-1 rounded text-xs inline-block">
-                      Randomness
+
+                    <div>
+                      <h3 className="font-semibold text-base mb-3">解决思路与主要理论</h3>
+
+                      <h4 className="font-medium text-sm mb-2">2.1 全息原理与AdS/CFT对偶</h4>
+                      <p className="mb-4">
+                        全息原理（Holographic Principle）认为，描述一个空间区域的所有物理信息，可以被编码在该区域的边界上（如黑洞的事件视界）。AdS/CFT对偶是这一原理的数学实现，它指出，一个五维反德西特时空（AdS）中的量子引力理论，等价于其四维边界上的共形场论（CFT）。在这种框架下，黑洞内部的信息可以被"映射"到边界上，从而避免信息丢失。
+                      </p>
+                      <p className="mb-4">
+                        全息原理的提出，解决了黑洞信息悖论的部分难题，并提供了新的理论工具。它表明，信息实际上并未丢失，而是以某种方式被"编码"在黑洞边界或外部宇宙中。
+                      </p>
+
+                      <h4 className="font-medium text-sm mb-2">2.2 佩奇曲线与量子纠缠</h4>
+                      <p className="mb-4">
+                        佩奇（Don Page）提出，如果黑洞与外界之间的纠缠随时间变化遵循"佩奇曲线"，则说明信息会从黑洞中释放出来。这条曲线早期随辐射增加而上升，达到峰值（佩奇时间）后下降，最终归零，意味着信息被完整保留。
+                      </p>
+                      <p className="mb-4">
+                        近年来，物理学家通过弦论、全息原理等方法，证明了黑洞的纠缠确实遵循佩奇曲线，信息会随着霍金辐射逐渐释放出来。
+                      </p>
+
+                      <h4 className="font-medium text-sm mb-2">2.3 ER=EPR假想</h4>
+                      <p className="mb-4">
+                        ER=EPR假想将爱因斯坦-罗森桥（ER，即虫洞）与量子纠缠（EPR，爱因斯坦-波多尔斯基-罗森悖论）联系起来，认为黑洞内部和外部的粒子通过虫洞连接，形成量子纠缠。这样，落入黑洞的信息会被保存在外部粒子中，并通过虫洞与内部粒子保持联系，从而避免了信息的丢失或复制。
+                      </p>
+                      <p className="mb-4">
+                        这一假想为信息如何在黑洞内外传递提供了新的视角，但目前尚未被实验证实。
+                      </p>
+
+                      <h4 className="font-medium text-sm mb-2">4. 信息量子热力学</h4>
+                      <p className="mb-4">
+                        有理论提出，信息本身不是先天固有的，而是后天生成的，物质与信息相互关联。落入黑洞的物质信息会转化为热辐射、热熵等量子态，通过量子信息科学和经典热力学的结合，信息得以保留。
+                      </p>
                     </div>
+                  </div>
+                </AnswerBody>
+
+                {/* 新一轮提问，vertical spacing 40px - 学习参考代码的样式 */}
+                <UserQuestionBubble
+                  content="黑洞信息悖论如何解决？"
+                  time="Me, Jun 1, 9:55 PM"
+                  style={{ marginTop: 40 }}
+                />
+
+                {/* Follow Up Response - 学习参考代码的样式 */}
+                <FollowUpResponse time="Jun 1, 9:58 PM" />
+
+                {/* 底部空白区域，确保内容可以滚动超过输入框 */}
+                <div className="h-32"></div>
+              </div>
+            </div>
+
+            {/* Right Sidebar */}
+            <div className={`${isSplit ? 'w-[220px]' : 'w-[320px]'} flex flex-col ${isSplit ? 'h-[calc(100vh-315px)]' : 'h-[calc(100vh-255px)]'} gap-[22px]`}>
+
+              {/* Fixed Right Sidebar - Related Contents */}
+              <div 
+                className="flex flex-col row-span-3"
+                style={{
+                  width: '256px',
+                  height: '648px',
+                  flexShrink: 0,
+                  borderRadius: '13px',
+                  borderTop: '1px solid rgba(73, 127, 255, 0.22)',
+                  borderRight: '1px solid rgba(73, 127, 255, 0.22)',
+                  borderLeft: '1px solid rgba(73, 127, 255, 0.22)',
+                  background: '#FFF',
+                  boxShadow: '0px 1px 30px 2px rgba(73, 127, 255, 0.05)'
+                }}
+              >
+                {/* Title Section */}
+                <div 
+                  className="flex-shrink-0"
+                  style={{
+                    width: '256px',
+                    height: '58.722px',
+                    borderTopLeftRadius: '13px',
+                    borderTopRightRadius: '13px',
+                    borderTop: '1px solid rgba(73, 127, 255, 0.22)',
+                    borderRight: '1px solid rgba(73, 127, 255, 0.22)',
+                    borderLeft: '1px solid rgba(73, 127, 255, 0.22)',
+                    background: '#ECF1F6',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  {/* First row - Icon and "Related Contents" text */}
+                  <div className="flex items-center">
+                    <img 
+                      src="/workspace/related_content_icon.svg" 
+                      alt="Related Contents Icon"
+                      style={{ flexShrink: 0, marginRight: '8px', width: '18.432px', height: '18px' }}
+                    />
+                    <span
+                      style={{
+                        color: '#0064A2',
+                        fontFamily: 'Inter',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        lineHeight: 'normal'
+                      }}
+                    >
+                      Related Contents
+                    </span>
+                  </div>
+                  
+                  {/* Second row - "See more on this topic" text */}
+                  <div style={{ marginLeft: '4px' }}>
+                    <span
+                      style={{
+                        color: '#000000',
+                        fontFamily: 'Inter',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        lineHeight: 'normal'
+                      }}
+                    >
+                      See more on this topic
+                    </span>
+                  </div>
+                </div>
+
+                {/* Scrollable Content Section */}
+                <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <div className="bg-white m-4">
+                    {/* Content will go here */}
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Fixed Right Sidebar - Concept Map */}
-          <div className="fixed bottom-6 h-[30%] flex flex-col border border-solid border-[#E2E1E8] w-[320px] row-span-2 bg-[#F0F0F0] rounded-lg overflow-hidden">
-            {/* Fixed Header Section */}
-            <div className="flex-shrink-0 px-4 pt-3 pb-1 bg-[#F0F0F0]">
-              <div className="flex items-center gap-2 mb-2">
-                <MapIcon className="w-4 h-4 text-[#4A90E2]" />
-                <h3 className="font-semibold text-sm text-black">Concept Map</h3>
-              </div>
-              <p className="text-sm text-black mb-4">Your Learning Roadmap</p>
-            </div>
-
-            {/* Scrollable Content Section */}
-            <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-0 rounded-0">
-              {/* Concept Map Visualization */}
-              <div className='w-full  mb-12 bg-white'>
-                <ForceGraph2D
-                  graphData={myData}
-                  width={320}
-                  height={200}
-                  nodeAutoColorBy="group"
-                  onNodeHover={(node: NodeObject | null) => {
-                    setHoverNode(node as CustomNode | null);
+              {/* Fixed Right Sidebar - Concept Map */}
+              <div 
+                className="flex flex-col"
+                style={{
+                  width: '256px',
+                  height: '228.464px',
+                  flexShrink: 0,
+                  borderRadius: '13px',
+                  borderTop: '1px solid rgba(157, 155, 179, 0.30)',
+                  borderLeft: '1px solid rgba(157, 155, 179, 0.30)',
+                  borderRight: '1px solid rgba(157, 155, 179, 0.30)',
+                  background: '#FFFFFF',
+                  boxShadow: '0px 1px 30px 2px rgba(242, 242, 242, 0.63)',
+                  marginTop: '22px'
+                }}
+              >
+                {/* Header Section */}
+                <div 
+                  className="flex-shrink-0"
+                  style={{
+                    width: '256px',
+                    height: '59.736px',
+                    background: 'rgba(228, 231, 239, 0.62)',
+                    borderTopLeftRadius: '13px',
+                    borderTopRightRadius: '13px',
+                    borderTop: '1px solid #E2E1E8',
+                    borderLeft: '1px solid #E2E1E8',
+                    borderRight: '1px solid #E2E1E8',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
                   }}
-                  nodeCanvasObject={(node: CustomNode, ctx, globalScale) => {
-                    const label = node.id;
-                    const fontSize = 12 / globalScale;
-                    ctx.font = `${fontSize}px Sans-Serif`;
+                >
+                  {/* First row - Icon and "Concept Map" text */}
+                  <div className="flex items-center">
+                    <img
+                      src="/workspace/concept_map_icon.svg"
+                      alt="Concept Map Icon"
+                      style={{ marginRight: '8px', width: '17px', height: '17px' }}
+                    />
+                    <span
+                      style={{
+                        color: '#63626B',
+                        fontFamily: 'Inter',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        lineHeight: 'normal'
+                      }}
+                    >
+                      Concept Map
+                    </span>
+                  </div>
+                  
+                  {/* Second row - "Your Learning Roadmap" text */}
+                  <div style={{ marginLeft: '4px' }}>
+                    <span
+                      style={{
+                        color: '#000000',
+                        fontFamily: 'Inter',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        lineHeight: 'normal'
+                      }}
+                    >
+                      Your Learning Roadmap
+                    </span>
+                  </div>
+                </div>
 
-                    const textWidth = ctx.measureText(label).width;
-                    const bckgDimensions: [number, number] = [
-                      textWidth + fontSize * 0.2,
-                      fontSize + fontSize * 0.2,
-                    ];
-                    const x = node.x ?? 0;
-                    const y = node.y ?? 0;
+                {/* Content Section - Scaled Concept Map */}
+                <div className="flex-1 overflow-hidden">
+                  <div className="w-full h-full bg-white">
+                    <ForceGraph2D
+                      graphData={myData}
+                      width={256}
+                      height={168}
+                      nodeAutoColorBy="group"
+                      onNodeHover={(node: NodeObject | null) => {
+                        setHoverNode(node as CustomNode | null);
+                      }}
+                      nodeCanvasObject={(node: CustomNode, ctx, globalScale) => {
+                        const label = node.id;
+                        const fontSize = 10 / globalScale;
+                        ctx.font = `${fontSize}px Sans-Serif`;
 
-                    if (hoverNode?.id === node.id) {
-                      ctx.save();
-                      ctx.shadowColor = node.color || '#4f46e5';
-                      ctx.shadowBlur = 15;
-                      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                      ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
-                      ctx.restore();
-                    } else {
+                        const textWidth = ctx.measureText(label).width;
+                        const bckgDimensions: [number, number] = [
+                          textWidth + fontSize * 0.2,
+                          fontSize + fontSize * 0.2,
+                        ];
+                        const x = node.x ?? 0;
+                        const y = node.y ?? 0;
 
-                      ctx.fillStyle = 'rgba(255, 255, 255, 0)';
-                      ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
-                    }
+                        if (hoverNode?.id === node.id) {
+                          ctx.save();
+                          ctx.shadowColor = node.color || '#4f46e5';
+                          ctx.shadowBlur = 15;
+                          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                          ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
+                          ctx.restore();
+                        } else {
+                          ctx.fillStyle = 'rgba(255, 255, 255, 0)';
+                          ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
+                        }
 
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillStyle = node.color ?? '#000';
-                    ctx.fillText(label, x, y);
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = node.color ?? '#000';
+                        ctx.fillText(label, x, y);
 
-                    node.__bckgDimensions = bckgDimensions;
-                  }}
-                  nodePointerAreaPaint={(node: CustomNode, color, ctx) => {
-                    const bckg = node.__bckgDimensions;
-                    if (bckg) {
-                      ctx.fillStyle = color;
-                      ctx.fillRect(
-                        (node.x ?? 0) - bckg[0] / 2,
-                        (node.y ?? 0) - bckg[1] / 2,
-                        ...bckg
-                      );
-                    }
-                  }}
-                />
+                        node.__bckgDimensions = bckgDimensions;
+                      }}
+                      linkPointerAreaPaint={(node: CustomNode, color, ctx) => {
+                        const bckg = node.__bckgDimensions;
+                        if (bckg) {
+                          ctx.fillStyle = color;
+                          ctx.fillRect(
+                            (node.x ?? 0) - bckg[0] / 2,
+                            (node.y ?? 0) - bckg[1] / 2,
+                            ...bckg
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Fixed Bottom Input Box - 相对于对话区域对齐 */}
+      <div className="fixed bottom-[35px] left-1/2 transform -translate-x-1/2 w-[649px] bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between">
+        <div className="flex items-center justify-between ">
+          <div className="flex items-center gap-4">
+            <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
+            <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100">
+              Follow Up
+            </button>
+            <span className="text-gray-500 font-['Inter',Helvetica] text-[12px]">or</span>
+            <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100">
+              New Topic
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-0">
+          <div className="text-sm text-gray-600 font-['Inter',Helvetica]">
+            Note: If already selected
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 font-['Inter',Helvetica]">Change to</span>
+              <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 text-[12px] font-['Inter',Helvetica] hover:bg-gray-100">
+                New Topic
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <GlobeIcon className="w-4 h-4 text-gray-500" />
+
+              {/* Deep Learn / Quick Search Toggle */}
+              <div
+                className="w-[180px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer relative"
+                onClick={() => setSelectedMode(selectedMode === 'deep-learn' ? 'quick-search' : 'deep-learn')}
+              >
+                <div
+                  className={`absolute top-1 w-[84px] h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${selectedMode === 'deep-learn' ? 'left-1.5' : 'left-[94px]'
+                    }`}
+                />
+                <div className="absolute left-4 h-full flex items-center z-20">
+                  <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Deep Learn</span>
+                </div>
+                <div className="absolute right-3 h-full flex items-center z-20">
+                  <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Quick Search</span>
+                </div>
+              </div>
+
+              <Button variant="ghost" size="icon" className="w-8 h-8 text-gray-600">
+                <FolderIcon className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-export default DeepLearnResponse;
+export default DeepLearnResponse; 

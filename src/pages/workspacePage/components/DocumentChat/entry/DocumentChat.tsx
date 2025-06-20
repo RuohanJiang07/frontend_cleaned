@@ -25,10 +25,9 @@ interface HistoryItem {
 interface DocumentChatProps {
   isSplit?: boolean;
   onBack?: () => void;
-  onViewChange?: (view: string | null) => void;
 }
 
-function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatProps) {
+function DocumentChat({ isSplit = false, onBack }: DocumentChatProps) {
   const [selectedDocuments, setSelectedDocuments] = useState<DocumentTag[]>([
     { id: '1', name: 'Introduction to Me...', type: 'pdf' },
     { id: '2', name: 'Cosmology and Its...', type: 'pdf' },
@@ -36,6 +35,7 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   ]);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [showResponse, setShowResponse] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<HistoryItem[]>([]);
   const itemsPerPage = 8;
@@ -102,17 +102,21 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   };
 
   const handleCreateNewChat = () => {
-    // Notify parent component to change view to response
-    onViewChange?.('document-chat-response');
+    setShowResponse(true);
   };
 
   const handleBackToEntry = () => {
-    // Notify parent component to go back to default view
-    onViewChange?.(null);
+    if (onBack) {
+      onBack();
+    } else {
+      setShowResponse(false);
+    }
   };
 
-  // If we're in response view, render the response component
-  // This will be handled by the parent component based on activeView
+  if (showResponse) {
+    return <DocumentChatResponse onBack={handleBackToEntry} isSplit={isSplit} />;
+  }
+
   return (
     <div className=" overflow-y-auto h-[calc(100vh-88px)]">
       <main className="flex-1 p-12 max-w-7xl mx-auto">
@@ -189,20 +193,18 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
                   </div>
                 </CardContent>
               </Card>
-
-            </div>
-          </div>
-          {/* Create New Chat */}
-          <div className="w-full mx-auto mt-[15px] mb-4">
-            <div className="flex justify-end">
-              <Button className="w-[132px] h-[28px] mr-[11px] bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-[8px] flex items-center justify-center font-['Inter'] text-[13px] font-semibold leading-normal" onClick={handleCreateNewChat}>
-                + Create New Chat
-              </Button>
             </div>
           </div>
         </div>
 
-
+        {/* Create New Chat */}
+        <div className="w-[813px] mx-auto mt-[15px] mb-4">
+          <div className="flex justify-end">
+            <Button className="w-[132px] h-[28px] mr-[11px] bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-[8px] flex items-center justify-center font-['Inter'] text-[13px] font-semibold leading-normal" onClick={handleCreateNewChat}>
+              + Create New Chat
+            </Button>
+          </div>
+        </div>
 
         {/* History Section */}
         <div className="w-full max-w-5xl mx-auto mt-[40px]">

@@ -24,12 +24,12 @@ interface NoteItem {
 
 interface NoteProps {
   onBack?: () => void;
-  onViewChange?: (view: string | null) => void;
 }
 
-function Note({ onBack, onViewChange }: NoteProps) {
+function Note({ onBack }: NoteProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('By Name');
+  const [showEditor, setShowEditor] = useState(false);
 
   // Sample recent notes data
   const recentNotes = Array.from({ length: 5 }, (_, i) => ({
@@ -99,17 +99,22 @@ function Note({ onBack, onViewChange }: NoteProps) {
   ];
 
   const handleNoteClick = () => {
-    // Notify parent component to change view to editor
-    onViewChange?.('smart-note-editor');
+    setShowEditor(true);
   };
 
   const handleBackToNotes = () => {
-    // Notify parent component to go back to default view
-    onViewChange?.(null);
+    if (onBack) {
+      onBack();
+    } else {
+      setShowEditor(false);
+    }
   };
 
-  // If we're in editor view, render the editor component
-  // This will be handled by the parent component based on activeView
+  // Show editor if showEditor is true
+  if (showEditor) {
+    return <NoteEditor onBack={handleBackToNotes} />;
+  }
+
   return (
     <div className="h-[calc(100vh-88px)] overflow-y-auto bg-white w-full">
       <main className="flex-1 p-12 max-w-7xl mx-auto">

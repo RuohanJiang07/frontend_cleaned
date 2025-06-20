@@ -18,14 +18,14 @@ interface ProblemHistoryItem {
 
 interface ProblemSolverProps {
   onBack?: () => void;
-  onViewChange?: (view: string | null) => void;
 }
 
-function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
+function ProblemSolver({ onBack }: ProblemSolverProps) {
   const [problemText, setProblemText] = useState('');
   const [selectedModel, setSelectedModel] = useState('GPT-4o');
   const [selectedMode, setSelectedMode] = useState<'step-by-step' | 'solution'>('step-by-step');
   const [sortBy, setSortBy] = useState('Date/Type');
+  const [showResponse, setShowResponse] = useState(false);
 
   // Sample history data
   const historyItems: ProblemHistoryItem[] = [
@@ -84,17 +84,22 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
   };
 
   const handleHistoryItemClick = (item: ProblemHistoryItem) => {
-    // Notify parent component to change view to response
-    onViewChange?.('problem-help-response');
+    setShowResponse(true);
   };
 
   const handleBackToEntry = () => {
-    // Notify parent component to go back to default view
-    onViewChange?.(null);
+    if (onBack) {
+      onBack();
+    } else {
+      setShowResponse(false);
+    }
   };
 
-  // If we're in response view, render the response component
-  // This will be handled by the parent component based on activeView
+  // Show response page if showResponse is true
+  if (showResponse) {
+    return <ProblemHelpResponse onBack={handleBackToEntry} />;
+  }
+
   return (
     <div className="h-[calc(100vh-88px)] flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto">
