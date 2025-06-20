@@ -4,7 +4,9 @@ import ForceGraph2D, { LinkObject, NodeObject } from 'react-force-graph-2d';
 import {
   ArrowLeftIcon,
   GlobeIcon,
-  FolderIcon
+  FolderIcon,
+  PlayIcon,
+  ExternalLinkIcon
 } from 'lucide-react';
 
 interface DeepLearnResponseProps {
@@ -39,9 +41,9 @@ const myData: { nodes: CustomNode[]; links: LinkObject[] } = {
   ],
 };
 
-// 回答标题区域组件 - 学习参考代码的样式
+// 回答标题区域组件 - 缩小上下间距
 const AnswerHeader: React.FC<{ title: string; tag: string }> = ({ title, tag }) => (
-  <div style={{ marginTop: 18, width: 649, marginLeft: 'auto', marginRight: 'auto' }}>
+  <div style={{ marginTop: 12, width: 649, marginLeft: 'auto', marginRight: 'auto' }}>
     <div className="flex items-center" style={{ marginLeft: 0 }}>
       <span
         style={{
@@ -75,7 +77,7 @@ const AnswerHeader: React.FC<{ title: string; tag: string }> = ({ title, tag }) 
     </div>
     <div
       style={{
-        marginTop: 9,
+        marginTop: 6,
         width: 649,
         height: 1.5,
         background: '#D9D9D9',
@@ -272,9 +274,9 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
   const [hoverNode, setHoverNode] = useState<CustomNode | null>(null);
 
   return (
-    <div className={`${isSplit ? 'h-[calc(100vh-183px)]' : 'h-[calc(100vh-183px)]'} flex flex-col bg-white`}>
-      {/* Header - 学习参考代码的布局和风格 */}
-      <div className="flex items-center justify-between pt-4 pr-4 pl-4 pb-[18px] bg-white">
+    <div className="h-screen flex flex-col bg-white overflow-hidden">
+      {/* Header - 缩小上下padding */}
+      <div className="flex items-center justify-between px-4 py-2 bg-white flex-shrink-0">
         <div className="flex items-center gap-[13px]">
           <Button
             variant="ghost"
@@ -333,13 +335,14 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-y-auto">
-        {/* 整个内容区域居中 */}
-        <div className="flex-1 flex justify-center">
-          <div className="flex gap-[150px]">
-            {/* Main Content - Scrollable */}
-            <div className="w-[649px] overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      {/* Main Content Area - 修复布局，防止页面滚动 */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* 整个内容区域居中 - 使用justify-center让内容组合在屏幕中央 */}
+        <div className="flex-1 flex justify-center overflow-hidden">
+          {/* 文字+sidebar组合 - 固定总宽度，在屏幕中央 */}
+          <div className="flex gap-6" style={{ width: '975px' }}>
+            {/* Main Content - Scrollable - 固定宽度649px */}
+            <div className="w-[649px] overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex-shrink-0">
               {/* User Question - 学习参考代码的conversation样式 */}
               <UserQuestionBubble content="黑洞信息悖论如何解决？" time="Me, Jun 1, 9:50 PM" />
 
@@ -418,40 +421,35 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
               </div>
             </div>
 
-            {/* Right Sidebar */}
-            <div className={`${isSplit ? 'w-[220px]' : 'w-[320px]'} flex flex-col ${isSplit ? 'h-[calc(100vh-315px)]' : 'h-[calc(100vh-255px)]'} gap-[22px]`}>
-
-              {/* Fixed Right Sidebar - Related Contents */}
+            {/* Right Sidebar - 紧贴左侧文字，缩小间距 */}
+            <div className="w-[320px] flex flex-col gap-[22px] py-6 flex-shrink-0 overflow-hidden">
+              {/* Fixed Right Sidebar - Related Contents - 缩小顶部间距 */}
               <div 
-                className="flex flex-col row-span-3"
+                className="flex flex-col flex-1"
                 style={{
                   width: '256px',
-                  height: '648px',
-                  flexShrink: 0,
+                  maxHeight: '370px',
                   borderRadius: '13px',
-                  borderTop: '1px solid rgba(73, 127, 255, 0.22)',
-                  borderRight: '1px solid rgba(73, 127, 255, 0.22)',
-                  borderLeft: '1px solid rgba(73, 127, 255, 0.22)',
+                  border: '1px solid rgba(73, 127, 255, 0.22)',
                   background: '#FFF',
-                  boxShadow: '0px 1px 30px 2px rgba(73, 127, 255, 0.05)'
+                  boxShadow: '0px 1px 30px 2px rgba(73, 127, 255, 0.05)',
+                  overflow: 'hidden',
+                  marginTop: '12px' // 控制距离顶端的距离
                 }}
               >
-                {/* Title Section */}
+                {/* Title Section - 修复边框对齐问题 */}
                 <div 
                   className="flex-shrink-0"
                   style={{
-                    width: '256px',
+                    width: '100%',
                     height: '58.722px',
                     borderTopLeftRadius: '13px',
                     borderTopRightRadius: '13px',
-                    borderTop: '1px solid rgba(73, 127, 255, 0.22)',
-                    borderRight: '1px solid rgba(73, 127, 255, 0.22)',
-                    borderLeft: '1px solid rgba(73, 127, 255, 0.22)',
                     background: '#ECF1F6',
                     padding: '12px 16px',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
                   }}
                 >
                   {/* First row - Icon and "Related Contents" text */}
@@ -490,15 +488,78 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                   </div>
                 </div>
 
-                {/* Scrollable Content Section */}
+                {/* Scrollable Content Section - 添加Related Contents内容 */}
                 <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  <div className="bg-white m-4">
-                    {/* Content will go here */}
+                  <div className="bg-white p-3">
+                    {/* Related Videos */}
+                    <div className="mb-4">
+                      <h4 className="font-medium text-xs text-black mb-2">Related Videos</h4>
+                      <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                        <div className="w-full h-20 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                          <div className="text-center z-10">
+                            <div className="text-yellow-300 font-bold text-xs mb-1">QUANTUM</div>
+                            <div className="flex items-center justify-center mb-1">
+                              <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center mr-1">
+                                <div className="w-2 h-2 bg-black rounded-full"></div>
+                              </div>
+                              <div className="text-blue-400 text-xs">⚡ ⚡</div>
+                            </div>
+                            <div className="text-white font-bold text-xs">ENTANGLEMENT</div>
+                          </div>
+                        </div>
+                        <div className="p-2">
+                          <p className="text-[10px] text-black mb-1 font-medium">Quantum Entanglement: Explained in REALLY SIMPLE Words</p>
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                            <p className="text-[9px] text-red-600 font-medium">Science ABC</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Related Webpages */}
+                    <div className="mb-4">
+                      <h4 className="font-medium text-xs text-black mb-2">Related Webpages</h4>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div className="bg-[#F0F0F0] rounded-lg p-2">
+                          <div className="text-[9px] font-medium text-black mb-1">ScienceDirect discusses quantum entanglement.</div>
+                          <div className="text-[8px] text-gray-600 mb-1">Explore the phenomenon crucial for quantum information processing applications.</div>
+                          <div className="text-[8px] text-black mb-1">Quantum Entanglement - an o...</div>
+                          <div className="text-[8px] text-orange-600">📄 ScienceDirect.com</div>
+                        </div>
+                        <div className="bg-[#F0F0F0] rounded-lg p-2">
+                          <div className="text-[9px] font-medium text-black mb-1">NASA's take entanglement</div>
+                          <div className="text-[8px] text-gray-600 mb-1">Learn about nature of par common orig</div>
+                          <div className="text-[8px] text-black mb-1">What is Qua</div>
+                          <div className="text-[8px] text-blue-600">🌐 NASA Sc</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Related Concepts */}
+                    <div>
+                      <h4 className="font-medium text-xs text-black mb-2">Related Concepts</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <div className="text-[9px] font-medium text-black mb-1">Understand the fundamental principles of quantum entanglement.</div>
+                          <div className="bg-[#D5EBF3] text-[#1e40af] px-1.5 py-0.5 rounded text-[8px] inline-block">
+                            Interconnected Fate
+                          </div>
+                        </div>
+                        <div className="bg-[#E8D5F3] text-[#6b21a8] px-1.5 py-0.5 rounded text-[8px] inline-block">
+                          Instantaneous Correlation
+                        </div>
+                        <div className="bg-[#D5F3E8] text-[#059669] px-1.5 py-0.5 rounded text-[8px] inline-block">
+                          Randomness
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Fixed Right Sidebar - Concept Map */}
+              {/* Fixed Right Sidebar - Concept Map - 修复边框对齐 */}
               <div 
                 className="flex flex-col"
                 style={{
@@ -506,30 +567,25 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                   height: '228.464px',
                   flexShrink: 0,
                   borderRadius: '13px',
-                  borderTop: '1px solid rgba(157, 155, 179, 0.30)',
-                  borderLeft: '1px solid rgba(157, 155, 179, 0.30)',
-                  borderRight: '1px solid rgba(157, 155, 179, 0.30)',
+                  border: '1px solid rgba(157, 155, 179, 0.30)',
                   background: '#FFFFFF',
                   boxShadow: '0px 1px 30px 2px rgba(242, 242, 242, 0.63)',
-                  marginTop: '22px'
+                  overflow: 'hidden'
                 }}
               >
-                {/* Header Section */}
+                {/* Header Section - 修复边框对齐问题 */}
                 <div 
                   className="flex-shrink-0"
                   style={{
-                    width: '256px',
+                    width: '100%',
                     height: '59.736px',
                     background: 'rgba(228, 231, 239, 0.62)',
                     borderTopLeftRadius: '13px',
                     borderTopRightRadius: '13px',
-                    borderTop: '1px solid #E2E1E8',
-                    borderLeft: '1px solid #E2E1E8',
-                    borderRight: '1px solid #E2E1E8',
                     padding: '12px 16px',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
                   }}
                 >
                   {/* First row - Icon and "Concept Map" text */}
@@ -631,8 +687,15 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
         </div>
       </div>
 
-      {/* Fixed Bottom Input Box - 相对于对话区域对齐 */}
-      <div className="fixed bottom-[35px] left-1/2 transform -translate-x-1/2 w-[649px] bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between">
+      {/* Fixed Bottom Input Box - 与文字对齐，使用相同的649px宽度，并计算正确的偏移量 */}
+      <div 
+        className="fixed bottom-[35px] bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between"
+        style={{
+          width: '649px',
+          left: '50%',
+          transform: 'translateX(-487.5px)' // 计算：(975px - 649px) / 2 = 163px，所以 -649px/2 - 163px = -487.5px
+        }}
+      >
         <div className="flex items-center justify-between ">
           <div className="flex items-center gap-4">
             <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
@@ -689,4 +752,4 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
   );
 }
 
-export default DeepLearnResponse; 
+export default DeepLearnResponse;
