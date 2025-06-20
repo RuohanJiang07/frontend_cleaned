@@ -321,16 +321,24 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             />
           </button>
 
-          {/* 打印按钮 - 学习参考代码的样式 */}
+          {/* 打印按钮 - 调整间距和图标粗细 */}
           <button
-            className="flex items-center justify-center w-[18px] h-[18px] flex-shrink-0 mr-[57px]"
+            className="flex items-center justify-center w-[18px] h-[18px] flex-shrink-0"
             aria-label="Print"
           >
-            <img 
-              src="/workspace/print_icon.svg" 
-              alt="Print Icon"
-              style={{ width: '18px', height: '18px' }}
-            />
+            <svg 
+              className="w-5 h-5" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2"
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <polyline points="6,9 6,2 18,2 18,9"/>
+              <path d="M6,18H4a2,2,0,0,1-2-2V11a2,2,0,0,1,2-2H20a2,2,0,0,1,2,2v5a2,2,0,0,1-2,2H18"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
           </button>
         </div>
       </div>
@@ -691,7 +699,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
       <div 
         className="fixed bottom-[35px] bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between"
         style={{
-          width: '649px',
+          width: '680px',
           left: '50%',
           transform: 'translateX(-487.5px)' // 计算：(975px - 649px) / 2 = 163px，所以 -649px/2 - 163px = -487.5px
         }}
