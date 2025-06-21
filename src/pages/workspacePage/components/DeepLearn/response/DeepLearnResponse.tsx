@@ -201,7 +201,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
       </div>
 
       {/* Main Content Area - 修复布局，防止页面滚动 */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className={`flex-1 flex overflow-hidden ${isSplit ? 'w-[95%]' : 'w-[70%]'}  self-center`}>
         {/* 整个内容区域居中 - 使用justify-center让内容组合在屏幕中央 */}
         <div className="flex-1 flex justify-center overflow-hidden">
           {/* 文字+sidebar组合 - 固定总宽度，在屏幕中央 */}
