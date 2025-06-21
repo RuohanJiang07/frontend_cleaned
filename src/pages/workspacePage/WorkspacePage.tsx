@@ -35,54 +35,110 @@ interface WindowData {
   isActive: boolean;
 }
 
+// Data migration function to ensure all tabs have activeView field
+const migrateWorkspaceData = (data: WindowData[]): WindowData[] => {
+  return data.map(window => ({
+    ...window,
+    panels: window.panels.map(panel => ({
+      ...panel,
+      tabs: panel.tabs.map(tab => ({
+        ...tab,
+        activeView: tab.activeView ?? null
+      }))
+    }))
+  }));
+};
+
+// Helper function to generate unique IDs
+const generateId = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+
+// Helper function to get default workspace state
+const getDefaultWorkspaceState = (): WindowData[] => {
+  const tabId = generateId();
+  return [{
+    id: generateId(),
+    panels: [{
+      id: generateId(),
+      tabs: [{ id: tabId, title: "New tab", activeView: null }],
+      activeTabId: tabId
+    }],
+    isActive: true
+  }];
+};
+
 function WorkspacePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [workspaceTitle, setWorkspaceTitle] = useState("WORKSPACE NAME");
   const [dragOverPanelId, setDragOverPanelId] = useState<string | null>(null);
+
+  // Get localStorage key based on title
+  const getStorageKey = (title: string) => `workspaceState_${title}`;
+
   const [windows, setWindows] = useState<WindowData[]>(() => {
     // Load from localStorage on initial render
-    const saved = localStorage.getItem('workspaceState');
+    const title = searchParams.get('title') || "WORKSPACE NAME";
+    const storageKey = getStorageKey(title);
+    const saved = localStorage.getItem(storageKey);
+    console.log(`Attempting to load workspace state for title "${title}" from localStorage...`);
+
     if (saved) {
       try {
         const parsedData = JSON.parse(saved);
-        // Migrate data to ensure all tabs have activeView field
-        const migratedData = migrateWorkspaceData(parsedData);
-        return migratedData;
+        console.log('Parsed data from localStorage:', parsedData);
+
+        // Validate the parsed data structure
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          // Migrate data to ensure all tabs have activeView field
+          const migratedData = migrateWorkspaceData(parsedData);
+          console.log(`Successfully loaded and migrated workspace state for "${title}" from localStorage:`, {
+            windowsCount: migratedData.length,
+            totalTabs: migratedData.reduce((acc, window) =>
+              acc + window.panels.reduce((panelAcc, panel) =>
+                panelAcc + panel.tabs.length, 0), 0)
+          });
+          return migratedData;
+        } else {
+          console.warn(`Invalid workspace state structure for "${title}", using default state`);
+          localStorage.removeItem(storageKey); // Clean up invalid data
+          return getDefaultWorkspaceState();
+        }
       } catch (e) {
-        console.error('Failed to parse saved workspace state:', e);
+        console.error(`Failed to parse saved workspace state for "${title}":`, e);
+        localStorage.removeItem(storageKey); // Clean up corrupted data
+        return getDefaultWorkspaceState();
       }
     }
-    // Default state
-    return [{
-      id: Date.now().toString(),
-      panels: [{
-        id: Date.now().toString(),
-        tabs: [{ id: "1", title: "New tab", activeView: null }],
-        activeTabId: "1"
-      }],
-      isActive: true
-    }];
+    console.log(`No saved workspace state found for "${title}", using default state`);
+    return getDefaultWorkspaceState();
   });
-
-  // Data migration function to ensure all tabs have activeView field
-  const migrateWorkspaceData = (data: WindowData[]): WindowData[] => {
-    return data.map(window => ({
-      ...window,
-      panels: window.panels.map(panel => ({
-        ...panel,
-        tabs: panel.tabs.map(tab => ({
-          ...tab,
-          activeView: tab.activeView ?? null
-        }))
-      }))
-    }));
-  };
 
   // Save to localStorage whenever windows state changes
   useEffect(() => {
-    localStorage.setItem('workspaceState', JSON.stringify(windows));
-  }, [windows]);
+    try {
+      const stateToSave = JSON.stringify(windows);
+      localStorage.setItem(getStorageKey(workspaceTitle), stateToSave);
+      console.log('Successfully saved workspace state to localStorage:', {
+        windowsCount: windows.length,
+        totalTabs: windows.reduce((acc, window) =>
+          acc + window.panels.reduce((panelAcc, panel) =>
+            panelAcc + panel.tabs.length, 0), 0),
+        stateSize: stateToSave.length
+      });
+    } catch (e) {
+      console.error('Failed to save workspace state to localStorage:', e);
+      // Try to clear localStorage if it's full
+      try {
+        localStorage.clear();
+        localStorage.setItem(getStorageKey(workspaceTitle), JSON.stringify(windows));
+        console.log('Cleared localStorage and retried saving');
+      } catch (retryError) {
+        console.error('Failed to save even after clearing localStorage:', retryError);
+      }
+    }
+  }, [windows, workspaceTitle]);
 
   useEffect(() => {
     const title = searchParams.get('title');
@@ -91,13 +147,52 @@ function WorkspacePage() {
     }
   }, [searchParams]);
 
+  // Handle title change - reload workspace state for new title
+  useEffect(() => {
+    const storageKey = getStorageKey(workspaceTitle);
+    const saved = localStorage.getItem(storageKey);
+    console.log(`Title changed to "${workspaceTitle}", loading corresponding workspace state...`);
+
+    if (saved) {
+      try {
+        const parsedData = JSON.parse(saved);
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          const migratedData = migrateWorkspaceData(parsedData);
+          setWindows(migratedData);
+          console.log(`Successfully loaded workspace state for "${workspaceTitle}"`);
+        } else {
+          console.warn(`Invalid workspace state for "${workspaceTitle}", using default state`);
+          setWindows(getDefaultWorkspaceState());
+        }
+      } catch (e) {
+        console.error(`Failed to parse workspace state for "${workspaceTitle}":`, e);
+        setWindows(getDefaultWorkspaceState());
+      }
+    } else {
+      console.log(`No saved workspace state for "${workspaceTitle}", using default state`);
+      setWindows(getDefaultWorkspaceState());
+    }
+  }, [workspaceTitle]);
+
+  // Debug: Check localStorage on mount
+  useEffect(() => {
+    console.log('WorkspacePage mounted, checking localStorage...');
+    const saved = localStorage.getItem(getStorageKey(workspaceTitle));
+    if (saved) {
+      console.log('localStorage contains data:', saved.substring(0, 200) + '...');
+    } else {
+      console.log('localStorage is empty');
+    }
+  }, [workspaceTitle]);
+
   const addWindow = () => {
+    const newTabId = generateId();
     const newWindow = {
-      id: Date.now().toString(),
+      id: generateId(),
       panels: [{
-        id: Date.now().toString(),
-        tabs: [{ id: Date.now().toString(), title: "New tab", activeView: null }],
-        activeTabId: Date.now().toString()
+        id: generateId(),
+        tabs: [{ id: newTabId, title: "New tab", activeView: null }],
+        activeTabId: newTabId
       }],
       isActive: true
     };
@@ -119,7 +214,7 @@ function WorkspacePage() {
           panels: window.panels.map(panel => {
             if (panel.id === panelId) {
               const newTab = {
-                id: Date.now().toString(),
+                id: generateId(),
                 title: "New tab",
                 activeView: null,
               };
@@ -189,14 +284,15 @@ function WorkspacePage() {
     setWindows(windows.map(window => {
       if (window.id === windowId) {
         if (window.panels.length === 1) {
+          const newTabId = generateId();
           return {
             ...window,
             panels: [
               window.panels[0],
               {
-                id: Date.now().toString(),
-                tabs: [{ id: Date.now().toString(), title: "New tab", activeView: null }],
-                activeTabId: Date.now().toString()
+                id: generateId(),
+                tabs: [{ id: newTabId, title: "New tab", activeView: null }],
+                activeTabId: newTabId
               }
             ]
           };
@@ -367,6 +463,75 @@ function WorkspacePage() {
             </div>
           </div>
           <div className="flex flex-row justify-center items-center align-middle mr-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="p-0 h-auto mr-4"
+              onClick={() => {
+                console.log('Current windows state:', windows);
+                console.log(`localStorage content for "${workspaceTitle}":`, localStorage.getItem(getStorageKey(workspaceTitle)));
+                console.log('All localStorage keys:', Object.keys(localStorage).filter(key => key.startsWith('workspaceState_')));
+              }}
+              title="Debug: Log current state"
+            >
+              <SearchIcon className="w-6 h-6" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="p-0 h-auto mr-4"
+              onClick={() => {
+                const keys = Object.keys(localStorage).filter(key => key.startsWith('workspaceState_'));
+                keys.forEach(key => localStorage.removeItem(key));
+                console.log(`Cleared all workspace states: ${keys.join(', ')}`);
+                window.location.reload();
+              }}
+              title="Debug: Clear all workspace states"
+            >
+              <X className="w-6 h-6" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="p-0 h-auto mr-4"
+              onClick={() => {
+                // Test: Set activeView to deep-learn-response for the first tab
+                const firstWindow = windows[0];
+                const firstPanel = firstWindow.panels[0];
+                const firstTab = firstPanel.tabs[0];
+                updateTabView(firstWindow.id, firstPanel.id, firstTab.id, 'deep-learn-response');
+                console.log('Test: Set activeView to deep-learn-response');
+              }}
+              title="Debug: Test set activeView"
+            >
+              <Plus className="w-6 h-6" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="p-0 h-auto mr-4"
+              onClick={() => {
+                // Test: Cycle through different view states
+                const firstWindow = windows[0];
+                const firstPanel = firstWindow.panels[0];
+                const firstTab = firstPanel.tabs[0];
+                const currentView = firstTab.activeView || null;
+                const views = [
+                  'deep-learn-response',
+                  'document-chat-response',
+                  'problem-help-response',
+                  'smart-note-editor',
+                  null
+                ];
+                const currentIndex = views.indexOf(currentView);
+                const nextView = views[(currentIndex + 1) % views.length];
+                updateTabView(firstWindow.id, firstPanel.id, firstTab.id, nextView);
+                console.log(`Test: Set activeView to ${nextView}`);
+              }}
+              title="Debug: Cycle through view states"
+            >
+              <SearchIcon className="w-6 h-6" />
+            </Button>
             <Button variant="ghost" size="icon" className="p-0 h-auto mr-4">
               <Share2Icon className="w-8 h-8" />
             </Button>

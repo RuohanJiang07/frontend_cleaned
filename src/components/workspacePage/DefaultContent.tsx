@@ -13,10 +13,14 @@ import {
 } from "lucide-react";
 import { Progress } from "../ui/progress";
 import DeepLearn from "../../pages/workspacePage/components/DeepLearn/entry/DeepLearn";
+import DeepLearnResponse from "../../pages/workspacePage/components/DeepLearn/response/DeepLearnResponse";
 import ProblemSolver from "../../pages/workspacePage/components/ProblemHelp/entry/ProblemSolver";
+import ProblemHelpResponse from "../../pages/workspacePage/components/ProblemHelp/response/ProblemHelpResponse";
 import DocumentChat from "../../pages/workspacePage/components/DocumentChat/entry/DocumentChat";
 import Note from "../../pages/workspacePage/components/Note/entry/Note";
+import NoteEditor from "../../pages/workspacePage/components/Note/response/NoteEditor";
 import Drive from "../../pages/workspacePage/components/Drive/Drive";
+import DocumentChatResponse from "../../pages/workspacePage/components/DocumentChat/response/DocumentChatResponse";
 
 interface DefaultContentProps {
   tabId: string;
@@ -94,19 +98,35 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit, activeV
 
   // Render specific component based on activeView
   if (activeView === "deep-learn") {
-    return <DeepLearn isSplit={isSplit} onBack={handleBackToDefault} />;
+    return <DeepLearn isSplit={isSplit} onBack={handleBackToDefault} onViewChange={onViewChange} />;
+  }
+
+  if (activeView === "deep-learn-response") {
+    return <DeepLearnResponse isSplit={isSplit} onBack={handleBackToDefault} />;
   }
 
   if (activeView === "problem-help") {
-    return <ProblemSolver onBack={handleBackToDefault} />;
+    return <ProblemSolver onBack={handleBackToDefault} onViewChange={onViewChange} />;
+  }
+
+  if (activeView === "problem-help-response") {
+    return <ProblemHelpResponse onBack={handleBackToDefault} />;
   }
 
   if (activeView === "document-chat") {
-    return <DocumentChat isSplit={isSplit} onBack={handleBackToDefault} />;
+    return <DocumentChat isSplit={isSplit} onBack={handleBackToDefault} onViewChange={onViewChange} />;
+  }
+
+  if (activeView === "document-chat-response") {
+    return <DocumentChatResponse isSplit={isSplit} onBack={handleBackToDefault} />;
   }
 
   if (activeView === "smart-note") {
-    return <Note onBack={handleBackToDefault} />;
+    return <Note onBack={handleBackToDefault} onViewChange={onViewChange} />;
+  }
+
+  if (activeView === "smart-note-editor") {
+    return <NoteEditor onBack={handleBackToDefault} />;
   }
 
   if (activeView === "drive") {
