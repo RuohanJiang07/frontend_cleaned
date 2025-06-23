@@ -209,8 +209,18 @@ export const submitQuickSearchQuery = async (
 
     console.log('Submitting Quick Search request:', requestData);
 
-    // Call interactive endpoint in parallel
-    const interactivePromise = callInteractiveEndpoint(conversationId, query, additionalComments);
+    // Schedule interactive endpoint call for 4 seconds later
+    const interactivePromise = new Promise<InteractiveResponse>((resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          console.log('Starting interactive endpoint call (4 seconds after quicksearch)...');
+          const interactiveData = await callInteractiveEndpoint(conversationId, query, additionalComments);
+          resolve(interactiveData);
+        } catch (error) {
+          reject(error);
+        }
+      }, 3000); // 4 seconds delay
+    });
 
     const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/start/quicksearch`, {
       method: 'POST',
@@ -275,7 +285,7 @@ export const submitQuickSearchQuery = async (
     // Wait for interactive endpoint to complete and handle the response
     try {
       const interactiveData = await interactivePromise;
-      console.log('Interactive endpoint response:', interactiveData);
+      console.log('Interactive endpoint response (after 4 second delay):', interactiveData);
       
       // Store interactive data for the sidebar
       const tabId = window.location.pathname + window.location.search;
@@ -286,7 +296,7 @@ export const submitQuickSearchQuery = async (
         detail: { tabId, data: interactiveData }
       }));
     } catch (interactiveError) {
-      console.error('Interactive endpoint error:', interactiveError);
+      console.error('Interactive endpoint error (after 4 second delay):', interactiveError);
       // Don't fail the main request if interactive fails
     }
 

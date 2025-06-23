@@ -88,6 +88,17 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     localStorage.setItem(`deeplearn_mode_${tabId}`, mode);
   };
 
+  // Helper function to clear related content for new conversations
+  const clearRelatedContent = () => {
+    const tabId = window.location.pathname + window.location.search;
+    // Clear all related content data for this tab
+    localStorage.removeItem(`deeplearn_interactive_${tabId}`);
+    localStorage.removeItem(`deeplearn_streaming_content_${tabId}`);
+    localStorage.removeItem(`deeplearn_streaming_complete_${tabId}`);
+    
+    console.log('Cleared related content for new conversation');
+  };
+
   const handleCardClick = (cardId: number) => {
     // Notify parent component to change view to response
     onViewChange?.('deep-learn-response');
@@ -100,6 +111,9 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     }
 
     try {
+      // Clear related content when starting a new conversation
+      clearRelatedContent();
+
       console.log('Submitting query with params:', {
         query: inputText.trim(),
         mode: selectedMode,

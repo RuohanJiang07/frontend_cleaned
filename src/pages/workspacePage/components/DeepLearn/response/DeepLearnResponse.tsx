@@ -43,6 +43,24 @@ const myData: { nodes: CustomNode[]; links: LinkObject[] } = {
   ],
 };
 
+// Helper function to extract YouTube video ID from URL
+const getYouTubeVideoId = (url: string): string | null => {
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+};
+
+// Helper function to get YouTube thumbnail URL
+const getYouTubeThumbnail = (url: string): string => {
+  const videoId = getYouTubeVideoId(url);
+  if (videoId) {
+    // Use maxresdefault for high quality, fallback to hqdefault if needed
+    return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  }
+  // Fallback to a placeholder if not a YouTube URL
+  return 'https://images.pexels.com/photos/1181298/pexels-photo-1181298.jpeg?auto=compress&cs=tinysrgb&w=400';
+};
+
 // 回答标题区域组件 - 缩小上下间距
 const AnswerHeader: React.FC<{ title: string; tag: string; isSplit?: boolean }> = ({ title, tag, isSplit = false }) => (
   <div className={`mt-3 ${isSplit ? 'w-full' : 'w-[649px]'} mx-auto`}>
@@ -467,14 +485,31 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                           <div className="mb-4">
                             <h4 className="font-medium text-xs text-black mb-2">Related Videos</h4>
                             <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
-                              <div className="w-full h-20 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
-                                <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                                <div className="text-center z-10">
-                                  <div className="text-yellow-300 font-bold text-xs mb-1">VIDEO</div>
-                                  <div className="flex items-center justify-center mb-1">
-                                    <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center mr-1">
-                                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                                    </div>
+                              <div className="w-full h-20 relative overflow-hidden">
+                                <img
+                                  src={getYouTubeThumbnail(interactiveData.interactive_content.recommended_videos[0].url)}
+                                  alt="Video thumbnail"
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    // Fallback to gradient background if thumbnail fails to load
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const parent = target.parentElement;
+                                    if (parent) {
+                                      parent.className += ' bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400';
+                                    }
+                                  }}
+                                />
+                                {/* Play button overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-12 h-12 bg-black bg-opacity-70 rounded-full flex items-center justify-center">
+                                    <PlayIcon className="w-6 h-6 text-white ml-1" />
+                                  </div>
+                                </div>
+                                {/* YouTube logo overlay */}
+                                <div className="absolute top-2 right-2">
+                                  <div className="bg-red-600 text-white px-1 py-0.5 rounded text-xs font-bold">
+                                    YouTube
                                   </div>
                                 </div>
                               </div>
@@ -539,73 +574,10 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                         )}
                       </>
                     ) : (
-                      /* Default placeholder content for non-quick-search modes */
-                      <>
-                        {/* Related Videos */}
-                        <div className="mb-4">
-                          <h4 className="font-medium text-xs text-black mb-2">Related Videos</h4>
-                          <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
-                            <div className="w-full h-20 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
-                              <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                              <div className="text-center z-10">
-                                <div className="text-yellow-300 font-bold text-xs mb-1">QUANTUM</div>
-                                <div className="flex items-center justify-center mb-1">
-                                  <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center mr-1">
-                                    <div className="w-2 h-2 bg-black rounded-full"></div>
-                                  </div>
-                                  <div className="text-blue-400 text-xs">⚡ ⚡</div>
-                                </div>
-                                <div className="text-white font-bold text-xs">ENTANGLEMENT</div>
-                              </div>
-                            </div>
-                            <div className="p-2">
-                              <p className="text-[10px] text-black mb-1 font-medium">Quantum Entanglement: Explained in REALLY SIMPLE Words</p>
-                              <div className="flex items-center gap-1">
-                                <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
-                                <p className="text-[9px] text-red-600 font-medium">Science ABC</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Related Webpages */}
-                        <div className="mb-4">
-                          <h4 className="font-medium text-xs text-black mb-2">Related Webpages</h4>
-                          <div className="grid grid-cols-2 gap-1.5">
-                            <div className="bg-[#F0F0F0] rounded-lg p-2">
-                              <div className="text-[9px] font-medium text-black mb-1">ScienceDirect discusses quantum entanglement.</div>
-                              <div className="text-[8px] text-gray-600 mb-1">Explore the phenomenon crucial for quantum information processing applications.</div>
-                              <div className="text-[8px] text-black mb-1">Quantum Entanglement - an o...</div>
-                              <div className="text-[8px] text-orange-600">📄 ScienceDirect.com</div>
-                            </div>
-                            <div className="bg-[#F0F0F0] rounded-lg p-2">
-                              <div className="text-[9px] font-medium text-black mb-1">NASA's take entanglement</div>
-                              <div className="text-[8px] text-gray-600 mb-1">Learn about nature of par common orig</div>
-                              <div className="text-[8px] text-black mb-1">What is Qua</div>
-                              <div className="text-[8px] text-blue-600">🌐 NASA Sc</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Related Concepts */}
-                        <div>
-                          <h4 className="font-medium text-xs text-black mb-2">Related Concepts</h4>
-                          <div className="space-y-2">
-                            <div>
-                              <div className="text-[9px] font-medium text-black mb-1">Understand the fundamental principles of quantum entanglement.</div>
-                              <div className="bg-[#D5EBF3] text-[#1e40af] px-1.5 py-0.5 rounded text-[8px] inline-block">
-                                Interconnected Fate
-                              </div>
-                            </div>
-                            <div className="bg-[#E8D5F3] text-[#6b21a8] px-1.5 py-0.5 rounded text-[8px] inline-block">
-                              Instantaneous Correlation
-                            </div>
-                            <div className="bg-[#D5F3E8] text-[#059669] px-1.5 py-0.5 rounded text-[8px] inline-block">
-                              Randomness
-                            </div>
-                          </div>
-                        </div>
-                      </>
+                      /* Show empty state when no interactive data */
+                      <div className="text-center py-8 text-gray-400">
+                        <p className="text-xs">Related content will appear here...</p>
+                      </div>
                     )}
                   </div>
                 </div>
