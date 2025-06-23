@@ -8,7 +8,7 @@ import {
   PlayIcon,
   ExternalLinkIcon
 } from 'lucide-react';
-import { getStreamingResponse, StreamingData } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
+import { getStreamingResponse, StreamingData, InteractiveResponse } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
 import { useToast } from '../../../../../hooks/useToast';
 
 interface DeepLearnResponseProps {
@@ -127,6 +127,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState<string>('');
   const [conversationId, setConversationId] = useState<string>('');
+  const [interactiveData, setInteractiveData] = useState<InteractiveResponse | null>(null);
+  const [isLoadingInteractive, setIsLoadingInteractive] = useState(true);
 
   // Load saved data for this tab
   useEffect(() => {
@@ -134,32 +136,83 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
     const savedConversationId = localStorage.getItem(`deeplearn_conversation_${tabId}`);
     const savedQuery = localStorage.getItem(`deeplearn_query_${tabId}`);
     const savedMode = localStorage.getItem(`deeplearn_mode_${tabId}`) as 'deep-learn' | 'quick-search';
+    const savedStreamingContent = localStorage.getItem(`deeplearn_streaming_content_${tabId}`) || '';
+    const isStreamingComplete = localStorage.getItem(`deeplearn_streaming_complete_${tabId}`) === 'true';
+    const savedInteractiveData = localStorage.getItem(`deeplearn_interactive_${tabId}`);
 
     console.log('Loading saved data for tab:', {
       tabId,
       conversationId: savedConversationId,
       query: savedQuery,
-      mode: savedMode
+      mode: savedMode,
+      streamingContentLength: savedStreamingContent.length,
+      isStreamingComplete,
+      hasInteractiveData: !!savedInteractiveData
     });
 
-    if (savedConversationId && savedQuery) {
-      setConversationId(savedConversationId);
+    if (savedQuery) {
       setUserQuery(savedQuery);
       if (savedMode) {
         setSelectedMode(savedMode);
       }
 
-      // Start streaming if mode is quicksearch
       if (savedMode === 'quick-search') {
-        console.log('Starting streaming for quicksearch mode');
+        // For quick search, load streaming content
+        setStreamingContent(savedStreamingContent);
+        setIsLoading(!isStreamingComplete);
+        
+        // Load interactive data if available
+        if (savedInteractiveData) {
+          try {
+            const parsedInteractiveData = JSON.parse(savedInteractiveData);
+            setInteractiveData(parsedInteractiveData);
+            setIsLoadingInteractive(false);
+          } catch (e) {
+            console.error('Failed to parse interactive data:', e);
+            setIsLoadingInteractive(false);
+          }
+        }
+        
+        // Listen for streaming updates
+        const handleStreamingUpdate = (event: CustomEvent) => {
+          if (event.detail.tabId === tabId) {
+            setStreamingContent(event.detail.content);
+          }
+        };
+
+        const handleStreamingComplete = (event: CustomEvent) => {
+          if (event.detail.tabId === tabId) {
+            setIsLoading(false);
+          }
+        };
+
+        const handleInteractiveUpdate = (event: CustomEvent) => {
+          if (event.detail.tabId === tabId) {
+            setInteractiveData(event.detail.data);
+            setIsLoadingInteractive(false);
+          }
+        };
+
+        window.addEventListener('deeplearn-streaming-update', handleStreamingUpdate as EventListener);
+        window.addEventListener('deeplearn-streaming-complete', handleStreamingComplete as EventListener);
+        window.addEventListener('deeplearn-interactive-update', handleInteractiveUpdate as EventListener);
+
+        return () => {
+          window.removeEventListener('deeplearn-streaming-update', handleStreamingUpdate as EventListener);
+          window.removeEventListener('deeplearn-streaming-complete', handleStreamingComplete as EventListener);
+          window.removeEventListener('deeplearn-interactive-update', handleInteractiveUpdate as EventListener);
+        };
+      } else if (savedConversationId) {
+        // For deep learn, start streaming if we have a conversation ID
+        setConversationId(savedConversationId);
+        console.log('Starting streaming for deep learn mode');
         startStreaming(savedConversationId);
-      } else {
-        console.log('Deep learn mode - no streaming needed');
-        setIsLoading(false);
+        setIsLoadingInteractive(false); // Deep learn doesn't use interactive data
       }
     } else {
       console.log('No saved data found, using defaults');
       setIsLoading(false);
+      setIsLoadingInteractive(false);
     }
   }, []);
 
@@ -174,7 +227,6 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
         (data: StreamingData) => {
           console.log('Received streaming chunk:', data);
           if (data.content) {
-            // 🎯 REAL-TIME STREAMING: 收到一段就立即显示一段！
             setStreamingContent(prev => {
               const newContent = prev + data.content;
               console.log('Updated content length:', newContent.length);
@@ -213,7 +265,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
           <h1 className="font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal">
-            Learning Journey: {userQuery || 'Exploration of Black Hole and its Related Concepts'}
+            Learning Journey: {userQuery || 'Research Topic'}
           </h1>
         </div>
 
@@ -276,7 +328,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
               <div className="h-[calc(100vh-280px)] overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex-shrink-0">
                 {/* User Question - 学习参考代码的conversation样式 */}
                 <UserQuestionBubble 
-                  content={userQuery || "黑洞信息悖论如何解决？"} 
+                  content={userQuery || "Research topic"} 
                   time="Me, Jun 1, 9:50 PM" 
                   isSplit={isSplit} 
                 />
@@ -284,7 +336,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                 {/* AI Response - 学习参考代码的conversation样式 */}
                 <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed">
                   <AnswerHeader 
-                    title={userQuery || "黑洞信息悖论如何解决？"} 
+                    title={userQuery || "Research topic"} 
                     tag={selectedMode === 'deep-learn' ? 'Deep Learn' : 'Quick Search'} 
                     isSplit={isSplit} 
                   />
@@ -404,70 +456,157 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                 {/* Scrollable Content Section - 添加Related Contents内容 */}
                 <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <div className="bg-white p-3">
-                    {/* Related Videos */}
-                    <div className="mb-4">
-                      <h4 className="font-medium text-xs text-black mb-2">Related Videos</h4>
-                      <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
-                        <div className="w-full h-20 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
-                          <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-                          <div className="text-center z-10">
-                            <div className="text-yellow-300 font-bold text-xs mb-1">QUANTUM</div>
-                            <div className="flex items-center justify-center mb-1">
-                              <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center mr-1">
-                                <div className="w-2 h-2 bg-black rounded-full"></div>
+                    {isLoadingInteractive ? (
+                      <div className="text-center py-4">
+                        <div className="text-gray-500 text-sm">Loading...</div>
+                      </div>
+                    ) : interactiveData ? (
+                      <>
+                        {/* Related Videos */}
+                        {interactiveData.interactive_content.recommended_videos.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="font-medium text-xs text-black mb-2">Related Videos</h4>
+                            <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                              <div className="w-full h-20 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
+                                <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                                <div className="text-center z-10">
+                                  <div className="text-yellow-300 font-bold text-xs mb-1">VIDEO</div>
+                                  <div className="flex items-center justify-center mb-1">
+                                    <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center mr-1">
+                                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-blue-400 text-xs">⚡ ⚡</div>
+                              <div className="p-2">
+                                <p className="text-[10px] text-black mb-1 font-medium line-clamp-2">
+                                  {interactiveData.interactive_content.recommended_videos[0].title}
+                                </p>
+                                <div className="flex items-center gap-1">
+                                  <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                                  <p className="text-[9px] text-red-600 font-medium">
+                                    {interactiveData.interactive_content.recommended_videos[0].channel}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-white font-bold text-xs">ENTANGLEMENT</div>
+                          </div>
+                        )}
+
+                        {/* Related Webpages */}
+                        {interactiveData.interactive_content.related_webpages.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="font-medium text-xs text-black mb-2">Related Webpages</h4>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {interactiveData.interactive_content.related_webpages.slice(0, 2).map((webpage, index) => (
+                                <div key={index} className="bg-[#F0F0F0] rounded-lg p-2">
+                                  <div className="text-[9px] font-medium text-black mb-1 line-clamp-2">
+                                    {webpage.title}
+                                  </div>
+                                  <div className="text-[8px] text-gray-600 mb-1 line-clamp-2">
+                                    {webpage.description}
+                                  </div>
+                                  <div className="text-[8px] text-blue-600 truncate">
+                                    🌐 {new URL(webpage.url).hostname}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Related Concepts */}
+                        {interactiveData.interactive_content.related_concepts.length > 0 && (
+                          <div>
+                            <h4 className="font-medium text-xs text-black mb-2">Related Concepts</h4>
+                            <div className="space-y-2">
+                              {interactiveData.interactive_content.related_concepts.slice(0, 3).map((concept, index) => (
+                                <div key={index}>
+                                  <div className="text-[9px] font-medium text-black mb-1">
+                                    {concept.explanation}
+                                  </div>
+                                  <div className={`${
+                                    index === 0 ? 'bg-[#D5EBF3] text-[#1e40af]' :
+                                    index === 1 ? 'bg-[#E8D5F3] text-[#6b21a8]' :
+                                    'bg-[#D5F3E8] text-[#059669]'
+                                  } px-1.5 py-0.5 rounded text-[8px] inline-block`}>
+                                    {concept.concept}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      /* Default placeholder content for non-quick-search modes */
+                      <>
+                        {/* Related Videos */}
+                        <div className="mb-4">
+                          <h4 className="font-medium text-xs text-black mb-2">Related Videos</h4>
+                          <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                            <div className="w-full h-20 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
+                              <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                              <div className="text-center z-10">
+                                <div className="text-yellow-300 font-bold text-xs mb-1">QUANTUM</div>
+                                <div className="flex items-center justify-center mb-1">
+                                  <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center mr-1">
+                                    <div className="w-2 h-2 bg-black rounded-full"></div>
+                                  </div>
+                                  <div className="text-blue-400 text-xs">⚡ ⚡</div>
+                                </div>
+                                <div className="text-white font-bold text-xs">ENTANGLEMENT</div>
+                              </div>
+                            </div>
+                            <div className="p-2">
+                              <p className="text-[10px] text-black mb-1 font-medium">Quantum Entanglement: Explained in REALLY SIMPLE Words</p>
+                              <div className="flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                                <p className="text-[9px] text-red-600 font-medium">Science ABC</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="p-2">
-                          <p className="text-[10px] text-black mb-1 font-medium">Quantum Entanglement: Explained in REALLY SIMPLE Words</p>
-                          <div className="flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
-                            <p className="text-[9px] text-red-600 font-medium">Science ABC</p>
+
+                        {/* Related Webpages */}
+                        <div className="mb-4">
+                          <h4 className="font-medium text-xs text-black mb-2">Related Webpages</h4>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <div className="bg-[#F0F0F0] rounded-lg p-2">
+                              <div className="text-[9px] font-medium text-black mb-1">ScienceDirect discusses quantum entanglement.</div>
+                              <div className="text-[8px] text-gray-600 mb-1">Explore the phenomenon crucial for quantum information processing applications.</div>
+                              <div className="text-[8px] text-black mb-1">Quantum Entanglement - an o...</div>
+                              <div className="text-[8px] text-orange-600">📄 ScienceDirect.com</div>
+                            </div>
+                            <div className="bg-[#F0F0F0] rounded-lg p-2">
+                              <div className="text-[9px] font-medium text-black mb-1">NASA's take entanglement</div>
+                              <div className="text-[8px] text-gray-600 mb-1">Learn about nature of par common orig</div>
+                              <div className="text-[8px] text-black mb-1">What is Qua</div>
+                              <div className="text-[8px] text-blue-600">🌐 NASA Sc</div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Related Webpages */}
-                    <div className="mb-4">
-                      <h4 className="font-medium text-xs text-black mb-2">Related Webpages</h4>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <div className="bg-[#F0F0F0] rounded-lg p-2">
-                          <div className="text-[9px] font-medium text-black mb-1">ScienceDirect discusses quantum entanglement.</div>
-                          <div className="text-[8px] text-gray-600 mb-1">Explore the phenomenon crucial for quantum information processing applications.</div>
-                          <div className="text-[8px] text-black mb-1">Quantum Entanglement - an o...</div>
-                          <div className="text-[8px] text-orange-600">📄 ScienceDirect.com</div>
-                        </div>
-                        <div className="bg-[#F0F0F0] rounded-lg p-2">
-                          <div className="text-[9px] font-medium text-black mb-1">NASA's take entanglement</div>
-                          <div className="text-[8px] text-gray-600 mb-1">Learn about nature of par common orig</div>
-                          <div className="text-[8px] text-black mb-1">What is Qua</div>
-                          <div className="text-[8px] text-blue-600">🌐 NASA Sc</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Related Concepts */}
-                    <div>
-                      <h4 className="font-medium text-xs text-black mb-2">Related Concepts</h4>
-                      <div className="space-y-2">
+                        {/* Related Concepts */}
                         <div>
-                          <div className="text-[9px] font-medium text-black mb-1">Understand the fundamental principles of quantum entanglement.</div>
-                          <div className="bg-[#D5EBF3] text-[#1e40af] px-1.5 py-0.5 rounded text-[8px] inline-block">
-                            Interconnected Fate
+                          <h4 className="font-medium text-xs text-black mb-2">Related Concepts</h4>
+                          <div className="space-y-2">
+                            <div>
+                              <div className="text-[9px] font-medium text-black mb-1">Understand the fundamental principles of quantum entanglement.</div>
+                              <div className="bg-[#D5EBF3] text-[#1e40af] px-1.5 py-0.5 rounded text-[8px] inline-block">
+                                Interconnected Fate
+                              </div>
+                            </div>
+                            <div className="bg-[#E8D5F3] text-[#6b21a8] px-1.5 py-0.5 rounded text-[8px] inline-block">
+                              Instantaneous Correlation
+                            </div>
+                            <div className="bg-[#D5F3E8] text-[#059669] px-1.5 py-0.5 rounded text-[8px] inline-block">
+                              Randomness
+                            </div>
                           </div>
                         </div>
-                        <div className="bg-[#E8D5F3] text-[#6b21a8] px-1.5 py-0.5 rounded text-[8px] inline-block">
-                          Instantaneous Correlation
-                        </div>
-                        <div className="bg-[#D5F3E8] text-[#059669] px-1.5 py-0.5 rounded text-[8px] inline-block">
-                          Randomness
-                        </div>
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

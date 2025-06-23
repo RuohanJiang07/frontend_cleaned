@@ -17,6 +17,62 @@ export interface DeepLearnResponse {
   status: string;
 }
 
+export interface QuickSearchRequest {
+  workspace_id: string;
+  conversation_id?: string;
+  new_conversation: boolean;
+  search_type: string;
+  web_search: boolean;
+  user_query: string;
+  user_additional_comment?: string | null;
+  profile_selected?: string | null;
+  references_selected?: string[] | null;
+}
+
+export interface InteractiveRequest {
+  workspace_id: string;
+  conversation_id: string;
+  user_query: string;
+  user_additional_comment?: string | null;
+}
+
+export interface InteractiveResponse {
+  success: boolean;
+  conversation_title: string;
+  topic: string;
+  roadmap_node_index: number;
+  concept_map: {
+    nodes: Array<{
+      id: number;
+      label: string;
+      neighbors: number[];
+    }>;
+  };
+  interactive_content: {
+    conversation_title: string;
+    recommended_videos: Array<{
+      title: string;
+      url: string;
+      thumbnail: string;
+      channel: string;
+    }>;
+    related_webpages: Array<{
+      title: string;
+      url: string;
+      description: string;
+    }>;
+    related_concepts: Array<{
+      concept: string;
+      explanation: string;
+    }>;
+  };
+  files_updated: {
+    conversation_json: string;
+    concept_map_json: string;
+  };
+  timestamp: string;
+}
+
 export interface StreamingData {
   content?: string;
   type?: string;
@@ -49,6 +105,21 @@ const createAuthHeaders = () => {
     'Content-Type': 'application/json',
     'accept': 'application/json',
   };
+};
+
+// Helper function to generate UUID
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+// Helper function to generate conversation ID in dl-c-{uuid} format
+const generateConversationId = (): string => {
+  const uuid = generateUUID();
+  return `dl-c-${uuid}`;
 };
 
 export const submitDeepLearnQuery = async (
@@ -99,6 +170,166 @@ export const submitDeepLearnQuery = async (
     return data;
   } catch (error) {
     console.error('Deep Learn API error:', error);
+    throw error;
+  }
+};
+
+export const submitQuickSearchQuery = async (
+  query: string,
+  webSearch: boolean,
+  additionalComments?: string,
+  profile?: string,
+  references?: string[] | null,
+  onData: (data: string) => void,
+  onError: (error: string) => void,
+  onComplete: () => void
+): Promise<string> => {
+  try {
+    const workspaceId = getWorkspaceId();
+    if (!workspaceId) {
+      throw new Error('No workspace selected. Please select a workspace first.');
+    }
+
+    // Generate conversation ID in dl-c-{uuid} format
+    const conversationId = generateConversationId();
+    console.log('Generated conversation ID:', conversationId);
+
+    // Use real user input and settings
+    const requestData: QuickSearchRequest = {
+      workspace_id: "workspace-de87ec2a-1b88-4f85-826c-2fd6894b21df",
+      conversation_id: conversationId,
+      search_type: "quicksearch",
+      web_search: webSearch,
+      user_query: query,
+      new_conversation: true,
+      user_additional_comment: additionalComments || null,
+      profile_selected: profile || null,
+      references_selected: references || []
+    };
+
+    console.log('Submitting Quick Search request:', requestData);
+
+    // Call interactive endpoint in parallel
+    const interactivePromise = callInteractiveEndpoint(conversationId, query, additionalComments);
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/start/quicksearch`, {
+      method: 'POST',
+      headers: createAuthHeaders(),
+      body: JSON.stringify(requestData),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication failed. Please login again.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('Failed to get response reader');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) {
+        console.log('Quick search streaming completed');
+        onComplete();
+        break;
+      }
+
+      // Decode the chunk and add to buffer
+      buffer += decoder.decode(value, { stream: true });
+      
+      // Process complete lines (backend sends line by line)
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (line.trim()) {
+          console.log('Received streaming line:', line);
+          
+          // Check for error in the line
+          if (line.includes('"error"')) {
+            try {
+              const errorData = JSON.parse(line);
+              if (errorData.error) {
+                onError(errorData.error);
+                return conversationId;
+              }
+            } catch (parseError) {
+              // If it's not valid JSON, treat as regular content
+            }
+          }
+          
+          // Send the line to the callback (add newline back since backend expects line-by-line)
+          onData(line + '\n');
+        }
+      }
+    }
+
+    // Wait for interactive endpoint to complete and handle the response
+    try {
+      const interactiveData = await interactivePromise;
+      console.log('Interactive endpoint response:', interactiveData);
+      
+      // Store interactive data for the sidebar
+      const tabId = window.location.pathname + window.location.search;
+      localStorage.setItem(`deeplearn_interactive_${tabId}`, JSON.stringify(interactiveData));
+      
+      // Trigger event to update sidebar
+      window.dispatchEvent(new CustomEvent('deeplearn-interactive-update', {
+        detail: { tabId, data: interactiveData }
+      }));
+    } catch (interactiveError) {
+      console.error('Interactive endpoint error:', interactiveError);
+      // Don't fail the main request if interactive fails
+    }
+
+    return conversationId;
+  } catch (error) {
+    console.error('Quick Search API error:', error);
+    onError(error instanceof Error ? error.message : 'Unknown quick search error');
+    throw error;
+  }
+};
+
+const callInteractiveEndpoint = async (
+  conversationId: string,
+  userQuery: string,
+  userAdditionalComment?: string
+): Promise<InteractiveResponse> => {
+  try {
+    const requestData: InteractiveRequest = {
+      workspace_id: "workspace-de87ec2a-1b88-4f85-826c-2fd6894b21df",
+      conversation_id: conversationId,
+      user_query: userQuery,
+      user_additional_comment: userAdditionalComment || null
+    };
+
+    console.log('Calling interactive endpoint:', requestData);
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/interactive`, {
+      method: 'POST',
+      headers: createAuthHeaders(),
+      body: JSON.stringify(requestData),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication failed. Please login again.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data: InteractiveResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Interactive API error:', error);
     throw error;
   }
 };

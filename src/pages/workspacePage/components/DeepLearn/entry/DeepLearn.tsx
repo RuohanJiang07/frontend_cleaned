@@ -3,7 +3,7 @@ import { GlobeIcon, PaperclipIcon, FolderIcon, ChevronDownIcon } from 'lucide-re
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { useState } from 'react';
-import { submitDeepLearnQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
+import { submitDeepLearnQuery, submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
 import { useToast } from '../../../../../hooks/useToast';
 
 interface DeepLearnProps {
@@ -100,7 +100,7 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     }
 
     try {
-      console.log('Submitting Deep Learn query with params:', {
+      console.log('Submitting query with params:', {
         query: inputText.trim(),
         mode: selectedMode,
         webSearch: webSearchEnabled,
@@ -109,26 +109,69 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
         references: null
       });
 
-      const response = await submitDeepLearnQuery(
-        inputText.trim(),
-        selectedMode,
-        webSearchEnabled,
-        additionalComments.trim() || undefined,
-        'profile-default',
-        null
-      );
-      
-      console.log('Deep Learn response:', response);
+      if (selectedMode === 'quick-search') {
+        // For quick search, use the new streaming endpoint
+        const tabId = window.location.pathname + window.location.search;
+        localStorage.setItem(`deeplearn_query_${tabId}`, inputText.trim());
+        localStorage.setItem(`deeplearn_mode_${tabId}`, selectedMode);
+        localStorage.setItem(`deeplearn_streaming_content_${tabId}`, ''); // Clear previous content
+        
+        // Navigate to response page immediately
+        onViewChange?.('deep-learn-response');
+        
+        // Start streaming in the background
+        await submitQuickSearchQuery(
+          inputText.trim(),
+          webSearchEnabled,
+          additionalComments.trim() || undefined,
+          'profile-default',
+          null,
+          (data: string) => {
+            // Update streaming content in localStorage
+            const currentContent = localStorage.getItem(`deeplearn_streaming_content_${tabId}`) || '';
+            localStorage.setItem(`deeplearn_streaming_content_${tabId}`, currentContent + data);
+            
+            // Trigger a custom event to notify the response component
+            window.dispatchEvent(new CustomEvent('deeplearn-streaming-update', {
+              detail: { tabId, content: currentContent + data }
+            }));
+          },
+          (errorMsg: string) => {
+            console.error('Quick search streaming error:', errorMsg);
+            error(`Streaming error: ${errorMsg}`);
+          },
+          () => {
+            console.log('Quick search streaming completed');
+            // Mark streaming as complete
+            localStorage.setItem(`deeplearn_streaming_complete_${tabId}`, 'true');
+            window.dispatchEvent(new CustomEvent('deeplearn-streaming-complete', {
+              detail: { tabId }
+            }));
+          }
+        );
+      } else {
+        // For deep learn, use the original endpoint
+        const response = await submitDeepLearnQuery(
+          inputText.trim(),
+          selectedMode,
+          webSearchEnabled,
+          additionalComments.trim() || undefined,
+          'profile-default',
+          null
+        );
+        
+        console.log('Deep Learn response:', response);
 
-      // Save conversation ID and query for this tab
-      saveTabData(response.conversation_id, inputText.trim(), selectedMode);
+        // Save conversation ID and query for this tab
+        saveTabData(response.conversation_id, inputText.trim(), selectedMode);
 
-      // Navigate to response page immediately
-      onViewChange?.('deep-learn-response');
+        // Navigate to response page immediately
+        onViewChange?.('deep-learn-response');
+      }
 
     } catch (err) {
-      console.error('Error submitting Deep Learn query:', err);
-      error('Failed to start deep research. Please try again.');
+      console.error('Error submitting query:', err);
+      error('Failed to start research. Please try again.');
     }
   };
 
