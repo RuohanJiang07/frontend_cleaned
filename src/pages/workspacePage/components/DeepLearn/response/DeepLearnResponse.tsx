@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import ForceGraph2D, { LinkObject, NodeObject } from 'react-force-graph-2d';
 import {
@@ -8,8 +8,6 @@ import {
   PlayIcon,
   ExternalLinkIcon
 } from 'lucide-react';
-import { getStreamingResponse, StreamingData } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
-import { useToast } from '../../../../../hooks/useToast';
 
 interface DeepLearnResponseProps {
   onBack: () => void;
@@ -72,42 +70,24 @@ const SourceWebpagesPlaceholders: React.FC<{ isSplit?: boolean }> = ({ isSplit =
   </div>
 );
 
-// 用户提问气泡组件 - 动态调整宽度
+// 用户提问气泡组件 - 学习参考代码的样式
 const UserQuestionBubble: React.FC<{
   content: string;
   time: string;
   className?: string;
   isSplit?: boolean;
-}> = ({ content, time, className = "", isSplit = false }) => {
-  // Calculate dynamic width based on content length
-  const getWidth = () => {
-    const baseWidth = isSplit ? 140 : 163;
-    const charLength = content.length;
-    
-    if (charLength <= 20) return baseWidth;
-    if (charLength <= 40) return baseWidth + (isSplit ? 40 : 60);
-    if (charLength <= 60) return baseWidth + (isSplit ? 80 : 120);
-    return baseWidth + (isSplit ? 120 : 180);
-  };
-
-  const dynamicWidth = getWidth();
-
-  return (
-    <div className={`flex flex-col items-end mb-6 ${isSplit ? 'w-full' : 'w-[649px]'} mx-auto ${className}`}>
-      <span className="font-medium text-[#636363] font-['Inter'] text-[10px] font-normal font-medium leading-normal mb-0.5 self-end">
-        {time}
+}> = ({ content, time, className = "", isSplit = false }) => (
+  <div className={`flex flex-col items-end mb-6 ${isSplit ? 'w-full' : 'w-[649px]'} mx-auto ${className}`}>
+    <span className="font-medium text-[#636363] font-['Inter'] text-[10px] font-normal font-medium leading-normal mb-0.5 self-end">
+      {time}
+    </span>
+    <div className={`flex items-center justify-center ${isSplit ? 'w-[140px]' : 'w-[163px]'} h-[34px] flex-shrink-0 rounded-[10px] bg-[#ECF1F6] self-end`}>
+      <span className={`text-black font-['Inter'] ${isSplit ? 'text-[11px]' : 'text-[13px]'} font-medium font-normal leading-normal`}>
+        {content}
       </span>
-      <div 
-        className={`flex items-center justify-center h-auto min-h-[34px] flex-shrink-0 rounded-[10px] bg-[#ECF1F6] self-end px-3 py-2`}
-        style={{ width: `${dynamicWidth}px`, maxWidth: isSplit ? '300px' : '400px' }}
-      >
-        <span className={`text-black font-['Inter'] ${isSplit ? 'text-[11px]' : 'text-[13px]'} font-medium font-normal leading-normal text-center break-words`}>
-          {content}
-        </span>
-      </div>
     </div>
-  );
-};
+  </div>
+);
 
 // 正文解释部分组件 - 学习参考代码的样式
 const AnswerBody: React.FC<{ children: React.ReactNode; isSplit?: boolean }> = ({ children, isSplit = false }) => (
@@ -119,85 +99,40 @@ const AnswerBody: React.FC<{ children: React.ReactNode; isSplit?: boolean }> = (
   </div>
 );
 
+// Follow Up Response 组件 - 学习参考代码的样式
+const FollowUpResponse: React.FC<{ time: string; isSplit?: boolean }> = ({ time, isSplit = false }) => (
+  <div className={`flex flex-col mt-[45px] ${isSplit ? 'w-full' : 'w-[649px]'} mx-auto`}>
+    {/* Meta 信息行 */}
+    <div className="flex items-center mb-1">
+      <span className="flex items-center justify-center w-14 h-4 flex-shrink-0 rounded-lg border border-[#D9D9D9] bg-[#F9F9F9] text-[#6B6B6B] font-['Inter'] text-[9px] font-medium leading-normal">
+        Follow Up
+      </span>
+      <span className="ml-1 text-[#636363] font-['Inter'] text-[10px] font-medium leading-normal">
+        {time}
+      </span>
+    </div>
+
+    {/* Follow Up 对话框 */}
+    <div className="w-full rounded-[10px] bg-[#ECF1F6] flex-shrink-0 p-3">
+      <div className={`text-black font-['Inter'] ${isSplit ? 'text-[11px]' : 'text-[13px]'} font-normal  leading-normal`}>
+        悖论的核心矛盾
+        量子决定性：给定量子系统的当前状态，未来状态可以被唯一确定；反之亦然。
+        可逆性：量子力学演化是幺正的，即信息不会被破坏或丢失。
+        霍金辐射的"无信息"：霍金辐射看似不携带黑洞内部的信息，信息似乎永久丢失。
+
+        解决思路与主要理论
+        2.1 全息原理与AdS/CFT对偶
+        全息原理（Holographic Principle）认为，描述一个空间区域的所有物理信息，可以被编码在该区域的边界上（如黑洞的事件视界）。AdS/CFT对偶是这一原理的数学实现，它指出，一个五维反德西特空间（AdS）中的量子引力理论，等价于其四维边界上的共形场论（CFT）。在这种框架下，黑洞内部的信息可以被"映射"到边界上，从而避免信息丢失。
+
+        全息原理的提出，解决了黑洞信息悖论的部分难题，并提供了新的理论工具。它表明，信息实际上并未丢失，而是以某种方式被"编码"在黑洞边界或外部宇宙中。
+      </div>
+    </div>
+  </div>
+);
+
 function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) {
-  const { error } = useToast();
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [hoverNode, setHoverNode] = useState<CustomNode | null>(null);
-  const [userQuery, setUserQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [streamingContent, setStreamingContent] = useState<string>('');
-  const [conversationId, setConversationId] = useState<string>('');
-
-  // Load saved data for this tab
-  useEffect(() => {
-    const tabId = window.location.pathname + window.location.search;
-    const savedConversationId = localStorage.getItem(`deeplearn_conversation_${tabId}`);
-    const savedQuery = localStorage.getItem(`deeplearn_query_${tabId}`);
-    const savedMode = localStorage.getItem(`deeplearn_mode_${tabId}`) as 'deep-learn' | 'quick-search';
-
-    console.log('Loading saved data for tab:', {
-      tabId,
-      conversationId: savedConversationId,
-      query: savedQuery,
-      mode: savedMode
-    });
-
-    if (savedConversationId && savedQuery) {
-      setConversationId(savedConversationId);
-      setUserQuery(savedQuery);
-      if (savedMode) {
-        setSelectedMode(savedMode);
-      }
-
-      // Start streaming if mode is quicksearch
-      if (savedMode === 'quick-search') {
-        console.log('Starting streaming for quicksearch mode');
-        startStreaming(savedConversationId);
-      } else {
-        console.log('Deep learn mode - no streaming needed');
-        setIsLoading(false);
-      }
-    } else {
-      console.log('No saved data found, using defaults');
-      setIsLoading(false);
-    }
-  }, []);
-
-  const startStreaming = async (convId: string) => {
-    try {
-      console.log('Starting streaming for conversation:', convId);
-      setIsLoading(true);
-      setStreamingContent('');
-
-      await getStreamingResponse(
-        convId,
-        (data: StreamingData) => {
-          console.log('Received streaming chunk:', data);
-          if (data.content) {
-            // 🎯 REAL-TIME STREAMING: 收到一段就立即显示一段！
-            setStreamingContent(prev => {
-              const newContent = prev + data.content;
-              console.log('Updated content length:', newContent.length);
-              return newContent;
-            });
-          }
-        },
-        (errorMsg: string) => {
-          console.error('Streaming error:', errorMsg);
-          error(`Streaming error: ${errorMsg}`);
-          setIsLoading(false);
-        },
-        () => {
-          console.log('Streaming completed');
-          setIsLoading(false);
-        }
-      );
-    } catch (err) {
-      console.error('Failed to start streaming:', err);
-      error('Failed to start streaming response');
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="h-[calc(100vh-88px)] flex flex-col bg-white overflow-hidden">
@@ -213,7 +148,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
           <h1 className="font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal">
-            Learning Journey: {userQuery || 'Exploration of Black Hole and its Related Concepts'}
+            Learning Journey: Exploration of Black Hole and its Related Concepts
           </h1>
         </div>
 
@@ -275,52 +210,87 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             <div className={`${isSplit ? 'max-w-[449px]' : 'w-[649px]'}`}>
               <div className="h-[calc(100vh-280px)] overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex-shrink-0">
                 {/* User Question - 学习参考代码的conversation样式 */}
-                <UserQuestionBubble 
-                  content={userQuery || "黑洞信息悖论如何解决？"} 
-                  time="Me, Jun 1, 9:50 PM" 
-                  isSplit={isSplit} 
-                />
+                <UserQuestionBubble content="黑洞信息悖论如何解决？" time="Me, Jun 1, 9:50 PM" isSplit={isSplit} />
 
                 {/* AI Response - 学习参考代码的conversation样式 */}
                 <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed">
-                  <AnswerHeader 
-                    title={userQuery || "黑洞信息悖论如何解决？"} 
-                    tag={selectedMode === 'deep-learn' ? 'Deep Learn' : 'Quick Search'} 
-                    isSplit={isSplit} 
-                  />
+                  <AnswerHeader title="黑洞信息悖论如何解决？" tag="Deep Learn" isSplit={isSplit} />
                   <SourceWebpagesPlaceholders isSplit={isSplit} />
-                  
-                  {/* 🎯 Conversation content area - 真正的实时streaming！ */}
                   <AnswerBody isSplit={isSplit}>
-                    {isLoading && !streamingContent ? (
-                      // 只在没有内容时显示简单的loading提示
-                      <div className="text-gray-500 italic">
-                        Loading response...
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-semibold text-base mb-3">1. 黑洞信息悖论的由来</h3>
+                        <p className="mb-4">
+                          黑洞信息悖论（Black Hole Information Paradox）源于量子力学与广义相对论在黑洞物理中的冲突。根据广义相对论，黑洞是一个引力极强、任何物质和辐射都无法逃逸的时空区域。1970年代，霍金（Stephen Hawking）将量子场论应用于黑洞附近，发现黑洞会通过量子效应向外辐射能量，这被称为"霍金辐射"。
+                        </p>
+                        <p className="mb-4">
+                          霍金的计算表明，霍金辐射的性质仅与黑洞的总质量、电荷和角动量有关，而与黑洞形成时的初始状态（即落入黑洞的物质信息）无关。这意味着，多个不同的初始状态可以演化成相同的最终状态，而这些初始状态的详细信息会在黑洞蒸发过程中"丢失"，这与量子力学中的"信息守恒"原理（即系统的波函数演化是幺正的，信息不会无故消失）相矛盾。
+                        </p>
                       </div>
-                    ) : streamingContent ? (
-                      // 🚀 实时显示streaming内容 - 收到一段显示一段！
-                      <div className="whitespace-pre-wrap leading-relaxed">
-                        {streamingContent}
-                        {/* 如果还在loading，显示一个简单的cursor */}
-                        {isLoading && (
-                          <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
-                        )}
+
+                      <div>
+                        <h3 className="font-semibold text-base mb-3">2. 悖论的核心矛盾</h3>
+                        <ul className="list-disc pl-6 mb-4 space-y-2">
+                          <li><strong>量子决定性</strong>：给定量子系统的当前状态，未来状态可以被唯一确定；反之亦然。</li>
+                          <li><strong>可逆性</strong>：量子力学演化是幺正的，即信息不会被破坏或丢失。</li>
+                          <li><strong>霍金辐射的"无信息"</strong>：霍金辐射看似不携带黑洞内部的信息，信息似乎永久丢失。</li>
+                        </ul>
                       </div>
-                    ) : selectedMode === 'deep-learn' ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>Deep learning response will appear here...</p>
+
+                      <div>
+                        <h3 className="font-semibold text-base mb-3">解决思路与主要理论</h3>
+
+                        <h4 className="font-medium text-sm mb-2">2.1 全息原理与AdS/CFT对偶</h4>
+                        <p className="mb-4">
+                          全息原理（Holographic Principle）认为，描述一个空间区域的所有物理信息，可以被编码在该区域的边界上（如黑洞的事件视界）。AdS/CFT对偶是这一原理的数学实现，它指出，一个五维反德西特时空（AdS）中的量子引力理论，等价于其四维边界上的共形场论（CFT）。在这种框架下，黑洞内部的信息可以被"映射"到边界上，从而避免信息丢失。
+                        </p>
+                        <p className="mb-4">
+                          全息原理的提出，解决了黑洞信息悖论的部分难题，并提供了新的理论工具。它表明，信息实际上并未丢失，而是以某种方式被"编码"在黑洞边界或外部宇宙中。
+                        </p>
+
+                        <h4 className="font-medium text-sm mb-2">2.2 佩奇曲线与量子纠缠</h4>
+                        <p className="mb-4">
+                          佩奇（Don Page）提出，如果黑洞与外界之间的纠缠随时间变化遵循"佩奇曲线"，则说明信息会从黑洞中释放出来。这条曲线早期随辐射增加而上升，达到峰值（佩奇时间）后下降，最终归零，意味着信息被完整保留。
+                        </p>
+                        <p className="mb-4">
+                          近年来，物理学家通过弦论、全息原理等方法，证明了黑洞的纠缠确实遵循佩奇曲线，信息会随着霍金辐射逐渐释放出来。
+                        </p>
+
+                        <h4 className="font-medium text-sm mb-2">2.3 ER=EPR假想</h4>
+                        <p className="mb-4">
+                          ER=EPR假想将爱因斯坦-罗森桥（ER，即虫洞）与量子纠缠（EPR，爱因斯坦-波多尔斯基-罗森悖论）联系起来，认为黑洞内部和外部的粒子通过虫洞连接，形成量子纠缠。这样，落入黑洞的信息会被保存在外部粒子中，并通过虫洞与内部粒子保持联系，从而避免了信息的丢失或复制。
+                        </p>
+                        <p className="mb-4">
+                          这一假想为信息如何在黑洞内外传递提供了新的视角，但目前尚未被实验证实。
+                        </p>
+
+                        <h4 className="font-medium text-sm mb-2">4. 信息量子热力学</h4>
+                        <p className="mb-4">
+                          有理论提出，信息本身不是先天固有的，而是后天生成的，物质与信息相互关联。落入黑洞的物质信息会转化为热辐射、热熵等量子态，通过量子信息科学和经典热力学的结合，信息得以保留。
+                        </p>
                       </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>Response content will appear here...</p>
-                      </div>
-                    )}
+                    </div>
                   </AnswerBody>
+
+                  {/* 新一轮提问，vertical spacing 40px - 学习参考代码的样式 */}
+                  <UserQuestionBubble
+                    content="黑洞信息悖论如何解决？"
+                    time="Me, Jun 1, 9:55 PM"
+                    className="mt-10"
+                    isSplit={isSplit}
+                  />
+
+                  {/* Follow Up Response - 学习参考代码的样式 */}
+                  <FollowUpResponse time="Jun 1, 9:58 PM" isSplit={isSplit} />
+
+
                 </div>
               </div>
-              
               {/* Fixed Bottom Input Box - 与文字对齐，使用相同的649px宽度，并计算正确的偏移量 */}
-              <div className=" bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between">
+              <div
+                className=" bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between"
+
+              >
                 <div className="flex items-center justify-between ">
                   <div className="flex items-center gap-4">
                     <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
@@ -558,6 +528,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
           </div>
         </div>
       </div>
+
+
     </div >
   );
 }

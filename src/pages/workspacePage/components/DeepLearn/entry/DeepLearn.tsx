@@ -3,8 +3,7 @@ import { GlobeIcon, PaperclipIcon, FolderIcon, ChevronDownIcon } from 'lucide-re
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { useState } from 'react';
-import { submitDeepLearnQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
-import { useToast } from '../../../../../hooks/useToast';
+import DeepLearnResponse from '../response/DeepLearnResponse';
 
 interface DeepLearnProps {
   isSplit?: boolean;
@@ -72,71 +71,14 @@ const learningCards = [
 ];
 
 function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
-  const { success, error } = useToast();
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [selectedTab, setSelectedTab] = useState<'trending' | 'history'>('trending');
   const [inputText, setInputText] = useState('');
   const [additionalComments, setAdditionalComments] = useState('');
-  const [webSearchEnabled, setWebSearchEnabled] = useState(true);
-
-  // Helper function to save conversation ID and query for this tab
-  const saveTabData = (conversationId: string, query: string, mode: 'deep-learn' | 'quick-search') => {
-    // Get current tab ID from the URL or generate one if needed
-    const tabId = window.location.pathname + window.location.search;
-    localStorage.setItem(`deeplearn_conversation_${tabId}`, conversationId);
-    localStorage.setItem(`deeplearn_query_${tabId}`, query);
-    localStorage.setItem(`deeplearn_mode_${tabId}`, mode);
-  };
 
   const handleCardClick = (cardId: number) => {
     // Notify parent component to change view to response
     onViewChange?.('deep-learn-response');
-  };
-
-  const handleSubmitQuery = async () => {
-    if (!inputText.trim()) {
-      error('Please enter a topic to learn about');
-      return;
-    }
-
-    try {
-      console.log('Submitting Deep Learn query with params:', {
-        query: inputText.trim(),
-        mode: selectedMode,
-        webSearch: webSearchEnabled,
-        additionalComments: additionalComments.trim() || undefined,
-        profile: 'profile-default',
-        references: null
-      });
-
-      const response = await submitDeepLearnQuery(
-        inputText.trim(),
-        selectedMode,
-        webSearchEnabled,
-        additionalComments.trim() || undefined,
-        'profile-default',
-        null
-      );
-      
-      console.log('Deep Learn response:', response);
-
-      // Save conversation ID and query for this tab
-      saveTabData(response.conversation_id, inputText.trim(), selectedMode);
-
-      // Navigate to response page immediately
-      onViewChange?.('deep-learn-response');
-
-    } catch (err) {
-      console.error('Error submitting Deep Learn query:', err);
-      error('Failed to start deep research. Please try again.');
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmitQuery();
-    }
   };
 
   const handleBackToEntry = () => {
@@ -144,6 +86,8 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     onViewChange?.(null);
   };
 
+  // If we're in response view, render the response component
+  // This will be handled by the parent component based on activeView
   return (
     <div className=" overflow-y-auto h-[calc(100vh-88px)]">
       <main className="flex-1 p-12 max-w-7xl mx-auto">
@@ -168,17 +112,7 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
 
         {/* Network icon + Deep Learn/Quick Search toggle - 与input box右对齐 */}
         <div className="w-full max-w-4xl mx-auto flex justify-end items-center gap-3 mb-4">
-          <button
-            onClick={() => setWebSearchEnabled(!webSearchEnabled)}
-            className={`p-1 rounded transition-colors ${
-              webSearchEnabled 
-                ? 'text-black' 
-                : 'text-gray-400'
-            }`}
-            title={webSearchEnabled ? 'Web search enabled' : 'Web search disabled'}
-          >
-            <GlobeIcon className="w-6 h-6" />
-          </button>
+          <GlobeIcon className="w-6 h-6 text-gray-600" />
 
           {/* Deep Learn / Quick Search 可选择切换 */}
           <div
@@ -212,7 +146,6 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
                 placeholder="Enter the topic you'd like to learn..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={handleKeyPress}
               />
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">
