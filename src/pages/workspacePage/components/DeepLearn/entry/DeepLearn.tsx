@@ -3,7 +3,8 @@ import { GlobeIcon, PaperclipIcon, FolderIcon, ChevronDownIcon } from 'lucide-re
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { useState } from 'react';
-import { submitDeepLearnQuery, submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
+import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
+import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import { useToast } from '../../../../../hooks/useToast';
 
 interface DeepLearnProps {
@@ -95,6 +96,8 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     localStorage.removeItem(`deeplearn_interactive_${tabId}`);
     localStorage.removeItem(`deeplearn_streaming_content_${tabId}`);
     localStorage.removeItem(`deeplearn_streaming_complete_${tabId}`);
+    localStorage.removeItem(`deeplearn_deep_content_${tabId}`);
+    localStorage.removeItem(`deeplearn_deep_complete_${tabId}`);
     
     console.log('Cleared related content for new conversation');
   };
@@ -124,7 +127,7 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
       });
 
       if (selectedMode === 'quick-search') {
-        // For quick search, use the new streaming endpoint
+        // For quick search, use the existing streaming endpoint
         const tabId = window.location.pathname + window.location.search;
         localStorage.setItem(`deeplearn_query_${tabId}`, inputText.trim());
         localStorage.setItem(`deeplearn_mode_${tabId}`, selectedMode);
@@ -164,23 +167,48 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
           }
         );
       } else {
-        // For deep learn, use the original endpoint
-        const response = await submitDeepLearnQuery(
+        // For deep learn, use the new deep learn endpoint
+        const tabId = window.location.pathname + window.location.search;
+        localStorage.setItem(`deeplearn_query_${tabId}`, inputText.trim());
+        localStorage.setItem(`deeplearn_mode_${tabId}`, selectedMode);
+        localStorage.setItem(`deeplearn_deep_content_${tabId}`, ''); // Clear previous content
+        
+        // Navigate to response page immediately
+        onViewChange?.('deep-learn-response');
+        
+        // Start deep learn streaming in the background
+        const conversationId = await submitDeepLearnDeepQuery(
           inputText.trim(),
-          selectedMode,
           webSearchEnabled,
           additionalComments.trim() || undefined,
           'profile-default',
-          null
+          null,
+          (data) => {
+            // For deep learn, completely replace the content each time
+            const contentToStore = JSON.stringify(data);
+            localStorage.setItem(`deeplearn_deep_content_${tabId}`, contentToStore);
+            
+            // Trigger a custom event to notify the response component
+            window.dispatchEvent(new CustomEvent('deeplearn-deep-update', {
+              detail: { tabId, data }
+            }));
+          },
+          (errorMsg: string) => {
+            console.error('Deep learn streaming error:', errorMsg);
+            error(`Deep learn error: ${errorMsg}`);
+          },
+          () => {
+            console.log('Deep learn streaming completed');
+            // Mark deep learn as complete
+            localStorage.setItem(`deeplearn_deep_complete_${tabId}`, 'true');
+            window.dispatchEvent(new CustomEvent('deeplearn-deep-complete', {
+              detail: { tabId }
+            }));
+          }
         );
-        
-        console.log('Deep Learn response:', response);
 
-        // Save conversation ID and query for this tab
-        saveTabData(response.conversation_id, inputText.trim(), selectedMode);
-
-        // Navigate to response page immediately
-        onViewChange?.('deep-learn-response');
+        // Save conversation ID for this tab
+        saveTabData(conversationId, inputText.trim(), selectedMode);
       }
 
     } catch (err) {
