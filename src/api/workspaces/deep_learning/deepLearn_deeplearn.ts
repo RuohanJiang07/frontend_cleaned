@@ -77,7 +77,6 @@ export interface DeepLearnDeepRequest {
     timestamp: string;
   }
   
-  // 🔧 修复问题2：使用正确的API base URL
   const API_BASE_URL = 'https://backend-aec-experimental.onrender.com';
   
   // Helper function to get access token
@@ -128,7 +127,8 @@ export interface DeepLearnDeepRequest {
     references?: string[] | null,
     onData: (data: DeepLearnStreamingData) => void,
     onError: (error: string) => void,
-    onComplete: () => void
+    onComplete: () => void,
+    existingConversationId?: string // New parameter for continuous conversation
   ): Promise<string> => {
     try {
       const workspaceId = getWorkspaceId();
@@ -136,17 +136,19 @@ export interface DeepLearnDeepRequest {
         throw new Error('No workspace selected. Please select a workspace first.');
       }
   
-      // Generate conversation ID in dl-c-{uuid} format
-      const conversationId = generateConversationId();
-      console.log('Generated conversation ID for deep learn:', conversationId);
+      // Use existing conversation ID or generate new one
+      const conversationId = existingConversationId || generateConversationId();
+      const isNewConversation = !existingConversationId;
+      
+      console.log('Generated/Using conversation ID for deep learn:', conversationId, 'isNew:', isNewConversation);
   
       const requestData: DeepLearnDeepRequest = {
         workspace_id: workspaceId,
         conversation_id: conversationId,
-        search_type: "new_topic",
+        search_type: isNewConversation ? "new_topic" : "new_topic", // Always new_topic for now
         web_search: webSearch,
         user_query: query,
-        new_conversation: true,
+        new_conversation: isNewConversation,
         user_additional_comment: additionalComments || null,
         profile_selected: profile || null,
         references_selected: references || null
@@ -154,14 +156,15 @@ export interface DeepLearnDeepRequest {
   
       console.log('Submitting Deep Learn (deep mode) request:', requestData);
   
-      // 🔧 修复问题3：在API被trigger后几秒就调用interactive，而不是等到完成
+      // 🔧 修复问题：确保 Interactive API 在 Deep Learn 模式下也被调用
       const interactivePromise = new Promise<InteractiveResponse>((resolve, reject) => {
         setTimeout(async () => {
           try {
-            console.log('Starting interactive endpoint call (4 seconds after deep learn start)...');
+            console.log('Starting interactive endpoint call for Deep Learn (4 seconds after deep learn start)...');
             const interactiveData = await callInteractiveEndpoint(conversationId, query, additionalComments);
             resolve(interactiveData);
           } catch (error) {
+            console.error('Interactive endpoint error for Deep Learn:', error);
             reject(error);
           }
         }, 4000); // 4 seconds delay after API start
@@ -238,7 +241,7 @@ export interface DeepLearnDeepRequest {
       // Handle interactive endpoint response (runs in parallel)
       try {
         const interactiveData = await interactivePromise;
-        console.log('Interactive endpoint response (after 4 second delay):', interactiveData);
+        console.log('Interactive endpoint response for Deep Learn (after 4 second delay):', interactiveData);
         
         // Store interactive data for the sidebar
         const tabId = window.location.pathname + window.location.search;
@@ -249,7 +252,7 @@ export interface DeepLearnDeepRequest {
           detail: { tabId, data: interactiveData }
         }));
       } catch (interactiveError) {
-        console.error('Interactive endpoint error (after 4 second delay):', interactiveError);
+        console.error('Interactive endpoint error for Deep Learn (after 4 second delay):', interactiveError);
         // Don't fail the main request if interactive fails
       }
   

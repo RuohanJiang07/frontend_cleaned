@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../../../../components/ui/button';
-import ForceGraph2D, { LinkObject, NodeObject } from 'react-force-graph-2d';
 import {
   ArrowLeftIcon,
   GlobeIcon,
@@ -10,38 +9,26 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../../../../hooks/useToast';
 import { DeepLearnStreamingData, InteractiveResponse } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
+import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
+import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
+import { ConceptMap } from '../../../../../components/workspacePage/conceptMap';
 
 interface DeepLearnResponseProps {
   onBack: () => void;
   isSplit?: boolean;
 }
 
-interface CustomNode extends NodeObject {
+// Conversation message interface
+interface ConversationMessage {
   id: string;
-  x?: number;
-  y?: number;
-  color?: string;
-  __bckgDimensions?: [number, number];
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  mode?: 'deep-learn' | 'quick-search';
+  isStreaming?: boolean;
+  streamingContent?: string;
+  deepLearnData?: DeepLearnStreamingData;
 }
-
-const myData: { nodes: CustomNode[]; links: LinkObject[] } = {
-  nodes: [
-    { id: 'Black Hole' },
-    { id: 'White dwarf' },
-    { id: 'Type I Supernova' },
-    { id: 'Gravity Wave' },
-    { id: 'Stretched Horizon' },
-    { id: 'Cosmology' },
-  ],
-  links: [
-    { source: 'Black Hole', target: 'White dwarf' },
-    { source: 'Black Hole', target: 'Type I Supernova' },
-    { source: 'Type I Supernova', target: 'White dwarf' },
-    { source: 'Type I Supernova', target: 'Gravity Wave' },
-    { source: 'Black Hole', target: 'Stretched Horizon' },
-    { source: 'Black Hole', target: 'Cosmology' },
-  ],
-};
 
 // Helper function to extract YouTube video ID from URL
 const getYouTubeVideoId = (url: string): string | null => {
@@ -137,19 +124,169 @@ const AnswerBody: React.FC<{ children: React.ReactNode; isSplit?: boolean }> = (
   </div>
 );
 
+// Assistant message component
+const AssistantMessage: React.FC<{
+  message: ConversationMessage;
+  isSplit?: boolean;
+}> = ({ message, isSplit = false }) => {
+  const renderContent = () => {
+    if (message.mode === 'quick-search') {
+      if (message.isStreaming && !message.streamingContent) {
+        return (
+          <div className="text-gray-500 italic">
+            Loading response...
+          </div>
+        );
+      } else if (message.streamingContent) {
+        return (
+          <div className="whitespace-pre-wrap leading-relaxed">
+            {message.streamingContent}
+            {message.isStreaming && (
+              <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="whitespace-pre-wrap leading-relaxed">
+            {message.content}
+          </div>
+        );
+      }
+    } else {
+      // Deep learn mode
+      if (message.isStreaming && !message.deepLearnData) {
+        return (
+          <div className="text-gray-500 italic">
+            Loading deep learn response...
+          </div>
+        );
+      } else if (message.deepLearnData) {
+        const data = message.deepLearnData;
+        return (
+          <div className="space-y-4">
+            {/* Progress information */}
+            {data.progress && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-800">
+                    Progress: {data.progress.current_completions}/{data.progress.total_expected_completions}
+                  </span>
+                  <span className="text-sm text-blue-600">
+                    {data.progress.progress_percentage}%
+                  </span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${data.progress.progress_percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {/* Stream info */}
+            <div className="text-sm text-gray-600 mb-4">
+              {data.stream_info}
+            </div>
+
+            {/* Newly completed item */}
+            {data.newly_completed_item && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <div className="text-sm font-medium text-green-800">
+                  ✅ Completed: {data.newly_completed_item.description}
+                </div>
+                <div className="text-xs text-green-600 mt-1">
+                  Section: {data.newly_completed_item.section} | 
+                  Type: {data.newly_completed_item.type}
+                </div>
+              </div>
+            )}
+
+            {/* LLM Response content */}
+            {data.llm_response && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-800 mb-2">Response Content:</h4>
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {JSON.stringify(data.llm_response, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            {/* Generation status */}
+            {data.generation_status && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <h4 className="font-medium text-yellow-800 mb-2">Generation Status:</h4>
+                <pre className="text-xs text-yellow-700 whitespace-pre-wrap">
+                  {JSON.stringify(data.generation_status, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            {/* Final status */}
+            {data.final && (
+              <div className="bg-green-100 border border-green-300 rounded-lg p-3">
+                <div className="text-green-800 font-medium">
+                  🎉 Deep learning process completed!
+                </div>
+                <div className="text-sm text-green-600 mt-1">
+                  Total streams sent: {data.total_streams_sent}
+                </div>
+              </div>
+            )}
+
+            {/* Loading indicator for ongoing process */}
+            {message.isStreaming && !data.final && (
+              <div className="flex items-center gap-2 text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span className="text-sm">Processing deep learning content...</span>
+              </div>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="whitespace-pre-wrap leading-relaxed">
+            {message.content}
+          </div>
+        );
+      }
+    }
+  };
+
+  return (
+    <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed mb-6">
+      <AnswerHeader 
+        title={message.content.substring(0, 50) + (message.content.length > 50 ? '...' : '')} 
+        tag={message.mode === 'deep-learn' ? 'Deep Learn' : 'Quick Search'} 
+        isSplit={isSplit} 
+      />
+      <SourceWebpagesPlaceholders isSplit={isSplit} />
+      
+      <AnswerBody isSplit={isSplit}>
+        {renderContent()}
+      </AnswerBody>
+    </div>
+  );
+};
+
 function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) {
-  const { error } = useToast();
+  const { error, success } = useToast();
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
-  const [hoverNode, setHoverNode] = useState<CustomNode | null>(null);
-  const [userQuery, setUserQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [streamingContent, setStreamingContent] = useState<string>('');
-  const [deepLearnContent, setDeepLearnContent] = useState<DeepLearnStreamingData | null>(null);
   const [conversationId, setConversationId] = useState<string>('');
   const [interactiveData, setInteractiveData] = useState<InteractiveResponse | null>(null);
   const [isLoadingInteractive, setIsLoadingInteractive] = useState(true);
 
-  // Load saved data for this tab
+  // New state for conversation history
+  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+  
+  // New state for continuous conversation
+  const [conversationMode, setConversationMode] = useState<'follow-up' | 'new-topic' | null>(null);
+  const [inputText, setInputText] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load saved data for this tab and initialize conversation history
   useEffect(() => {
     const tabId = window.location.pathname + window.location.search;
     const savedConversationId = localStorage.getItem(`deeplearn_conversation_${tabId}`);
@@ -174,240 +311,276 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
     });
 
     if (savedQuery) {
-      setUserQuery(savedQuery);
       if (savedMode) {
         setSelectedMode(savedMode);
       }
-
-      if (savedMode === 'quick-search') {
-        // For quick search, load streaming content
-        setStreamingContent(savedStreamingContent);
-        setIsLoading(!isStreamingComplete);
-        
-        // Load interactive data if available
-        if (savedInteractiveData) {
-          try {
-            const parsedInteractiveData = JSON.parse(savedInteractiveData);
-            setInteractiveData(parsedInteractiveData);
-            setIsLoadingInteractive(false);
-          } catch (e) {
-            console.error('Failed to parse interactive data:', e);
-            setIsLoadingInteractive(false);
-          }
-        }
-        
-        // Listen for streaming updates
-        const handleStreamingUpdate = (event: CustomEvent) => {
-          if (event.detail.tabId === tabId) {
-            setStreamingContent(event.detail.content);
-          }
-        };
-
-        const handleStreamingComplete = (event: CustomEvent) => {
-          if (event.detail.tabId === tabId) {
-            setIsLoading(false);
-          }
-        };
-
-        const handleInteractiveUpdate = (event: CustomEvent) => {
-          if (event.detail.tabId === tabId) {
-            setInteractiveData(event.detail.data);
-            setIsLoadingInteractive(false);
-          }
-        };
-
-        window.addEventListener('deeplearn-streaming-update', handleStreamingUpdate as EventListener);
-        window.addEventListener('deeplearn-streaming-complete', handleStreamingComplete as EventListener);
-        window.addEventListener('deeplearn-interactive-update', handleInteractiveUpdate as EventListener);
-
-        return () => {
-          window.removeEventListener('deeplearn-streaming-update', handleStreamingUpdate as EventListener);
-          window.removeEventListener('deeplearn-streaming-complete', handleStreamingComplete as EventListener);
-          window.removeEventListener('deeplearn-interactive-update', handleInteractiveUpdate as EventListener);
-        };
-      } else if (savedMode === 'deep-learn') {
-        // For deep learn, load deep content
-        if (savedDeepContent) {
-          try {
-            const parsedDeepContent = JSON.parse(savedDeepContent);
-            setDeepLearnContent(parsedDeepContent);
-          } catch (e) {
-            console.error('Failed to parse deep learn content:', e);
-          }
-        }
-        setIsLoading(!isDeepComplete);
-        
-        // Load interactive data if available
-        if (savedInteractiveData) {
-          try {
-            const parsedInteractiveData = JSON.parse(savedInteractiveData);
-            setInteractiveData(parsedInteractiveData);
-            setIsLoadingInteractive(false);
-          } catch (e) {
-            console.error('Failed to parse interactive data:', e);
-            setIsLoadingInteractive(false);
-          }
-        }
-        
-        // Listen for deep learn updates
-        const handleDeepUpdate = (event: CustomEvent) => {
-          if (event.detail.tabId === tabId) {
-            setDeepLearnContent(event.detail.data);
-          }
-        };
-
-        const handleDeepComplete = (event: CustomEvent) => {
-          if (event.detail.tabId === tabId) {
-            setIsLoading(false);
-          }
-        };
-
-        const handleInteractiveUpdate = (event: CustomEvent) => {
-          if (event.detail.tabId === tabId) {
-            setInteractiveData(event.detail.data);
-            setIsLoadingInteractive(false);
-          }
-        };
-
-        window.addEventListener('deeplearn-deep-update', handleDeepUpdate as EventListener);
-        window.addEventListener('deeplearn-deep-complete', handleDeepComplete as EventListener);
-        window.addEventListener('deeplearn-interactive-update', handleInteractiveUpdate as EventListener);
-
-        return () => {
-          window.removeEventListener('deeplearn-deep-update', handleDeepUpdate as EventListener);
-          window.removeEventListener('deeplearn-deep-complete', handleDeepComplete as EventListener);
-          window.removeEventListener('deeplearn-interactive-update', handleInteractiveUpdate as EventListener);
-        };
+      if (savedConversationId) {
+        setConversationId(savedConversationId);
       }
+
+      // Initialize conversation history with the first message
+      const initialUserMessage: ConversationMessage = {
+        id: 'initial-user',
+        type: 'user',
+        content: savedQuery,
+        timestamp: 'Me, Jun 1, 9:50 PM'
+      };
+
+      const initialAssistantMessage: ConversationMessage = {
+        id: 'initial-assistant',
+        type: 'assistant',
+        content: savedQuery,
+        timestamp: 'Assistant',
+        mode: savedMode,
+        isStreaming: savedMode === 'quick-search' ? !isStreamingComplete : !isDeepComplete,
+        streamingContent: savedMode === 'quick-search' ? savedStreamingContent : undefined,
+        deepLearnData: savedMode === 'deep-learn' && savedDeepContent ? JSON.parse(savedDeepContent) : undefined
+      };
+
+      setConversationHistory([initialUserMessage, initialAssistantMessage]);
+
+      // Load interactive data if available
+      if (savedInteractiveData) {
+        try {
+          const parsedInteractiveData = JSON.parse(savedInteractiveData);
+          setInteractiveData(parsedInteractiveData);
+          setIsLoadingInteractive(false);
+        } catch (e) {
+          console.error('Failed to parse interactive data:', e);
+          setIsLoadingInteractive(false);
+        }
+      }
+      
+      // Listen for streaming updates
+      const handleStreamingUpdate = (event: CustomEvent) => {
+        if (event.detail.tabId === tabId) {
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === 'initial-assistant' && msg.mode === 'quick-search'
+                ? { ...msg, streamingContent: event.detail.content }
+                : msg
+            )
+          );
+        }
+      };
+
+      const handleStreamingComplete = (event: CustomEvent) => {
+        if (event.detail.tabId === tabId) {
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === 'initial-assistant' && msg.mode === 'quick-search'
+                ? { ...msg, isStreaming: false }
+                : msg
+            )
+          );
+        }
+      };
+
+      const handleDeepUpdate = (event: CustomEvent) => {
+        if (event.detail.tabId === tabId) {
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === 'initial-assistant' && msg.mode === 'deep-learn'
+                ? { ...msg, deepLearnData: event.detail.data }
+                : msg
+            )
+          );
+        }
+      };
+
+      const handleDeepComplete = (event: CustomEvent) => {
+        if (event.detail.tabId === tabId) {
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === 'initial-assistant' && msg.mode === 'deep-learn'
+                ? { ...msg, isStreaming: false }
+                : msg
+            )
+          );
+        }
+      };
+
+      const handleInteractiveUpdate = (event: CustomEvent) => {
+        if (event.detail.tabId === tabId) {
+          setInteractiveData(event.detail.data);
+          setIsLoadingInteractive(false);
+        }
+      };
+
+      window.addEventListener('deeplearn-streaming-update', handleStreamingUpdate as EventListener);
+      window.addEventListener('deeplearn-streaming-complete', handleStreamingComplete as EventListener);
+      window.addEventListener('deeplearn-deep-update', handleDeepUpdate as EventListener);
+      window.addEventListener('deeplearn-deep-complete', handleDeepComplete as EventListener);
+      window.addEventListener('deeplearn-interactive-update', handleInteractiveUpdate as EventListener);
+
+      return () => {
+        window.removeEventListener('deeplearn-streaming-update', handleStreamingUpdate as EventListener);
+        window.removeEventListener('deeplearn-streaming-complete', handleStreamingComplete as EventListener);
+        window.removeEventListener('deeplearn-deep-update', handleDeepUpdate as EventListener);
+        window.removeEventListener('deeplearn-deep-complete', handleDeepComplete as EventListener);
+        window.removeEventListener('deeplearn-interactive-update', handleInteractiveUpdate as EventListener);
+      };
     } else {
       console.log('No saved data found, using defaults');
-      setIsLoading(false);
       setIsLoadingInteractive(false);
     }
   }, []);
 
-  // Render content based on mode
-  const renderContent = () => {
-    if (selectedMode === 'quick-search') {
-      if (isLoading && !streamingContent) {
-        return (
-          <div className="text-gray-500 italic">
-            Loading response...
-          </div>
-        );
-      } else if (streamingContent) {
-        return (
-          <div className="whitespace-pre-wrap leading-relaxed">
-            {streamingContent}
-            {isLoading && (
-              <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
-            )}
-          </div>
-        );
-      } else {
-        return (
-          <div className="text-center py-8 text-gray-500">
-            <p>Quick search response will appear here...</p>
-          </div>
-        );
+  // Handle mode selection
+  const handleModeSelection = (mode: 'follow-up' | 'new-topic') => {
+    setConversationMode(mode);
+  };
+
+  // Handle mode change
+  const handleModeChange = () => {
+    if (conversationMode === 'follow-up') {
+      setConversationMode('new-topic');
+    } else if (conversationMode === 'new-topic') {
+      setConversationMode('follow-up');
+    }
+  };
+
+  // Get the opposite mode for "Change to" text
+  const getOppositeMode = () => {
+    return conversationMode === 'follow-up' ? 'New Topic' : 'Follow Up';
+  };
+
+  // Handle submitting new question
+  const handleSubmitQuestion = async () => {
+    if (!inputText.trim() || isSubmitting) {
+      return;
+    }
+
+    if (conversationMode === 'follow-up') {
+      // TODO: Implement follow-up logic later
+      success('Follow-up functionality will be implemented next!');
+      return;
+    }
+
+    if (conversationMode === 'new-topic') {
+      try {
+        setIsSubmitting(true);
+        
+        // Add user message to conversation history
+        const newUserMessage: ConversationMessage = {
+          id: `user-${Date.now()}`,
+          type: 'user',
+          content: inputText.trim(),
+          timestamp: new Date().toLocaleString()
+        };
+
+        // Add assistant message placeholder
+        const newAssistantMessage: ConversationMessage = {
+          id: `assistant-${Date.now()}`,
+          type: 'assistant',
+          content: inputText.trim(),
+          timestamp: 'Assistant',
+          mode: selectedMode,
+          isStreaming: true,
+          streamingContent: selectedMode === 'quick-search' ? '' : undefined,
+          deepLearnData: undefined
+        };
+
+        setConversationHistory(prev => [...prev, newUserMessage, newAssistantMessage]);
+        
+        // Clear input immediately after submission
+        const queryToSubmit = inputText.trim();
+        setInputText('');
+        
+        console.log('Starting new topic conversation:', {
+          query: queryToSubmit,
+          mode: selectedMode,
+          conversationId,
+          newConversation: false
+        });
+
+        if (selectedMode === 'quick-search') {
+          // Start quick search with existing conversation ID
+          await submitQuickSearchQuery(
+            queryToSubmit,
+            true, // web search enabled
+            undefined, // no additional comments
+            'profile-default',
+            null, // no references
+            (data: string) => {
+              // Update the streaming content for the current assistant message
+              setConversationHistory(prev => 
+                prev.map(msg => 
+                  msg.id === newAssistantMessage.id
+                    ? { ...msg, streamingContent: (msg.streamingContent || '') + data }
+                    : msg
+                )
+              );
+            },
+            (errorMsg: string) => {
+              console.error('Quick search streaming error:', errorMsg);
+              error(`Streaming error: ${errorMsg}`);
+              setIsSubmitting(false);
+            },
+            () => {
+              console.log('Quick search streaming completed');
+              setConversationHistory(prev => 
+                prev.map(msg => 
+                  msg.id === newAssistantMessage.id
+                    ? { ...msg, isStreaming: false }
+                    : msg
+                )
+              );
+              setIsSubmitting(false);
+            },
+            conversationId // Pass existing conversation ID
+          );
+        } else {
+          // Deep learn mode
+          await submitDeepLearnDeepQuery(
+            queryToSubmit,
+            true, // web search enabled
+            undefined, // no additional comments
+            'profile-default',
+            null, // no references
+            (data) => {
+              // Update the deep learn data for the current assistant message
+              setConversationHistory(prev => 
+                prev.map(msg => 
+                  msg.id === newAssistantMessage.id
+                    ? { ...msg, deepLearnData: data }
+                    : msg
+                )
+              );
+            },
+            (errorMsg: string) => {
+              console.error('Deep learn streaming error:', errorMsg);
+              error(`Deep learn error: ${errorMsg}`);
+              setIsSubmitting(false);
+            },
+            () => {
+              console.log('Deep learn streaming completed');
+              setConversationHistory(prev => 
+                prev.map(msg => 
+                  msg.id === newAssistantMessage.id
+                    ? { ...msg, isStreaming: false }
+                    : msg
+                )
+              );
+              setIsSubmitting(false);
+            },
+            conversationId // Pass existing conversation ID
+          );
+        }
+        
+      } catch (err) {
+        console.error('Error submitting new topic question:', err);
+        error('Failed to submit question. Please try again.');
+        setIsSubmitting(false);
       }
-    } else {
-      // Deep learn mode
-      if (isLoading && !deepLearnContent) {
-        return (
-          <div className="text-gray-500 italic">
-            Loading deep learn response...
-          </div>
-        );
-      } else if (deepLearnContent) {
-        return (
-          <div className="space-y-4">
-            {/* Progress information */}
-            {deepLearnContent.progress && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-blue-800">
-                    Progress: {deepLearnContent.progress.current_completions}/{deepLearnContent.progress.total_expected_completions}
-                  </span>
-                  <span className="text-sm text-blue-600">
-                    {deepLearnContent.progress.progress_percentage}%
-                  </span>
-                </div>
-                <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${deepLearnContent.progress.progress_percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
+    }
+  };
 
-            {/* Stream info */}
-            <div className="text-sm text-gray-600 mb-4">
-              {deepLearnContent.stream_info}
-            </div>
-
-            {/* Newly completed item */}
-            {deepLearnContent.newly_completed_item && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                <div className="text-sm font-medium text-green-800">
-                  ✅ Completed: {deepLearnContent.newly_completed_item.description}
-                </div>
-                <div className="text-xs text-green-600 mt-1">
-                  Section: {deepLearnContent.newly_completed_item.section} | 
-                  Type: {deepLearnContent.newly_completed_item.type}
-                </div>
-              </div>
-            )}
-
-            {/* LLM Response content */}
-            {deepLearnContent.llm_response && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-800 mb-2">Response Content:</h4>
-                <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-                  {JSON.stringify(deepLearnContent.llm_response, null, 2)}
-                </pre>
-              </div>
-            )}
-
-            {/* Generation status */}
-            {deepLearnContent.generation_status && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <h4 className="font-medium text-yellow-800 mb-2">Generation Status:</h4>
-                <pre className="text-xs text-yellow-700 whitespace-pre-wrap">
-                  {JSON.stringify(deepLearnContent.generation_status, null, 2)}
-                </pre>
-              </div>
-            )}
-
-            {/* Final status */}
-            {deepLearnContent.final && (
-              <div className="bg-green-100 border border-green-300 rounded-lg p-3">
-                <div className="text-green-800 font-medium">
-                  🎉 Deep learning process completed!
-                </div>
-                <div className="text-sm text-green-600 mt-1">
-                  Total streams sent: {deepLearnContent.total_streams_sent}
-                </div>
-              </div>
-            )}
-
-            {/* Loading indicator for ongoing process */}
-            {isLoading && !deepLearnContent.final && (
-              <div className="flex items-center gap-2 text-blue-600">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <span className="text-sm">Processing deep learning content...</span>
-              </div>
-            )}
-          </div>
-        );
-      } else {
-        return (
-          <div className="text-center py-8 text-gray-500">
-            <p>Deep learning response will appear here...</p>
-          </div>
-        );
-      }
+  // Handle Enter key press
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmitQuestion();
     }
   };
 
@@ -425,7 +598,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
           <h1 className="font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal">
-            Learning Journey: {userQuery || 'Research Topic'}
+            Learning Journey: {conversationHistory[0]?.content || 'Research Topic'}
           </h1>
         </div>
 
@@ -486,82 +659,115 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             {/* Main Content - Scrollable - 固定宽度649px */}
             <div className={`${isSplit ? 'max-w-[449px]' : 'w-[649px]'}`}>
               <div className="h-[calc(100vh-280px)] overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex-shrink-0">
-                {/* User Question - 学习参考代码的conversation样式 */}
-                <UserQuestionBubble 
-                  content={userQuery || "Research topic"} 
-                  time="Me, Jun 1, 9:50 PM" 
-                  isSplit={isSplit} 
-                />
-
-                {/* AI Response - 学习参考代码的conversation样式 */}
-                <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed">
-                  <AnswerHeader 
-                    title={userQuery || "Research topic"} 
-                    tag={selectedMode === 'deep-learn' ? 'Deep Learn' : 'Quick Search'} 
-                    isSplit={isSplit} 
-                  />
-                  <SourceWebpagesPlaceholders isSplit={isSplit} />
-                  
-                  {/* 🎯 Conversation content area - 真正的实时streaming！ */}
-                  <AnswerBody isSplit={isSplit}>
-                    {renderContent()}
-                  </AnswerBody>
-                </div>
+                {/* Render conversation history */}
+                {conversationHistory.map((message) => (
+                  <div key={message.id}>
+                    {message.type === 'user' ? (
+                      <UserQuestionBubble 
+                        content={message.content} 
+                        time={message.timestamp} 
+                        isSplit={isSplit} 
+                      />
+                    ) : (
+                      <AssistantMessage 
+                        message={message} 
+                        isSplit={isSplit} 
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
               
-              {/* Fixed Bottom Input Box - 与文字对齐，使用相同的649px宽度，并计算正确的偏移量 */}
-              <div className=" bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between">
-                <div className="flex items-center justify-between ">
-                  <div className="flex items-center gap-4">
-                    <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
-                    <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100">
-                      Follow Up
-                    </button>
-                    <span className="text-gray-500 font-['Inter',Helvetica] text-[12px]">or</span>
-                    <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100">
-                      New Topic
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-0">
-                  <div className="text-sm text-gray-600 font-['Inter',Helvetica]">
-                    Note: If already selected
-                  </div>
+              {/* Fixed Bottom Input Box - Enhanced hover effects, removed submit button */}
+              <div className={`bg-white border rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between transition-all duration-300 ${
+                isInputFocused 
+                  ? 'border-[#80A5E4] shadow-[0px_2px_15px_0px_rgba(128,165,228,0.15)]' 
+                  : 'border-gray-300'
+              }`}>
+                {/* Mode Selection Section - Only show if no mode is selected */}
+                {!conversationMode && (
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600 font-['Inter',Helvetica]">Change to</span>
-                      <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 text-[12px] font-['Inter',Helvetica] hover:bg-gray-100">
+                    <div className="flex items-center gap-4">
+                      <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
+                      <button 
+                        className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100 transition-colors"
+                        onClick={() => handleModeSelection('follow-up')}
+                      >
+                        Follow Up
+                      </button>
+                      <span className="text-gray-500 font-['Inter',Helvetica] text-[12px]">or</span>
+                      <button 
+                        className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100 transition-colors"
+                        onClick={() => handleModeSelection('new-topic')}
+                      >
                         New Topic
                       </button>
                     </div>
+                  </div>
+                )}
 
-                    <div className="flex items-center gap-2">
-                      <GlobeIcon className="w-4 h-4 text-gray-500" />
+                {/* Input Area - Show when mode is selected */}
+                {conversationMode && (
+                  <div className="flex-1">
+                    <textarea
+                      className={`w-full h-full resize-none border-none outline-none bg-transparent font-['Inter',Helvetica] text-[12px] placeholder:text-gray-400 transition-all duration-300 ${
+                        isInputFocused ? 'caret-[#80A5E4]' : ''
+                      }`}
+                      placeholder={`Type your ${conversationMode === 'follow-up' ? 'follow-up question' : 'new topic'} here...`}
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onFocus={() => setIsInputFocused(true)}
+                      onBlur={() => setIsInputFocused(false)}
+                      onKeyPress={handleKeyPress}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                )}
 
-                      {/* Deep Learn / Quick Search Toggle */}
-                      <div
-                        className="w-[180px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer relative"
-                        onClick={() => setSelectedMode(selectedMode === 'deep-learn' ? 'quick-search' : 'deep-learn')}
-                      >
-                        <div
-                          className={`absolute top-1 w-[84px] h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${selectedMode === 'deep-learn' ? 'left-1.5' : 'left-[94px]'
-                            }`}
-                        />
-                        <div className="absolute left-4 h-full flex items-center z-20">
-                          <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Deep Learn</span>
-                        </div>
-                        <div className="absolute right-3 h-full flex items-center z-20">
-                          <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Quick Search</span>
-                        </div>
+                {/* Bottom Controls - Show when mode is selected */}
+                {conversationMode && (
+                  <div className="space-y-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600 font-['Inter',Helvetica]">Change to</span>
+                        <button 
+                          className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 text-[12px] font-['Inter',Helvetica] hover:bg-gray-100 transition-colors"
+                          onClick={handleModeChange}
+                          disabled={isSubmitting}
+                        >
+                          {getOppositeMode()}
+                        </button>
                       </div>
 
-                      <Button variant="ghost" size="icon" className="w-8 h-8 text-gray-600">
-                        <FolderIcon className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <GlobeIcon className="w-4 h-4 text-gray-500" />
+
+                        {/* Deep Learn / Quick Search Toggle - Only show in new-topic mode */}
+                        {conversationMode === 'new-topic' && (
+                          <div
+                            className="w-[180px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer relative"
+                            onClick={() => !isSubmitting && setSelectedMode(selectedMode === 'deep-learn' ? 'quick-search' : 'deep-learn')}
+                          >
+                            <div
+                              className={`absolute top-1 w-[84px] h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${selectedMode === 'deep-learn' ? 'left-1.5' : 'left-[94px]'
+                                }`}
+                            />
+                            <div className="absolute left-4 h-full flex items-center z-20">
+                              <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Deep Learn</span>
+                            </div>
+                            <div className="absolute right-3 h-full flex items-center z-20">
+                              <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Quick Search</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <Button variant="ghost" size="icon" className="w-8 h-8 text-gray-600" disabled={isSubmitting}>
+                          <FolderIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -703,88 +909,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                 </div>
               </div>
 
-              {/* Fixed Right Sidebar - Concept Map - 修复边框对齐 */}
-              <div className="flex flex-col max-w-[220px] h-[228.464px] flex-shrink-0 rounded-[13px] border border-[rgba(157,155,179,0.30)] bg-white shadow-[0px_1px_30px_2px_rgba(242,242,242,0.63)] overflow-hidden">
-                {/* Header Section - 修复边框对齐问题 */}
-                <div className="flex-shrink-0 w-full h-[59.736px] bg-[rgba(228,231,239,0.62)] rounded-t-[13px] p-3 flex flex-col justify-between">
-                  {/* First row - Icon and "Concept Map" text */}
-                  <div className="flex items-center">
-                    <img
-                      src="/workspace/concept_map_icon.svg"
-                      alt="Concept Map Icon"
-                      className="mr-2 w-[17px] h-[17px]"
-                    />
-                    <span className="text-[#63626B] font-['Inter'] text-[12px] font-medium leading-normal">
-                      Concept Map
-                    </span>
-                  </div>
-
-                  {/* Second row - "Your Learning Roadmap" text */}
-                  <div className="ml-1">
-                    <span className="text-black font-['Inter'] text-[14px] font-semibold leading-normal">
-                      Your Learning Roadmap
-                    </span>
-                  </div>
-                </div>
-
-                {/* Content Section - Scaled Concept Map */}
-                <div className="flex-1 overflow-hidden">
-                  <div className="w-full h-full bg-white">
-                    <ForceGraph2D
-                      graphData={myData}
-                      width={256}
-                      height={168}
-                      nodeAutoColorBy="group"
-                      onNodeHover={(node: NodeObject | null) => {
-                        setHoverNode(node as CustomNode | null);
-                      }}
-                      nodeCanvasObject={(node: CustomNode, ctx, globalScale) => {
-                        const label = node.id;
-                        const fontSize = 10 / globalScale;
-                        ctx.font = `${fontSize}px Sans-Serif`;
-
-                        const textWidth = ctx.measureText(label).width;
-                        const bckgDimensions: [number, number] = [
-                          textWidth + fontSize * 0.2,
-                          fontSize + fontSize * 0.2,
-                        ];
-                        const x = node.x ?? 0;
-                        const y = node.y ?? 0;
-
-                        if (hoverNode?.id === node.id) {
-                          ctx.save();
-                          ctx.shadowColor = node.color || '#4f46e5';
-                          ctx.shadowBlur = 15;
-                          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                          ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
-                          ctx.restore();
-                        } else {
-                          ctx.fillStyle = 'rgba(255, 255, 255, 0)';
-                          ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
-                        }
-
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.fillStyle = node.color ?? '#000';
-                        ctx.fillText(label, x, y);
-
-                        node.__bckgDimensions = bckgDimensions;
-                      }}
-                      linkPointerAreaPaint={(node: CustomNode, color, ctx) => {
-                        const bckg = node.__bckgDimensions;
-                        if (bckg) {
-                          ctx.fillStyle = color;
-                          ctx.fillRect(
-                            (node.x ?? 0) - bckg[0] / 2,
-                            (node.y ?? 0) - bckg[1] / 2,
-                            ...bckg
-                          );
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              {/* Fixed Right Sidebar - Concept Map - Use the separated component */}
+              <ConceptMap />
             </div>
           </div>
         </div>

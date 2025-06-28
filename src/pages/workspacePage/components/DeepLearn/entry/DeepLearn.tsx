@@ -79,6 +79,8 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
   const [inputText, setInputText] = useState('');
   const [additionalComments, setAdditionalComments] = useState('');
   const [webSearchEnabled, setWebSearchEnabled] = useState(true);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [isAdditionalCommentsFocused, setIsAdditionalCommentsFocused] = useState(false);
 
   // Helper function to save conversation ID and query for this tab
   const saveTabData = (conversationId: string, query: string, mode: 'deep-learn' | 'quick-search') => {
@@ -287,25 +289,40 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
           </div>
         </div>
 
-        {/* Search Input Section - 多行支持，无滚动条 */}
+        {/* Search Input Section - Enhanced hover effects matching Problem Help */}
         <div className="flex justify-center mb-4">
-          <Card className="w-full max-w-4xl h-[155px] rounded-[13px] border-[#d0d9e3] shadow-[0px_3px_60px_1px_#4870d00d]">
+          <Card className={`w-full max-w-4xl h-[155px] rounded-[13px] border shadow-[0px_3px_60px_1px_#4870d00d] transition-all duration-300 ${
+            isInputFocused 
+              ? 'border-[#80A5E4] shadow-[0px_2px_20px_0px_rgba(128,165,228,0.15)]' 
+              : 'border-[#d0d9e3]'
+          }`}>
             <CardContent className="p-5 h-full flex flex-col">
-              {/* 主要输入框 - 支持多行，无滚动条 */}
+              {/* 主要输入框 - 支持多行，无滚动条，增强焦点效果，文字颜色改为黑色 */}
               <textarea
-                className="flex-1 text-base font-medium font-['Inter',Helvetica] text-[#969696] border-0 resize-none outline-none bg-transparent placeholder:text-[#969696] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                className={`flex-1 text-base font-medium font-['Inter',Helvetica] text-black border-0 resize-none outline-none bg-transparent placeholder:text-[#969696] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] transition-all duration-300 ${
+                  isInputFocused ? 'caret-[#80A5E4]' : ''
+                }`}
                 placeholder="Enter the topic you'd like to learn..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={handleKeyPress}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
               />
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">
+                {/* Additional comments 输入框 - 添加 hover 效果 */}
                 <textarea
-                  className="w-full sm:w-[391px] h-[30px] bg-[#ecf1f6] rounded-[5px] text-xs font-medium font-['Inter',Helvetica] text-[#898989] border-0 resize-none outline-none px-3 py-2 placeholder:text-[#898989] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                  className={`w-full sm:w-[391px] h-[30px] bg-[#ecf1f6] rounded-[5px] text-xs font-medium font-['Inter',Helvetica] text-black border-0 resize-none outline-none px-3 py-2 placeholder:text-[#898989] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] transition-all duration-300 ${
+                    isAdditionalCommentsFocused 
+                      ? 'border border-[#80A5E4] shadow-[0px_1px_8px_0px_rgba(128,165,228,0.15)] caret-[#80A5E4]' 
+                      : 'border border-transparent'
+                  }`}
                   placeholder="Enter additional comments..."
                   value={additionalComments}
                   onChange={(e) => setAdditionalComments(e.target.value)}
+                  onFocus={() => setIsAdditionalCommentsFocused(true)}
+                  onBlur={() => setIsAdditionalCommentsFocused(false)}
                 />
 
                 <div className="flex flex-wrap gap-2">

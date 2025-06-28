@@ -182,7 +182,8 @@ export const submitQuickSearchQuery = async (
   references?: string[] | null,
   onData: (data: string) => void,
   onError: (error: string) => void,
-  onComplete: () => void
+  onComplete: () => void,
+  existingConversationId?: string // New parameter for continuous conversation
 ): Promise<string> => {
   try {
     const workspaceId = getWorkspaceId();
@@ -190,18 +191,20 @@ export const submitQuickSearchQuery = async (
       throw new Error('No workspace selected. Please select a workspace first.');
     }
 
-    // Generate conversation ID in dl-c-{uuid} format
-    const conversationId = generateConversationId();
-    console.log('Generated conversation ID:', conversationId);
+    // Use existing conversation ID or generate new one
+    const conversationId = existingConversationId || generateConversationId();
+    const isNewConversation = !existingConversationId;
+    
+    console.log('Generated/Using conversation ID:', conversationId, 'isNew:', isNewConversation);
 
     // Use real user input and settings
     const requestData: QuickSearchRequest = {
-      workspace_id: "workspace-de87ec2a-1b88-4f85-826c-2fd6894b21df",
+      workspace_id: workspaceId,
       conversation_id: conversationId,
-      search_type: "quicksearch",
+      search_type: isNewConversation ? "new_topic" : "new_topic", // Always new_topic for now
       web_search: webSearch,
       user_query: query,
-      new_conversation: true,
+      new_conversation: isNewConversation,
       user_additional_comment: additionalComments || null,
       profile_selected: profile || null,
       references_selected: references || []
@@ -219,7 +222,7 @@ export const submitQuickSearchQuery = async (
         } catch (error) {
           reject(error);
         }
-      }, 3000); // 4 seconds delay
+      }, 3000); // 3 seconds delay
     });
 
     const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/start/quicksearch`, {
@@ -285,7 +288,7 @@ export const submitQuickSearchQuery = async (
     // Wait for interactive endpoint to complete and handle the response
     try {
       const interactiveData = await interactivePromise;
-      console.log('Interactive endpoint response (after 4 second delay):', interactiveData);
+      console.log('Interactive endpoint response (after 3 second delay):', interactiveData);
       
       // Store interactive data for the sidebar
       const tabId = window.location.pathname + window.location.search;
@@ -296,7 +299,7 @@ export const submitQuickSearchQuery = async (
         detail: { tabId, data: interactiveData }
       }));
     } catch (interactiveError) {
-      console.error('Interactive endpoint error (after 4 second delay):', interactiveError);
+      console.error('Interactive endpoint error (after 3 second delay):', interactiveError);
       // Don't fail the main request if interactive fails
     }
 
@@ -314,8 +317,13 @@ const callInteractiveEndpoint = async (
   userAdditionalComment?: string
 ): Promise<InteractiveResponse> => {
   try {
+    const workspaceId = getWorkspaceId();
+    if (!workspaceId) {
+      throw new Error('No workspace selected for interactive call.');
+    }
+
     const requestData: InteractiveRequest = {
-      workspace_id: "workspace-de87ec2a-1b88-4f85-826c-2fd6894b21df",
+      workspace_id: workspaceId,
       conversation_id: conversationId,
       user_query: userQuery,
       user_additional_comment: userAdditionalComment || null
