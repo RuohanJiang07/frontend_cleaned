@@ -34,7 +34,7 @@ export const ShiftingDropDown = ({ trigger, items, className }: DropDownProps) =
       <button
         onMouseEnter={() => handleSetSelected(1)}
         onClick={() => handleSetSelected(1)}
-        className="flex items-center gap-1 rounded-[10px] px-4 py-1.5 text-sm transition-colors bg-[#80A5E4] text-white hover:bg-[#6b94d6]"
+        className="flex items-center gap-1 rounded-[10px] px-4 py-1.5 text-sm transition-colors bg-[#4587f7] text-white"
       >
         {trigger}
         <ArrowDown
@@ -131,3 +131,4 @@ const Nub = ({ selected }: { selected: number | null }) => {
     />
   );
 };
+
