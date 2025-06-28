@@ -1,1 +1,1 @@
-export { default as ConceptMap } from './ConceptMap';
+export { default as ConceptMap } from './conceptMap';
