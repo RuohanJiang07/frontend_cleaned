@@ -8,7 +8,6 @@ import {
   LightbulbIcon
 } from 'lucide-react';
 import DocumentChatResponse from '../response/DocumentChatResponse';
-import { UploadModal } from '../../../../../components/workspacePage/uploadModal';
 
 interface DocumentTag {
   id: string;
@@ -39,8 +38,6 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState<HistoryItem[]>([]);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
   const itemsPerPage = 8;
 
   const historyItems: HistoryItem[] = Array.from({ length: 24 }, (_, i) => ({
@@ -114,16 +111,6 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
     onViewChange?.(null);
   };
 
-  const handleUploadBoxClick = () => {
-    setIsUploadModalOpen(true);
-  };
-
-  const handleUpload = (files: any[]) => {
-    console.log('Uploaded files:', files);
-    // Handle the uploaded files here
-    // You can convert them to DocumentTag format and add to selectedDocuments
-  };
-
   // If we're in response view, render the response component
   // This will be handled by the parent component based on activeView
   return (
@@ -145,14 +132,7 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
         <div className="w-full max-w-5xl mx-auto mb-6">
           <div className="flex gap-[25px] justify-center">
             <div className="w-[300px]">
-              <Card 
-                className={`w-full h-[154px] border-2 border-[#0064A2] bg-[rgba(226,238,252,0.60)] rounded-lg shadow-[0px_3px_30px_0px_rgba(72,112,208,0.05)] border-dashed cursor-pointer transition-all duration-200 ${
-                  isHovering ? 'bg-[rgba(226,238,252,0.80)] shadow-[0px_5px_40px_0px_rgba(72,112,208,0.15)] scale-[1.02]' : ''
-                }`}
-                onClick={handleUploadBoxClick}
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => setIsHovering(false)}
-              >
+              <Card className="w-full h-[154px] border-2 border-[#0064A2] bg-[rgba(226,238,252,0.60)] rounded-lg shadow-[0px_3px_30px_0px_rgba(72,112,208,0.05)] border-dashed">
                 <CardContent className="flex flex-col items-center justify-center h-full p-6">
                   <div className="w-10 h-10 flex-shrink-0 mb-4">
                     <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
@@ -313,13 +293,6 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
             </button>
           </div>
         </div>
-
-        {/* Upload Modal */}
-        <UploadModal
-          isOpen={isUploadModalOpen}
-          onClose={() => setIsUploadModalOpen(false)}
-          onUpload={handleUpload}
-        />
       </main>
     </div>
   );
