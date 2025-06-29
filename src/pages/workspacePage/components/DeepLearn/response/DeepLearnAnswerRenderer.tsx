@@ -99,4 +99,28 @@ const DeepLearnAnswerRenderer: React.FC<DeepLearnAnswerRendererProps> = ({
             {data.llm_response && (
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-medium text-gray-800 mb-2">Response Content:</h4>
-                <pre className="text-sm
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {data.llm_response}
+                </pre>
+              </div>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="whitespace-pre-wrap leading-relaxed">
+            {message.content}
+          </div>
+        );
+      }
+    }
+  };
+
+  return (
+    <div className={`${isSplit ? 'w-full' : ''}`}>
+      {renderContent()}
+    </div>
+  );
+};
+
+export default DeepLearnAnswerRenderer;

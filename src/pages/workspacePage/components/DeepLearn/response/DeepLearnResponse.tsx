@@ -9,7 +9,7 @@ import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learn
 import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import InteractiveContent from './InteractiveContent';
 import DeepLearnAnswerRenderer from './DeepLearnAnswerRenderer';
-import QuestionInput from './QuestionInput';
+import QuestionInput from './QustionInput';
 
 interface DeepLearnResponseProps {
   onBack: () => void;
