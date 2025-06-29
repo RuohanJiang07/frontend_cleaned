@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import {
   ArrowLeftIcon,
+  GlobeIcon,
+  FolderIcon,
+  PlayIcon,
+  ExternalLinkIcon
 } from 'lucide-react';
 import { useToast } from '../../../../../hooks/useToast';
 import { DeepLearnStreamingData, InteractiveResponse } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
 import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
-import InteractiveContent from './InteractiveContent';
-import DeepLearnAnswerRenderer from './DeepLearnAnswerRenderer';
-import QuestionInput from './QustionInput';
+import { ConceptMap } from '../../../../../components/workspacePage/conceptMap';
 
 interface DeepLearnResponseProps {
   onBack: () => void;
@@ -27,6 +29,24 @@ interface ConversationMessage {
   streamingContent?: string;
   deepLearnData?: DeepLearnStreamingData;
 }
+
+// Helper function to extract YouTube video ID from URL
+const getYouTubeVideoId = (url: string): string | null => {
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+};
+
+// Helper function to get YouTube thumbnail URL
+const getYouTubeThumbnail = (url: string): string => {
+  const videoId = getYouTubeVideoId(url);
+  if (videoId) {
+    // Use maxresdefault for high quality, fallback to hqdefault if needed
+    return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  }
+  // Fallback to a placeholder if not a YouTube URL
+  return 'https://images.pexels.com/photos/1181298/pexels-photo-1181298.jpeg?auto=compress&cs=tinysrgb&w=400';
+};
 
 // 回答标题区域组件 - 缩小上下间距
 const AnswerHeader: React.FC<{ title: string; tag: string; isSplit?: boolean }> = ({ title, tag, isSplit = false }) => (
@@ -109,6 +129,131 @@ const AssistantMessage: React.FC<{
   message: ConversationMessage;
   isSplit?: boolean;
 }> = ({ message, isSplit = false }) => {
+  const renderContent = () => {
+    if (message.mode === 'quick-search') {
+      if (message.isStreaming && !message.streamingContent) {
+        return (
+          <div className="text-gray-500 italic">
+            Loading response...
+          </div>
+        );
+      } else if (message.streamingContent) {
+        return (
+          <div className="whitespace-pre-wrap leading-relaxed">
+            {message.streamingContent}
+            {message.isStreaming && (
+              <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="whitespace-pre-wrap leading-relaxed">
+            {message.content}
+          </div>
+        );
+      }
+    } else {
+      // Deep learn mode
+      if (message.isStreaming && !message.deepLearnData) {
+        return (
+          <div className="text-gray-500 italic">
+            Loading deep learn response...
+          </div>
+        );
+      } else if (message.deepLearnData) {
+        const data = message.deepLearnData;
+        return (
+          <div className="space-y-4">
+            {/* Progress information */}
+            {data.progress && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-800">
+                    Progress: {data.progress.current_completions}/{data.progress.total_expected_completions}
+                  </span>
+                  <span className="text-sm text-blue-600">
+                    {data.progress.progress_percentage}%
+                  </span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${data.progress.progress_percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {/* Stream info */}
+            <div className="text-sm text-gray-600 mb-4">
+              {data.stream_info}
+            </div>
+
+            {/* Newly completed item */}
+            {data.newly_completed_item && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <div className="text-sm font-medium text-green-800">
+                  ✅ Completed: {data.newly_completed_item.description}
+                </div>
+                <div className="text-xs text-green-600 mt-1">
+                  Section: {data.newly_completed_item.section} | 
+                  Type: {data.newly_completed_item.type}
+                </div>
+              </div>
+            )}
+
+            {/* LLM Response content */}
+            {data.llm_response && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-800 mb-2">Response Content:</h4>
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {JSON.stringify(data.llm_response, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            {/* Generation status */}
+            {data.generation_status && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <h4 className="font-medium text-yellow-800 mb-2">Generation Status:</h4>
+                <pre className="text-xs text-yellow-700 whitespace-pre-wrap">
+                  {JSON.stringify(data.generation_status, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            {/* Final status */}
+            {data.final && (
+              <div className="bg-green-100 border border-green-300 rounded-lg p-3">
+                <div className="text-green-800 font-medium">
+                  🎉 Deep learning process completed!
+                </div>
+                <div className="text-sm text-green-600 mt-1">
+                  Total streams sent: {data.total_streams_sent}
+                </div>
+              </div>
+            )}
+
+            {/* Loading indicator for ongoing process */}
+            {message.isStreaming && !data.final && (
+              <div className="flex items-center gap-2 text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span className="text-sm">Processing deep learning content...</span>
+              </div>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="whitespace-pre-wrap leading-relaxed">
+            {message.content}
+          </div>
+        );
+      }
+    }
+  };
+
   return (
     <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed mb-6">
       <AnswerHeader 
@@ -119,7 +264,7 @@ const AssistantMessage: React.FC<{
       <SourceWebpagesPlaceholders isSplit={isSplit} />
       
       <AnswerBody isSplit={isSplit}>
-        <DeepLearnAnswerRenderer message={message} isSplit={isSplit} />
+        {renderContent()}
       </AnswerBody>
     </div>
   );
@@ -295,9 +440,9 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
     }
   };
 
-  // Handle mode toggle for Deep Learn / Quick Search
-  const handleModeToggle = () => {
-    setSelectedMode(selectedMode === 'deep-learn' ? 'quick-search' : 'deep-learn');
+  // Get the opposite mode for "Change to" text
+  const getOppositeMode = () => {
+    return conversationMode === 'follow-up' ? 'New Topic' : 'Follow Up';
   };
 
   // Handle submitting new question
@@ -533,29 +678,240 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                 ))}
               </div>
               
-              {/* Fixed Bottom Input Box - Now using the separated component */}
-              <QuestionInput
-                conversationMode={conversationMode}
-                inputText={inputText}
-                isInputFocused={isInputFocused}
-                isSubmitting={isSubmitting}
-                selectedMode={selectedMode}
-                onModeSelection={handleModeSelection}
-                onModeChange={handleModeChange}
-                onInputChange={setInputText}
-                onInputFocus={() => setIsInputFocused(true)}
-                onInputBlur={() => setIsInputFocused(false)}
-                onKeyPress={handleKeyPress}
-                onModeToggle={handleModeToggle}
-              />
+              {/* Fixed Bottom Input Box - Enhanced hover effects, removed submit button */}
+              <div className={`bg-white border rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between transition-all duration-300 ${
+                isInputFocused 
+                  ? 'border-[#80A5E4] shadow-[0px_2px_15px_0px_rgba(128,165,228,0.15)]' 
+                  : 'border-gray-300'
+              }`}>
+                {/* Mode Selection Section - Only show if no mode is selected */}
+                {!conversationMode && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
+                      <button 
+                        className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100 transition-colors"
+                        onClick={() => handleModeSelection('follow-up')}
+                      >
+                        Follow Up
+                      </button>
+                      <span className="text-gray-500 font-['Inter',Helvetica] text-[12px]">or</span>
+                      <button 
+                        className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100 transition-colors"
+                        onClick={() => handleModeSelection('new-topic')}
+                      >
+                        New Topic
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Input Area - Show when mode is selected */}
+                {conversationMode && (
+                  <div className="flex-1">
+                    <textarea
+                      className={`w-full h-full resize-none border-none outline-none bg-transparent font-['Inter',Helvetica] text-[12px] placeholder:text-gray-400 transition-all duration-300 ${
+                        isInputFocused ? 'caret-[#80A5E4]' : ''
+                      }`}
+                      placeholder={`Type your ${conversationMode === 'follow-up' ? 'follow-up question' : 'new topic'} here...`}
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onFocus={() => setIsInputFocused(true)}
+                      onBlur={() => setIsInputFocused(false)}
+                      onKeyPress={handleKeyPress}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                )}
+
+                {/* Bottom Controls - Show when mode is selected */}
+                {conversationMode && (
+                  <div className="space-y-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600 font-['Inter',Helvetica]">Change to</span>
+                        <button 
+                          className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 text-[12px] font-['Inter',Helvetica] hover:bg-gray-100 transition-colors"
+                          onClick={handleModeChange}
+                          disabled={isSubmitting}
+                        >
+                          {getOppositeMode()}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <GlobeIcon className="w-4 h-4 text-gray-500" />
+
+                        {/* Deep Learn / Quick Search Toggle - Only show in new-topic mode */}
+                        {conversationMode === 'new-topic' && (
+                          <div
+                            className="w-[180px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer relative"
+                            onClick={() => !isSubmitting && setSelectedMode(selectedMode === 'deep-learn' ? 'quick-search' : 'deep-learn')}
+                          >
+                            <div
+                              className={`absolute top-1 w-[84px] h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${selectedMode === 'deep-learn' ? 'left-1.5' : 'left-[94px]'
+                                }`}
+                            />
+                            <div className="absolute left-4 h-full flex items-center z-20">
+                              <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Deep Learn</span>
+                            </div>
+                            <div className="absolute right-3 h-full flex items-center z-20">
+                              <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Quick Search</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <Button variant="ghost" size="icon" className="w-8 h-8 text-gray-600" disabled={isSubmitting}>
+                          <FolderIcon className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right Sidebar - 紧贴左侧文字，缩小间距 */}
-            <InteractiveContent 
-              interactiveData={interactiveData}
-              isLoadingInteractive={isLoadingInteractive}
-              isSplit={isSplit}
-            />
+            <div className={`${isSplit ? 'pr-[-100px]' : 'p-0'} flex flex-col gap-[22px] py-6 flex-shrink-0 overflow-hidden`}>
+              {/* Fixed Right Sidebar - Related Contents - 缩小顶部间距 */}
+              <div className="flex flex-col flex-1 max-w-[220px] rounded-[13px] border border-[rgba(73,127,255,0.22)] bg-white shadow-[0px_1px_30px_2px_rgba(73,127,255,0.05)] overflow-hidden mt-3">
+                {/* Title Section - 修复边框对齐问题 */}
+                <div className="flex-shrink-0 w-full h-[58.722px] rounded-t-[13px] bg-[#ECF1F6] p-3 flex flex-col justify-between">
+                  {/* First row - Icon and "Related Contents" text */}
+                  <div className="flex items-center">
+                    <img
+                      src="/workspace/related_content_icon.svg"
+                      alt="Related Contents Icon"
+                      className="flex-shrink-0 mr-2 w-[18.432px] h-[18px]"
+                    />
+                    <span className="text-[#0064A2] font-['Inter'] text-[12px] font-medium leading-normal">
+                      Related Contents
+                    </span>
+                  </div>
+
+                  {/* Second row - "See more on this topic" text */}
+                  <div className="ml-1">
+                    <span className="text-black font-['Inter'] text-[14px] font-semibold leading-normal">
+                      See more on this topic
+                    </span>
+                  </div>
+                </div>
+
+                {/* Scrollable Content Section - 添加Related Contents内容 */}
+                <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <div className="bg-white p-3">
+                    {isLoadingInteractive ? (
+                      <div className="text-center py-4">
+                        <div className="text-gray-500 text-sm">Loading...</div>
+                      </div>
+                    ) : interactiveData ? (
+                      <>
+                        {/* Related Videos */}
+                        {interactiveData.interactive_content.recommended_videos.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="font-medium text-xs text-black mb-2">Related Videos</h4>
+                            <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                              <div className="w-full h-20 relative overflow-hidden">
+                                <img
+                                  src={getYouTubeThumbnail(interactiveData.interactive_content.recommended_videos[0].url)}
+                                  alt="Video thumbnail"
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    // Fallback to gradient background if thumbnail fails to load
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const parent = target.parentElement;
+                                    if (parent) {
+                                      parent.className += ' bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400';
+                                    }
+                                  }}
+                                />
+                                {/* Play button overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-12 h-12 bg-black bg-opacity-70 rounded-full flex items-center justify-center">
+                                    <PlayIcon className="w-6 h-6 text-white ml-1" />
+                                  </div>
+                                </div>
+                                {/* YouTube logo overlay */}
+                                <div className="absolute top-2 right-2">
+                                  <div className="bg-red-600 text-white px-1 py-0.5 rounded text-xs font-bold">
+                                    YouTube
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="p-2">
+                                <p className="text-[10px] text-black mb-1 font-medium line-clamp-2">
+                                  {interactiveData.interactive_content.recommended_videos[0].title}
+                                </p>
+                                <div className="flex items-center gap-1">
+                                  <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                                  <p className="text-[9px] text-red-600 font-medium">
+                                    {interactiveData.interactive_content.recommended_videos[0].channel}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Related Webpages */}
+                        {interactiveData.interactive_content.related_webpages.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="font-medium text-xs text-black mb-2">Related Webpages</h4>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {interactiveData.interactive_content.related_webpages.slice(0, 2).map((webpage, index) => (
+                                <div key={index} className="bg-[#F0F0F0] rounded-lg p-2">
+                                  <div className="text-[9px] font-medium text-black mb-1 line-clamp-2">
+                                    {webpage.title}
+                                  </div>
+                                  <div className="text-[8px] text-gray-600 mb-1 line-clamp-2">
+                                    {webpage.description}
+                                  </div>
+                                  <div className="text-[8px] text-blue-600 truncate">
+                                    🌐 {new URL(webpage.url).hostname}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Related Concepts */}
+                        {interactiveData.interactive_content.related_concepts.length > 0 && (
+                          <div>
+                            <h4 className="font-medium text-xs text-black mb-2">Related Concepts</h4>
+                            <div className="space-y-2">
+                              {interactiveData.interactive_content.related_concepts.slice(0, 3).map((concept, index) => (
+                                <div key={index}>
+                                  <div className="text-[9px] font-medium text-black mb-1">
+                                    {concept.explanation}
+                                  </div>
+                                  <div className={`${
+                                    index === 0 ? 'bg-[#D5EBF3] text-[#1e40af]' :
+                                    index === 1 ? 'bg-[#E8D5F3] text-[#6b21a8]' :
+                                    'bg-[#D5F3E8] text-[#059669]'
+                                  } px-1.5 py-0.5 rounded text-[8px] inline-block`}>
+                                    {concept.concept}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      /* Show empty state when no interactive data */
+                      <div className="text-center py-8 text-gray-400">
+                        <p className="text-xs">Related content will appear here...</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Fixed Right Sidebar - Concept Map - Use the separated component */}
+              <ConceptMap />
+            </div>
           </div>
         </div>
       </div>
