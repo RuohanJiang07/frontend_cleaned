@@ -7,7 +7,8 @@ import {
   SearchIcon,
   UploadIcon
 } from 'lucide-react';
-import ProblemHelpResponse from '../response/ProblemHelpResponse';
+import { submitProblemSolverSolution } from '../../../../../api/workspaces/problem_help/ProblemHelpMain';
+import { useToast } from '../../../../../hooks/useToast';
 
 interface ProblemHistoryItem {
   id: number;
@@ -22,12 +23,14 @@ interface ProblemSolverProps {
 }
 
 function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
+  const { success, error } = useToast();
   const [problemText, setProblemText] = useState('');
   const [selectedModel, setSelectedModel] = useState('GPT-4o');
   const [selectedMode, setSelectedMode] = useState<'step-by-step' | 'solution'>('step-by-step');
   const [sortBy, setSortBy] = useState('Date/Type');
   const [isFocused, setIsFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sample history data
   const historyItems: ProblemHistoryItem[] = [
@@ -85,6 +88,127 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
     return historyItems.slice(startIndex, endIndex);
   };
 
+  // Helper function to generate UUID
+  const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
+  // Helper function to generate conversation ID in ps-c-{uuid} format
+  const generateConversationId = (): string => {
+    const uuid = generateUUID();
+    return `ps-c-${uuid}`;
+  };
+
+  // Helper function to save conversation ID and query for this tab
+  const saveTabData = (conversationId: string, query: string, mode: 'step-by-step' | 'solution') => {
+    // Get current tab ID from the URL or generate one if needed
+    const tabId = window.location.pathname + window.location.search;
+    localStorage.setItem(`problemhelp_conversation_${tabId}`, conversationId);
+    localStorage.setItem(`problemhelp_query_${tabId}`, query);
+    localStorage.setItem(`problemhelp_mode_${tabId}`, mode);
+    
+    console.log(`💾 Saved problem help conversation data for tab ${tabId}:`, {
+      conversationId,
+      query,
+      mode
+    });
+  };
+
+  // Helper function to clear related content for new conversations
+  const clearRelatedContent = () => {
+    const tabId = window.location.pathname + window.location.search;
+    // Clear all related content data for this tab
+    localStorage.removeItem(`problemhelp_streaming_content_${tabId}`);
+    localStorage.removeItem(`problemhelp_streaming_complete_${tabId}`);
+    
+    console.log('🧹 Cleared related content for new problem help conversation');
+  };
+
+  const handleSubmitProblem = async () => {
+    if (!problemText.trim()) {
+      error('Please enter a problem to solve');
+      return;
+    }
+
+    // Only handle solution mode for now
+    if (selectedMode !== 'solution') {
+      error('Step-by-step mode is not implemented yet. Please select Solution mode.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Clear related content when starting a new conversation
+      clearRelatedContent();
+
+      // Generate conversation ID for new conversation
+      const conversationId = generateConversationId();
+      
+      console.log('🆔 Generated conversation ID:', conversationId);
+      console.log('📝 Submitting problem with params:', {
+        query: problemText.trim(),
+        mode: selectedMode,
+        profile: 'profile-default',
+        references: null,
+        conversationId
+      });
+
+      // Save conversation data immediately
+      saveTabData(conversationId, problemText.trim(), selectedMode);
+
+      // For solution mode, use the problem solver solution endpoint
+      const tabId = window.location.pathname + window.location.search;
+      localStorage.setItem(`problemhelp_query_${tabId}`, problemText.trim());
+      localStorage.setItem(`problemhelp_mode_${tabId}`, selectedMode);
+      localStorage.setItem(`problemhelp_streaming_content_${tabId}`, ''); // Clear previous content
+      
+      // Navigate to response page immediately
+      onViewChange?.('problem-help-response');
+      
+      // Start streaming in the background
+      await submitProblemSolverSolution(
+        problemText.trim(),
+        'profile-default',
+        null,
+        (data: string) => {
+          // Update streaming content in localStorage
+          const currentContent = localStorage.getItem(`problemhelp_streaming_content_${tabId}`) || '';
+          localStorage.setItem(`problemhelp_streaming_content_${tabId}`, currentContent + data);
+          
+          // Trigger a custom event to notify the response component
+          window.dispatchEvent(new CustomEvent('problemhelp-streaming-update', {
+            detail: { tabId, content: currentContent + data }
+          }));
+        },
+        (errorMsg: string) => {
+          console.error('Problem solver streaming error:', errorMsg);
+          error(`Streaming error: ${errorMsg}`);
+        },
+        () => {
+          console.log('Problem solver streaming completed');
+          // Mark streaming as complete
+          localStorage.setItem(`problemhelp_streaming_complete_${tabId}`, 'true');
+          window.dispatchEvent(new CustomEvent('problemhelp-streaming-complete', {
+            detail: { tabId }
+          }));
+        },
+        undefined, // No existing conversation ID for new conversation
+        conversationId // Pass the generated conversation ID
+      );
+
+    } catch (err) {
+      console.error('Error submitting problem:', err);
+      error('Failed to start problem solving. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleHistoryItemClick = (item: ProblemHistoryItem) => {
     // Notify parent component to change view to response
     onViewChange?.('problem-help-response');
@@ -93,6 +217,13 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
   const handleBackToEntry = () => {
     // Notify parent component to go back to default view
     onViewChange?.(null);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmitProblem();
+    }
   };
 
   // If we're in response view, render the response component
@@ -148,6 +279,8 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
                 onChange={(e) => setProblemText(e.target.value)}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
+                onKeyPress={handleKeyPress}
+                disabled={isSubmitting}
               />
 
               {/* Bottom buttons container */}
@@ -157,6 +290,7 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
                   variant="outline"
                   size="sm"
                   className="w-[106px] h-[25px] bg-[rgba(236,241,246,0.63)] border-none rounded-lg flex items-center justify-center gap-1 p-0 hover:bg-[rgba(236,241,246,0.8)] transition-colors duration-200"
+                  disabled={isSubmitting}
                 >
                   <div className="w-4 h-4">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -169,8 +303,8 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
 
                 {/* Mode selection toggle - positioned 13px to the right */}
                 <div
-                  className="ml-[13px] w-[168px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer relative"
-                  onClick={() => setSelectedMode(selectedMode === 'step-by-step' ? 'solution' : 'step-by-step')}
+                  className={`ml-[13px] w-[168px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer relative ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={() => !isSubmitting && setSelectedMode(selectedMode === 'step-by-step' ? 'solution' : 'step-by-step')}
                 >
                   <div
                     className={`absolute top-1 w-24 h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${selectedMode === 'step-by-step' ? 'left-1.5' : 'left-[66px]'
@@ -190,6 +324,7 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
                     variant="outline"
                     size="sm"
                     className="w-[81px] h-[25px] bg-[#EDF2F7] border-none rounded-lg flex items-center justify-center gap-1 p-0 hover:bg-[#e2e8f0] transition-colors duration-200"
+                    disabled={isSubmitting}
                   >
                     <UserIcon className="w-3 h-3 text-[#6B6B6B]" />
                     <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Profile</span>
@@ -197,6 +332,19 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
                   </Button>
                 </div>
               </div>
+
+              {/* Submit button - only show when there's text and solution mode is selected */}
+              {problemText.trim() && selectedMode === 'solution' && (
+                <div className="absolute bottom-3 right-3">
+                  <Button
+                    onClick={handleSubmitProblem}
+                    disabled={isSubmitting}
+                    className="bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-lg px-4 py-1 text-sm font-['Inter',Helvetica]"
+                  >
+                    {isSubmitting ? 'Solving...' : 'Solve'}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
