@@ -122,23 +122,13 @@ function Interactive({ isSplit = false }: InteractiveProps) {
                             <PlayIcon className="w-6 h-6 text-white ml-1" />
                           </div>
                         </div>
-                        {/* YouTube logo overlay */}
-                        <div className="absolute top-2 right-2">
-                          <div className="bg-red-600 text-white px-1 py-0.5 rounded text-xs font-bold">
-                            YouTube
-                          </div>
-                        </div>
+                        {/* 移除 YouTube logo overlay - 不再显示 YouTube 红框标识 */}
                       </div>
                       <div className="p-2">
                         <p className="text-[10px] text-black mb-1 font-medium line-clamp-2">
                           {interactiveData.interactive_content.recommended_videos[0].title}
                         </p>
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
-                          <p className="text-[9px] text-red-600 font-medium">
-                            {interactiveData.interactive_content.recommended_videos[0].channel}
-                          </p>
-                        </div>
+                        {/* 移除 channel 显示部分 - 因为后端不再返回 channel 信息 */}
                       </div>
                     </div>
                   </div>

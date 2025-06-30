@@ -158,19 +158,40 @@ export interface DeepLearnDeepRequest {
   
       console.log('📝 Submitting Deep Learn (deep mode) request:', requestData);
   
-      // 🔧 修复问题：确保 Interactive API 在 Deep Learn 模式下也被调用
-      const interactivePromise = new Promise<InteractiveResponse>((resolve, reject) => {
-        setTimeout(async () => {
-          try {
-            console.log('Starting interactive endpoint call for Deep Learn (4 seconds after deep learn start)...');
-            const interactiveData = await callInteractiveEndpoint(conversationId, query, additionalComments);
-            resolve(interactiveData);
-          } catch (error) {
-            console.error('Interactive endpoint error for Deep Learn:', error);
-            reject(error);
-          }
-        }, 4000); // 4 seconds delay after API start
-      });
+      // 🔧 修复问题：确保 Interactive API 在 Deep Learn 模式下也被正确调用和等待
+      // 立即获取 tabId 并开始 interactive 调用
+      const tabId = window.location.pathname + window.location.search;
+      console.log('🔧 Starting interactive call for Deep Learn with tabId:', tabId);
+      
+      // 启动 interactive 调用（4秒后）
+      const interactivePromise = callInteractiveEndpoint(conversationId, query, additionalComments)
+        .then(interactiveData => {
+          console.log('✅ Interactive endpoint returned data for Deep Learn:', interactiveData);
+          
+          // 立即存储 interactive 数据
+          localStorage.setItem(`deeplearn_interactive_${tabId}`, JSON.stringify(interactiveData));
+          console.log('💾 Stored interactive data to localStorage with key:', `deeplearn_interactive_${tabId}`);
+          
+          // 立即触发事件来更新 sidebar
+          window.dispatchEvent(new CustomEvent('deeplearn-interactive-update', {
+            detail: { tabId, data: interactiveData }
+          }));
+          console.log('📡 Triggered deeplearn-interactive-update event for tabId:', tabId);
+          
+          return interactiveData;
+        })
+        .catch(error => {
+          console.error('❌ Interactive endpoint error for Deep Learn:', error);
+          throw error;
+        });
+  
+      // 4秒后开始 interactive 调用
+      setTimeout(() => {
+        console.log('⏰ Starting interactive endpoint call for Deep Learn (4 seconds after deep learn start)...');
+        interactivePromise.catch(error => {
+          console.error('⚠️ Interactive call failed but continuing with Deep Learn:', error);
+        });
+      }, 4000);
   
       const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/start/deep_learn`, {
         method: 'POST',
@@ -281,24 +302,6 @@ export interface DeepLearnDeepRequest {
         }
       }
   
-      // Handle interactive endpoint response (runs in parallel)
-      try {
-        const interactiveData = await interactivePromise;
-        console.log('Interactive endpoint response for Deep Learn (after 4 second delay):', interactiveData);
-        
-        // Store interactive data for the sidebar
-        const tabId = window.location.pathname + window.location.search;
-        localStorage.setItem(`deeplearn_interactive_${tabId}`, JSON.stringify(interactiveData));
-        
-        // Trigger event to update sidebar
-        window.dispatchEvent(new CustomEvent('deeplearn-interactive-update', {
-          detail: { tabId, data: interactiveData }
-        }));
-      } catch (interactiveError) {
-        console.error('Interactive endpoint error for Deep Learn (after 4 second delay):', interactiveError);
-        // Don't fail the main request if interactive fails
-      }
-  
       return conversationId;
     } catch (error) {
       console.error('Deep Learn (deep mode) API error:', error);
@@ -325,7 +328,7 @@ export interface DeepLearnDeepRequest {
         user_additional_comment: userAdditionalComment || null
       };
   
-      console.log('Calling interactive endpoint for deep learn:', requestData);
+      console.log('📞 Calling interactive endpoint for deep learn:', requestData);
   
       const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/interactive`, {
         method: 'POST',
@@ -341,6 +344,7 @@ export interface DeepLearnDeepRequest {
       }
   
       const data: InteractiveResponse = await response.json();
+      console.log('✅ Interactive endpoint returned data for Deep Learn:', data);
       return data;
     } catch (error) {
       console.error('Interactive API error for deep learn:', error);
