@@ -199,6 +199,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
   const { error, success } = useToast();
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [conversationId, setConversationId] = useState<string>('');
+  const [webSearchEnabled, setWebSearchEnabled] = useState(true); // Add web search state
 
   // New state for conversation history
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
@@ -360,6 +361,11 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
     return conversationMode === 'follow-up' ? 'New Topic' : 'Follow Up';
   };
 
+  // Handle web search toggle
+  const handleWebSearchToggle = () => {
+    setWebSearchEnabled(!webSearchEnabled);
+  };
+
   // Handle submitting new question
   const handleSubmitQuestion = async () => {
     if (!inputText.trim() || isSubmitting) {
@@ -383,6 +389,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
           conversationId: currentConversationId,
           query: inputText.trim(),
           mode: selectedMode,
+          webSearch: webSearchEnabled, // Use the web search state
           isNewConversation: false
         });
         
@@ -413,10 +420,10 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
         setInputText('');
 
         if (selectedMode === 'quick-search') {
-          // Start quick search with existing conversation ID
+          // Start quick search with existing conversation ID and web search setting
           await submitQuickSearchQuery(
             queryToSubmit,
-            true, // web search enabled
+            webSearchEnabled, // Use the web search state
             undefined, // no additional comments
             'profile-default',
             null, // no references
@@ -450,10 +457,10 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             currentConversationId // Also pass as the generated conversation ID parameter
           );
         } else {
-          // Deep learn mode
+          // Deep learn mode with web search setting
           await submitDeepLearnDeepQuery(
             queryToSubmit,
-            true, // web search enabled
+            webSearchEnabled, // Use the web search state
             undefined, // no additional comments
             'profile-default',
             null, // no references
@@ -661,7 +668,19 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <GlobeIcon className="w-4 h-4 text-gray-500" />
+                        {/* Web Search Toggle Button */}
+                        <button
+                          onClick={handleWebSearchToggle}
+                          className={`p-1 rounded transition-colors ${
+                            webSearchEnabled 
+                              ? 'text-black' 
+                              : 'text-gray-400'
+                          }`}
+                          title={webSearchEnabled ? 'Web search enabled' : 'Web search disabled'}
+                          disabled={isSubmitting}
+                        >
+                          <GlobeIcon className="w-4 h-4" />
+                        </button>
 
                         {/* Deep Learn / Quick Search Toggle - Only show in new-topic mode */}
                         {conversationMode === 'new-topic' && (

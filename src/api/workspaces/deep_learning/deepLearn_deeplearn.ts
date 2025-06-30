@@ -215,6 +215,12 @@ export interface DeepLearnDeepRequest {
             const jsonData = line.substring(6); // Remove 'data: ' prefix
             
             try {
+              // 🔧 修复：添加更好的错误处理和空数据检查
+              if (!jsonData.trim()) {
+                console.warn('Received empty data line, skipping...');
+                continue;
+              }
+              
               const data: DeepLearnStreamingData = JSON.parse(jsonData);
               console.log('Received deep learn streaming data:', data);
               
@@ -235,6 +241,41 @@ export interface DeepLearnDeepRequest {
               }
             } catch (parseError) {
               console.warn('Failed to parse deep learn streaming data:', jsonData, parseError);
+              // 🔧 修复：如果解析失败，不要立即报错，继续处理下一行
+              if (jsonData.includes('error') || jsonData.includes('Error')) {
+                onError(`Parse error: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`);
+                return conversationId;
+              }
+            }
+          } else if (line.trim() && !line.startsWith('data: ')) {
+            // 🔧 修复：处理不是 SSE 格式的数据
+            try {
+              if (!line.trim()) {
+                continue;
+              }
+              
+              const data: DeepLearnStreamingData = JSON.parse(line.trim());
+              console.log('Received deep learn streaming data (non-SSE):', data);
+              
+              if (data.error) {
+                onError(data.error);
+                return conversationId;
+              }
+              
+              onData(data);
+              
+              if (data.final || data.status === 'completed') {
+                console.log('Deep learn streaming marked as final/completed');
+                onComplete();
+                return conversationId;
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse non-SSE deep learn streaming data:', line, parseError);
+              // 只有在明确是错误信息时才报错
+              if (line.includes('error') || line.includes('Error')) {
+                onError(`Parse error: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`);
+                return conversationId;
+              }
             }
           }
         }
