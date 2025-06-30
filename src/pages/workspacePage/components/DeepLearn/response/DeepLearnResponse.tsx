@@ -1,33 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../../../../../components/ui/button';
+import ForceGraph2D, { LinkObject, NodeObject } from 'react-force-graph-2d';
 import {
   ArrowLeftIcon,
   GlobeIcon,
-  FolderIcon
+  FolderIcon,
+  PlayIcon,
+  ExternalLinkIcon
 } from 'lucide-react';
-import { useToast } from '../../../../../hooks/useToast';
-import { DeepLearnStreamingData } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
-import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
-import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
-import Interactive from './Interactive';
-import DeepLearnResponseDisplay from './DeepLearnResponseDisplay';
 
 interface DeepLearnResponseProps {
   onBack: () => void;
   isSplit?: boolean;
 }
 
-// Conversation message interface
-interface ConversationMessage {
+interface CustomNode extends NodeObject {
   id: string;
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  mode?: 'deep-learn' | 'quick-search';
-  isStreaming?: boolean;
-  streamingContent?: string;
-  deepLearnData?: DeepLearnStreamingData;
+  x?: number;
+  y?: number;
+  color?: string;
+  __bckgDimensions?: [number, number];
 }
+
+const myData: { nodes: CustomNode[]; links: LinkObject[] } = {
+  nodes: [
+    { id: 'Black Hole' },
+    { id: 'White dwarf' },
+    { id: 'Type I Supernova' },
+    { id: 'Gravity Wave' },
+    { id: 'Stretched Horizon' },
+    { id: 'Cosmology' },
+  ],
+  links: [
+    { source: 'Black Hole', target: 'White dwarf' },
+    { source: 'Black Hole', target: 'Type I Supernova' },
+    { source: 'Type I Supernova', target: 'White dwarf' },
+    { source: 'Type I Supernova', target: 'Gravity Wave' },
+    { source: 'Black Hole', target: 'Stretched Horizon' },
+    { source: 'Black Hole', target: 'Cosmology' },
+  ],
+};
 
 // 回答标题区域组件 - 缩小上下间距
 const AnswerHeader: React.FC<{ title: string; tag: string; isSplit?: boolean }> = ({ title, tag, isSplit = false }) => (
@@ -58,42 +70,24 @@ const SourceWebpagesPlaceholders: React.FC<{ isSplit?: boolean }> = ({ isSplit =
   </div>
 );
 
-// 用户提问气泡组件 - 动态调整宽度
+// 用户提问气泡组件 - 学习参考代码的样式
 const UserQuestionBubble: React.FC<{
   content: string;
   time: string;
   className?: string;
   isSplit?: boolean;
-}> = ({ content, time, className = "", isSplit = false }) => {
-  // Calculate dynamic width based on content length
-  const getWidth = () => {
-    const baseWidth = isSplit ? 140 : 163;
-    const charLength = content.length;
-    
-    if (charLength <= 20) return baseWidth;
-    if (charLength <= 40) return baseWidth + (isSplit ? 40 : 60);
-    if (charLength <= 60) return baseWidth + (isSplit ? 80 : 120);
-    return baseWidth + (isSplit ? 120 : 180);
-  };
-
-  const dynamicWidth = getWidth();
-
-  return (
-    <div className={`flex flex-col items-end mb-6 ${isSplit ? 'w-full' : 'w-[649px]'} mx-auto ${className}`}>
-      <span className="font-medium text-[#636363] font-['Inter'] text-[10px] font-normal font-medium leading-normal mb-0.5 self-end">
-        {time}
+}> = ({ content, time, className = "", isSplit = false }) => (
+  <div className={`flex flex-col items-end mb-6 ${isSplit ? 'w-full' : 'w-[649px]'} mx-auto ${className}`}>
+    <span className="font-medium text-[#636363] font-['Inter'] text-[10px] font-normal font-medium leading-normal mb-0.5 self-end">
+      {time}
+    </span>
+    <div className={`flex items-center justify-center ${isSplit ? 'w-[140px]' : 'w-[163px]'} h-[34px] flex-shrink-0 rounded-[10px] bg-[#ECF1F6] self-end`}>
+      <span className={`text-black font-['Inter'] ${isSplit ? 'text-[11px]' : 'text-[13px]'} font-medium font-normal leading-normal`}>
+        {content}
       </span>
-      <div 
-        className={`flex items-center justify-center h-auto min-h-[34px] flex-shrink-0 rounded-[10px] bg-[#ECF1F6] self-end px-3 py-2`}
-        style={{ width: `${dynamicWidth}px`, maxWidth: isSplit ? '300px' : '400px' }}
-      >
-        <span className={`text-black font-['Inter'] ${isSplit ? 'text-[11px]' : 'text-[13px]'} font-medium font-normal leading-normal text-center break-words`}>
-          {content}
-        </span>
-      </div>
     </div>
-  );
-};
+  </div>
+);
 
 // 正文解释部分组件 - 学习参考代码的样式
 const AnswerBody: React.FC<{ children: React.ReactNode; isSplit?: boolean }> = ({ children, isSplit = false }) => (
@@ -105,363 +99,40 @@ const AnswerBody: React.FC<{ children: React.ReactNode; isSplit?: boolean }> = (
   </div>
 );
 
-// Assistant message component
-const AssistantMessage: React.FC<{
-  message: ConversationMessage;
-  isSplit?: boolean;
-}> = ({ message, isSplit = false }) => {
-  const renderContent = () => {
-    if (message.mode === 'quick-search') {
-      if (message.isStreaming && !message.streamingContent) {
-        return (
-          <div className="text-gray-500 italic">
-            Loading response...
-          </div>
-        );
-      } else if (message.streamingContent) {
-        return (
-          <div className="whitespace-pre-wrap leading-relaxed">
-            {message.streamingContent}
-            {message.isStreaming && (
-              <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
-            )}
-          </div>
-        );
-      } else {
-        return (
-          <div className="whitespace-pre-wrap leading-relaxed">
-            {message.content}
-          </div>
-        );
-      }
-    } else {
-      // Deep learn mode
-      if (message.isStreaming && !message.deepLearnData) {
-        return (
-          <div className="text-gray-500 italic">
-            Loading deep learn response...
-          </div>
-        );
-      } else if (message.deepLearnData) {
-        return (
-          <DeepLearnResponseDisplay 
-            deepLearnData={message.deepLearnData} 
-            isStreaming={message.isStreaming || false} 
-          />
-        );
-      } else {
-        return (
-          <div className="whitespace-pre-wrap leading-relaxed">
-            {message.content}
-          </div>
-        );
-      }
-    }
-  };
-
-  return (
-    <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed mb-6">
-      <AnswerHeader 
-        title={message.content.substring(0, 50) + (message.content.length > 50 ? '...' : '')} 
-        tag={message.mode === 'deep-learn' ? 'Deep Learn' : 'Quick Search'} 
-        isSplit={isSplit} 
-      />
-      <SourceWebpagesPlaceholders isSplit={isSplit} />
-      
-      <AnswerBody isSplit={isSplit}>
-        {renderContent()}
-      </AnswerBody>
+// Follow Up Response 组件 - 学习参考代码的样式
+const FollowUpResponse: React.FC<{ time: string; isSplit?: boolean }> = ({ time, isSplit = false }) => (
+  <div className={`flex flex-col mt-[45px] ${isSplit ? 'w-full' : 'w-[649px]'} mx-auto`}>
+    {/* Meta 信息行 */}
+    <div className="flex items-center mb-1">
+      <span className="flex items-center justify-center w-14 h-4 flex-shrink-0 rounded-lg border border-[#D9D9D9] bg-[#F9F9F9] text-[#6B6B6B] font-['Inter'] text-[9px] font-medium leading-normal">
+        Follow Up
+      </span>
+      <span className="ml-1 text-[#636363] font-['Inter'] text-[10px] font-medium leading-normal">
+        {time}
+      </span>
     </div>
-  );
-};
+
+    {/* Follow Up 对话框 */}
+    <div className="w-full rounded-[10px] bg-[#ECF1F6] flex-shrink-0 p-3">
+      <div className={`text-black font-['Inter'] ${isSplit ? 'text-[11px]' : 'text-[13px]'} font-normal  leading-normal`}>
+        悖论的核心矛盾
+        量子决定性：给定量子系统的当前状态，未来状态可以被唯一确定；反之亦然。
+        可逆性：量子力学演化是幺正的，即信息不会被破坏或丢失。
+        霍金辐射的"无信息"：霍金辐射看似不携带黑洞内部的信息，信息似乎永久丢失。
+
+        解决思路与主要理论
+        2.1 全息原理与AdS/CFT对偶
+        全息原理（Holographic Principle）认为，描述一个空间区域的所有物理信息，可以被编码在该区域的边界上（如黑洞的事件视界）。AdS/CFT对偶是这一原理的数学实现，它指出，一个五维反德西特空间（AdS）中的量子引力理论，等价于其四维边界上的共形场论（CFT）。在这种框架下，黑洞内部的信息可以被"映射"到边界上，从而避免信息丢失。
+
+        全息原理的提出，解决了黑洞信息悖论的部分难题，并提供了新的理论工具。它表明，信息实际上并未丢失，而是以某种方式被"编码"在黑洞边界或外部宇宙中。
+      </div>
+    </div>
+  </div>
+);
 
 function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) {
-  const { error, success } = useToast();
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
-  const [conversationId, setConversationId] = useState<string>('');
-
-  // New state for conversation history
-  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
-  
-  // New state for continuous conversation
-  const [conversationMode, setConversationMode] = useState<'follow-up' | 'new-topic' | null>(null);
-  const [inputText, setInputText] = useState('');
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Load saved data for this tab and initialize conversation history
-  useEffect(() => {
-    const tabId = window.location.pathname + window.location.search;
-    const savedConversationId = localStorage.getItem(`deeplearn_conversation_${tabId}`);
-    const savedQuery = localStorage.getItem(`deeplearn_query_${tabId}`);
-    const savedMode = localStorage.getItem(`deeplearn_mode_${tabId}`) as 'deep-learn' | 'quick-search';
-    const savedStreamingContent = localStorage.getItem(`deeplearn_streaming_content_${tabId}`) || '';
-    const savedDeepContent = localStorage.getItem(`deeplearn_deep_content_${tabId}`);
-    const isStreamingComplete = localStorage.getItem(`deeplearn_streaming_complete_${tabId}`) === 'true';
-    const isDeepComplete = localStorage.getItem(`deeplearn_deep_complete_${tabId}`) === 'true';
-
-    console.log('Loading saved data for tab:', {
-      tabId,
-      conversationId: savedConversationId,
-      query: savedQuery,
-      mode: savedMode,
-      streamingContentLength: savedStreamingContent.length,
-      hasDeepContent: !!savedDeepContent,
-      isStreamingComplete,
-      isDeepComplete
-    });
-
-    if (savedQuery) {
-      if (savedMode) {
-        setSelectedMode(savedMode);
-      }
-      if (savedConversationId) {
-        setConversationId(savedConversationId);
-      }
-
-      // Initialize conversation history with the first message
-      const initialUserMessage: ConversationMessage = {
-        id: 'initial-user',
-        type: 'user',
-        content: savedQuery,
-        timestamp: 'Me, Jun 1, 9:50 PM'
-      };
-
-      const initialAssistantMessage: ConversationMessage = {
-        id: 'initial-assistant',
-        type: 'assistant',
-        content: savedQuery,
-        timestamp: 'Assistant',
-        mode: savedMode,
-        isStreaming: savedMode === 'quick-search' ? !isStreamingComplete : !isDeepComplete,
-        streamingContent: savedMode === 'quick-search' ? savedStreamingContent : undefined,
-        deepLearnData: savedMode === 'deep-learn' && savedDeepContent ? JSON.parse(savedDeepContent) : undefined
-      };
-
-      setConversationHistory([initialUserMessage, initialAssistantMessage]);
-      
-      // Listen for streaming updates
-      const handleStreamingUpdate = (event: CustomEvent) => {
-        if (event.detail.tabId === tabId) {
-          setConversationHistory(prev => 
-            prev.map(msg => 
-              msg.id === 'initial-assistant' && msg.mode === 'quick-search'
-                ? { ...msg, streamingContent: event.detail.content }
-                : msg
-            )
-          );
-        }
-      };
-
-      const handleStreamingComplete = (event: CustomEvent) => {
-        if (event.detail.tabId === tabId) {
-          setConversationHistory(prev => 
-            prev.map(msg => 
-              msg.id === 'initial-assistant' && msg.mode === 'quick-search'
-                ? { ...msg, isStreaming: false }
-                : msg
-            )
-          );
-        }
-      };
-
-      const handleDeepUpdate = (event: CustomEvent) => {
-        if (event.detail.tabId === tabId) {
-          setConversationHistory(prev => 
-            prev.map(msg => 
-              msg.id === 'initial-assistant' && msg.mode === 'deep-learn'
-                ? { ...msg, deepLearnData: event.detail.data }
-                : msg
-            )
-          );
-        }
-      };
-
-      const handleDeepComplete = (event: CustomEvent) => {
-        if (event.detail.tabId === tabId) {
-          setConversationHistory(prev => 
-            prev.map(msg => 
-              msg.id === 'initial-assistant' && msg.mode === 'deep-learn'
-                ? { ...msg, isStreaming: false }
-                : msg
-            )
-          );
-        }
-      };
-
-      window.addEventListener('deeplearn-streaming-update', handleStreamingUpdate as EventListener);
-      window.addEventListener('deeplearn-streaming-complete', handleStreamingComplete as EventListener);
-      window.addEventListener('deeplearn-deep-update', handleDeepUpdate as EventListener);
-      window.addEventListener('deeplearn-deep-complete', handleDeepComplete as EventListener);
-
-      return () => {
-        window.removeEventListener('deeplearn-streaming-update', handleStreamingUpdate as EventListener);
-        window.removeEventListener('deeplearn-streaming-complete', handleStreamingComplete as EventListener);
-        window.removeEventListener('deeplearn-deep-update', handleDeepUpdate as EventListener);
-        window.removeEventListener('deeplearn-deep-complete', handleDeepComplete as EventListener);
-      };
-    } else {
-      console.log('No saved data found, using defaults');
-    }
-  }, []);
-
-  // Handle mode selection
-  const handleModeSelection = (mode: 'follow-up' | 'new-topic') => {
-    setConversationMode(mode);
-  };
-
-  // Handle mode change
-  const handleModeChange = () => {
-    if (conversationMode === 'follow-up') {
-      setConversationMode('new-topic');
-    } else if (conversationMode === 'new-topic') {
-      setConversationMode('follow-up');
-    }
-  };
-
-  // Get the opposite mode for "Change to" text
-  const getOppositeMode = () => {
-    return conversationMode === 'follow-up' ? 'New Topic' : 'Follow Up';
-  };
-
-  // Handle submitting new question
-  const handleSubmitQuestion = async () => {
-    if (!inputText.trim() || isSubmitting) {
-      return;
-    }
-
-    if (conversationMode === 'follow-up') {
-      // TODO: Implement follow-up logic later
-      success('Follow-up functionality will be implemented next!');
-      return;
-    }
-
-    if (conversationMode === 'new-topic') {
-      try {
-        setIsSubmitting(true);
-        
-        // Add user message to conversation history
-        const newUserMessage: ConversationMessage = {
-          id: `user-${Date.now()}`,
-          type: 'user',
-          content: inputText.trim(),
-          timestamp: new Date().toLocaleString()
-        };
-
-        // Add assistant message placeholder
-        const newAssistantMessage: ConversationMessage = {
-          id: `assistant-${Date.now()}`,
-          type: 'assistant',
-          content: inputText.trim(),
-          timestamp: 'Assistant',
-          mode: selectedMode,
-          isStreaming: true,
-          streamingContent: selectedMode === 'quick-search' ? '' : undefined,
-          deepLearnData: undefined
-        };
-
-        setConversationHistory(prev => [...prev, newUserMessage, newAssistantMessage]);
-        
-        // Clear input immediately after submission
-        const queryToSubmit = inputText.trim();
-        setInputText('');
-        
-        console.log('Starting new topic conversation:', {
-          query: queryToSubmit,
-          mode: selectedMode,
-          conversationId,
-          newConversation: false
-        });
-
-        if (selectedMode === 'quick-search') {
-          // Start quick search with existing conversation ID
-          await submitQuickSearchQuery(
-            queryToSubmit,
-            true, // web search enabled
-            undefined, // no additional comments
-            'profile-default',
-            null, // no references
-            (data: string) => {
-              // Update the streaming content for the current assistant message
-              setConversationHistory(prev => 
-                prev.map(msg => 
-                  msg.id === newAssistantMessage.id
-                    ? { ...msg, streamingContent: (msg.streamingContent || '') + data }
-                    : msg
-                )
-              );
-            },
-            (errorMsg: string) => {
-              console.error('Quick search streaming error:', errorMsg);
-              error(`Streaming error: ${errorMsg}`);
-              setIsSubmitting(false);
-            },
-            () => {
-              console.log('Quick search streaming completed');
-              setConversationHistory(prev => 
-                prev.map(msg => 
-                  msg.id === newAssistantMessage.id
-                    ? { ...msg, isStreaming: false }
-                    : msg
-                )
-              );
-              setIsSubmitting(false);
-            },
-            conversationId // Pass existing conversation ID
-          );
-        } else {
-          // Deep learn mode
-          await submitDeepLearnDeepQuery(
-            queryToSubmit,
-            true, // web search enabled
-            undefined, // no additional comments
-            'profile-default',
-            null, // no references
-            (data) => {
-              // Update the deep learn data for the current assistant message
-              setConversationHistory(prev => 
-                prev.map(msg => 
-                  msg.id === newAssistantMessage.id
-                    ? { ...msg, deepLearnData: data }
-                    : msg
-                )
-              );
-            },
-            (errorMsg: string) => {
-              console.error('Deep learn streaming error:', errorMsg);
-              error(`Deep learn error: ${errorMsg}`);
-              setIsSubmitting(false);
-            },
-            () => {
-              console.log('Deep learn streaming completed');
-              setConversationHistory(prev => 
-                prev.map(msg => 
-                  msg.id === newAssistantMessage.id
-                    ? { ...msg, isStreaming: false }
-                    : msg
-                )
-              );
-              setIsSubmitting(false);
-            },
-            conversationId // Pass existing conversation ID
-          );
-        }
-        
-      } catch (err) {
-        console.error('Error submitting new topic question:', err);
-        error('Failed to submit question. Please try again.');
-        setIsSubmitting(false);
-      }
-    }
-  };
-
-  // Handle Enter key press
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmitQuestion();
-    }
-  };
+  const [hoverNode, setHoverNode] = useState<CustomNode | null>(null);
 
   return (
     <div className="h-[calc(100vh-88px)] flex flex-col bg-white overflow-hidden">
@@ -477,7 +148,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
           <h1 className="font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal">
-            Learning Journey: {conversationHistory[0]?.content || 'Research Topic'}
+            Learning Journey: Exploration of Black Hole and its Related Concepts
           </h1>
         </div>
 
@@ -538,123 +209,327 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             {/* Main Content - Scrollable - 固定宽度649px */}
             <div className={`${isSplit ? 'max-w-[449px]' : 'w-[649px]'}`}>
               <div className="h-[calc(100vh-280px)] overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex-shrink-0">
-                {/* Render conversation history */}
-                {conversationHistory.map((message) => (
-                  <div key={message.id}>
-                    {message.type === 'user' ? (
-                      <UserQuestionBubble 
-                        content={message.content} 
-                        time={message.timestamp} 
-                        isSplit={isSplit} 
-                      />
-                    ) : (
-                      <AssistantMessage 
-                        message={message} 
-                        isSplit={isSplit} 
-                      />
-                    )}
-                  </div>
-                ))}
+                {/* User Question - 学习参考代码的conversation样式 */}
+                <UserQuestionBubble content="黑洞信息悖论如何解决？" time="Me, Jun 1, 9:50 PM" isSplit={isSplit} />
+
+                {/* AI Response - 学习参考代码的conversation样式 */}
+                <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed">
+                  <AnswerHeader title="黑洞信息悖论如何解决？" tag="Deep Learn" isSplit={isSplit} />
+                  <SourceWebpagesPlaceholders isSplit={isSplit} />
+                  <AnswerBody isSplit={isSplit}>
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-semibold text-base mb-3">1. 黑洞信息悖论的由来</h3>
+                        <p className="mb-4">
+                          黑洞信息悖论（Black Hole Information Paradox）源于量子力学与广义相对论在黑洞物理中的冲突。根据广义相对论，黑洞是一个引力极强、任何物质和辐射都无法逃逸的时空区域。1970年代，霍金（Stephen Hawking）将量子场论应用于黑洞附近，发现黑洞会通过量子效应向外辐射能量，这被称为"霍金辐射"。
+                        </p>
+                        <p className="mb-4">
+                          霍金的计算表明，霍金辐射的性质仅与黑洞的总质量、电荷和角动量有关，而与黑洞形成时的初始状态（即落入黑洞的物质信息）无关。这意味着，多个不同的初始状态可以演化成相同的最终状态，而这些初始状态的详细信息会在黑洞蒸发过程中"丢失"，这与量子力学中的"信息守恒"原理（即系统的波函数演化是幺正的，信息不会无故消失）相矛盾。
+                        </p>
+                      </div>
+
+                      <div>
+                        <h3 className="font-semibold text-base mb-3">2. 悖论的核心矛盾</h3>
+                        <ul className="list-disc pl-6 mb-4 space-y-2">
+                          <li><strong>量子决定性</strong>：给定量子系统的当前状态，未来状态可以被唯一确定；反之亦然。</li>
+                          <li><strong>可逆性</strong>：量子力学演化是幺正的，即信息不会被破坏或丢失。</li>
+                          <li><strong>霍金辐射的"无信息"</strong>：霍金辐射看似不携带黑洞内部的信息，信息似乎永久丢失。</li>
+                        </ul>
+                      </div>
+
+                      <div>
+                        <h3 className="font-semibold text-base mb-3">解决思路与主要理论</h3>
+
+                        <h4 className="font-medium text-sm mb-2">2.1 全息原理与AdS/CFT对偶</h4>
+                        <p className="mb-4">
+                          全息原理（Holographic Principle）认为，描述一个空间区域的所有物理信息，可以被编码在该区域的边界上（如黑洞的事件视界）。AdS/CFT对偶是这一原理的数学实现，它指出，一个五维反德西特时空（AdS）中的量子引力理论，等价于其四维边界上的共形场论（CFT）。在这种框架下，黑洞内部的信息可以被"映射"到边界上，从而避免信息丢失。
+                        </p>
+                        <p className="mb-4">
+                          全息原理的提出，解决了黑洞信息悖论的部分难题，并提供了新的理论工具。它表明，信息实际上并未丢失，而是以某种方式被"编码"在黑洞边界或外部宇宙中。
+                        </p>
+
+                        <h4 className="font-medium text-sm mb-2">2.2 佩奇曲线与量子纠缠</h4>
+                        <p className="mb-4">
+                          佩奇（Don Page）提出，如果黑洞与外界之间的纠缠随时间变化遵循"佩奇曲线"，则说明信息会从黑洞中释放出来。这条曲线早期随辐射增加而上升，达到峰值（佩奇时间）后下降，最终归零，意味着信息被完整保留。
+                        </p>
+                        <p className="mb-4">
+                          近年来，物理学家通过弦论、全息原理等方法，证明了黑洞的纠缠确实遵循佩奇曲线，信息会随着霍金辐射逐渐释放出来。
+                        </p>
+
+                        <h4 className="font-medium text-sm mb-2">2.3 ER=EPR假想</h4>
+                        <p className="mb-4">
+                          ER=EPR假想将爱因斯坦-罗森桥（ER，即虫洞）与量子纠缠（EPR，爱因斯坦-波多尔斯基-罗森悖论）联系起来，认为黑洞内部和外部的粒子通过虫洞连接，形成量子纠缠。这样，落入黑洞的信息会被保存在外部粒子中，并通过虫洞与内部粒子保持联系，从而避免了信息的丢失或复制。
+                        </p>
+                        <p className="mb-4">
+                          这一假想为信息如何在黑洞内外传递提供了新的视角，但目前尚未被实验证实。
+                        </p>
+
+                        <h4 className="font-medium text-sm mb-2">4. 信息量子热力学</h4>
+                        <p className="mb-4">
+                          有理论提出，信息本身不是先天固有的，而是后天生成的，物质与信息相互关联。落入黑洞的物质信息会转化为热辐射、热熵等量子态，通过量子信息科学和经典热力学的结合，信息得以保留。
+                        </p>
+                      </div>
+                    </div>
+                  </AnswerBody>
+
+                  {/* 新一轮提问，vertical spacing 40px - 学习参考代码的样式 */}
+                  <UserQuestionBubble
+                    content="黑洞信息悖论如何解决？"
+                    time="Me, Jun 1, 9:55 PM"
+                    className="mt-10"
+                    isSplit={isSplit}
+                  />
+
+                  {/* Follow Up Response - 学习参考代码的样式 */}
+                  <FollowUpResponse time="Jun 1, 9:58 PM" isSplit={isSplit} />
+
+
+                </div>
               </div>
-              
-              {/* Fixed Bottom Input Box - Enhanced hover effects, removed submit button */}
-              <div className={`bg-white border rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between transition-all duration-300 ${
-                isInputFocused 
-                  ? 'border-[#80A5E4] shadow-[0px_2px_15px_0px_rgba(128,165,228,0.15)]' 
-                  : 'border-gray-300'
-              }`}>
-                {/* Mode Selection Section - Only show if no mode is selected */}
-                {!conversationMode && (
+              {/* Fixed Bottom Input Box - 与文字对齐，使用相同的649px宽度，并计算正确的偏移量 */}
+              <div
+                className=" bg-white border border-gray-300 rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between"
+
+              >
+                <div className="flex items-center justify-between ">
+                  <div className="flex items-center gap-4">
+                    <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
+                    <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100">
+                      Follow Up
+                    </button>
+                    <span className="text-gray-500 font-['Inter',Helvetica] text-[12px]">or</span>
+                    <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100">
+                      New Topic
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-0">
+                  <div className="text-sm text-gray-600 font-['Inter',Helvetica]">
+                    Note: If already selected
+                  </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <span className="text-gray-700 font-['Inter',Helvetica] text-[12px]">Start a</span>
-                      <button 
-                        className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100 transition-colors"
-                        onClick={() => handleModeSelection('follow-up')}
-                      >
-                        Follow Up
-                      </button>
-                      <span className="text-gray-500 font-['Inter',Helvetica] text-[12px]">or</span>
-                      <button 
-                        className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 font-['Inter',Helvetica] text-[12px] hover:bg-gray-100 transition-colors"
-                        onClick={() => handleModeSelection('new-topic')}
-                      >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600 font-['Inter',Helvetica]">Change to</span>
+                      <button className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 text-[12px] font-['Inter',Helvetica] hover:bg-gray-100">
                         New Topic
                       </button>
                     </div>
-                  </div>
-                )}
 
-                {/* Input Area - Show when mode is selected */}
-                {conversationMode && (
-                  <div className="flex-1">
-                    <textarea
-                      className={`w-full h-full resize-none border-none outline-none bg-transparent font-['Inter',Helvetica] text-[12px] placeholder:text-gray-400 transition-all duration-300 ${
-                        isInputFocused ? 'caret-[#80A5E4]' : ''
-                      }`}
-                      placeholder={`Type your ${conversationMode === 'follow-up' ? 'follow-up question' : 'new topic'} here...`}
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      onFocus={() => setIsInputFocused(true)}
-                      onBlur={() => setIsInputFocused(false)}
-                      onKeyPress={handleKeyPress}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                )}
+                    <div className="flex items-center gap-2">
+                      <GlobeIcon className="w-4 h-4 text-gray-500" />
 
-                {/* Bottom Controls - Show when mode is selected */}
-                {conversationMode && (
-                  <div className="space-y-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600 font-['Inter',Helvetica]">Change to</span>
-                        <button 
-                          className="bg-[#F9F9F9] border border-[#D9D9D9] text-[#4A4A4A] rounded-xl px-2 py-0.5 text-[12px] font-['Inter',Helvetica] hover:bg-gray-100 transition-colors"
-                          onClick={handleModeChange}
-                          disabled={isSubmitting}
-                        >
-                          {getOppositeMode()}
-                        </button>
+                      {/* Deep Learn / Quick Search Toggle */}
+                      <div
+                        className="w-[180px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer relative"
+                        onClick={() => setSelectedMode(selectedMode === 'deep-learn' ? 'quick-search' : 'deep-learn')}
+                      >
+                        <div
+                          className={`absolute top-1 w-[84px] h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${selectedMode === 'deep-learn' ? 'left-1.5' : 'left-[94px]'
+                            }`}
+                        />
+                        <div className="absolute left-4 h-full flex items-center z-20">
+                          <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Deep Learn</span>
+                        </div>
+                        <div className="absolute right-3 h-full flex items-center z-20">
+                          <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Quick Search</span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <GlobeIcon className="w-4 h-4 text-gray-500" />
-
-                        {/* Deep Learn / Quick Search Toggle - Only show in new-topic mode */}
-                        {conversationMode === 'new-topic' && (
-                          <div
-                            className="w-[180px] h-[30px] bg-[#ECF1F6] rounded-[16.5px] flex items-center cursor-pointer relative"
-                            onClick={() => !isSubmitting && setSelectedMode(selectedMode === 'deep-learn' ? 'quick-search' : 'deep-learn')}
-                          >
-                            <div
-                              className={`absolute top-1 w-[84px] h-[22px] bg-white rounded-[14px] transition-all duration-300 ease-in-out z-10 ${selectedMode === 'deep-learn' ? 'left-1.5' : 'left-[94px]'
-                                }`}
-                            />
-                            <div className="absolute left-4 h-full flex items-center z-20">
-                              <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Deep Learn</span>
-                            </div>
-                            <div className="absolute right-3 h-full flex items-center z-20">
-                              <span className="text-[#6B6B6B] font-['Inter',Helvetica] text-xs font-medium">Quick Search</span>
-                            </div>
-                          </div>
-                        )}
-
-                        <Button variant="ghost" size="icon" className="w-8 h-8 text-gray-600" disabled={isSubmitting}>
-                          <FolderIcon className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <Button variant="ghost" size="icon" className="w-8 h-8 text-gray-600">
+                        <FolderIcon className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
             {/* Right Sidebar - 紧贴左侧文字，缩小间距 */}
-            <Interactive isSplit={isSplit} />
+            <div className={`${isSplit ? 'pr-[-100px]' : 'p-0'} flex flex-col gap-[22px] py-6 flex-shrink-0 overflow-hidden`}>
+              {/* Fixed Right Sidebar - Related Contents - 缩小顶部间距 */}
+              <div className="flex flex-col flex-1 max-w-[220px] rounded-[13px] border border-[rgba(73,127,255,0.22)] bg-white shadow-[0px_1px_30px_2px_rgba(73,127,255,0.05)] overflow-hidden mt-3">
+                {/* Title Section - 修复边框对齐问题 */}
+                <div className="flex-shrink-0 w-full h-[58.722px] rounded-t-[13px] bg-[#ECF1F6] p-3 flex flex-col justify-between">
+                  {/* First row - Icon and "Related Contents" text */}
+                  <div className="flex items-center">
+                    <img
+                      src="/workspace/related_content_icon.svg"
+                      alt="Related Contents Icon"
+                      className="flex-shrink-0 mr-2 w-[18.432px] h-[18px]"
+                    />
+                    <span className="text-[#0064A2] font-['Inter'] text-[12px] font-medium leading-normal">
+                      Related Contents
+                    </span>
+                  </div>
+
+                  {/* Second row - "See more on this topic" text */}
+                  <div className="ml-1">
+                    <span className="text-black font-['Inter'] text-[14px] font-semibold leading-normal">
+                      See more on this topic
+                    </span>
+                  </div>
+                </div>
+
+                {/* Scrollable Content Section - 添加Related Contents内容 */}
+                <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <div className="bg-white p-3">
+                    {/* Related Videos */}
+                    <div className="mb-4">
+                      <h4 className="font-medium text-xs text-black mb-2">Related Videos</h4>
+                      <div className="bg-white rounded-lg overflow-hidden border border-gray-200">
+                        <div className="w-full h-20 bg-gradient-to-r from-yellow-400 via-blue-500 to-yellow-400 relative flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+                          <div className="text-center z-10">
+                            <div className="text-yellow-300 font-bold text-xs mb-1">QUANTUM</div>
+                            <div className="flex items-center justify-center mb-1">
+                              <div className="w-4 h-4 bg-red-600 rounded-full flex items-center justify-center mr-1">
+                                <div className="w-2 h-2 bg-black rounded-full"></div>
+                              </div>
+                              <div className="text-blue-400 text-xs">⚡ ⚡</div>
+                            </div>
+                            <div className="text-white font-bold text-xs">ENTANGLEMENT</div>
+                          </div>
+                        </div>
+                        <div className="p-2">
+                          <p className="text-[10px] text-black mb-1 font-medium">Quantum Entanglement: Explained in REALLY SIMPLE Words</p>
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                            <p className="text-[9px] text-red-600 font-medium">Science ABC</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Related Webpages */}
+                    <div className="mb-4">
+                      <h4 className="font-medium text-xs text-black mb-2">Related Webpages</h4>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div className="bg-[#F0F0F0] rounded-lg p-2">
+                          <div className="text-[9px] font-medium text-black mb-1">ScienceDirect discusses quantum entanglement.</div>
+                          <div className="text-[8px] text-gray-600 mb-1">Explore the phenomenon crucial for quantum information processing applications.</div>
+                          <div className="text-[8px] text-black mb-1">Quantum Entanglement - an o...</div>
+                          <div className="text-[8px] text-orange-600">📄 ScienceDirect.com</div>
+                        </div>
+                        <div className="bg-[#F0F0F0] rounded-lg p-2">
+                          <div className="text-[9px] font-medium text-black mb-1">NASA's take entanglement</div>
+                          <div className="text-[8px] text-gray-600 mb-1">Learn about nature of par common orig</div>
+                          <div className="text-[8px] text-black mb-1">What is Qua</div>
+                          <div className="text-[8px] text-blue-600">🌐 NASA Sc</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Related Concepts */}
+                    <div>
+                      <h4 className="font-medium text-xs text-black mb-2">Related Concepts</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <div className="text-[9px] font-medium text-black mb-1">Understand the fundamental principles of quantum entanglement.</div>
+                          <div className="bg-[#D5EBF3] text-[#1e40af] px-1.5 py-0.5 rounded text-[8px] inline-block">
+                            Interconnected Fate
+                          </div>
+                        </div>
+                        <div className="bg-[#E8D5F3] text-[#6b21a8] px-1.5 py-0.5 rounded text-[8px] inline-block">
+                          Instantaneous Correlation
+                        </div>
+                        <div className="bg-[#D5F3E8] text-[#059669] px-1.5 py-0.5 rounded text-[8px] inline-block">
+                          Randomness
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fixed Right Sidebar - Concept Map - 修复边框对齐 */}
+              <div className="flex flex-col max-w-[220px] h-[228.464px] flex-shrink-0 rounded-[13px] border border-[rgba(157,155,179,0.30)] bg-white shadow-[0px_1px_30px_2px_rgba(242,242,242,0.63)] overflow-hidden">
+                {/* Header Section - 修复边框对齐问题 */}
+                <div className="flex-shrink-0 w-full h-[59.736px] bg-[rgba(228,231,239,0.62)] rounded-t-[13px] p-3 flex flex-col justify-between">
+                  {/* First row - Icon and "Concept Map" text */}
+                  <div className="flex items-center">
+                    <img
+                      src="/workspace/concept_map_icon.svg"
+                      alt="Concept Map Icon"
+                      className="mr-2 w-[17px] h-[17px]"
+                    />
+                    <span className="text-[#63626B] font-['Inter'] text-[12px] font-medium leading-normal">
+                      Concept Map
+                    </span>
+                  </div>
+
+                  {/* Second row - "Your Learning Roadmap" text */}
+                  <div className="ml-1">
+                    <span className="text-black font-['Inter'] text-[14px] font-semibold leading-normal">
+                      Your Learning Roadmap
+                    </span>
+                  </div>
+                </div>
+
+                {/* Content Section - Scaled Concept Map */}
+                <div className="flex-1 overflow-hidden">
+                  <div className="w-full h-full bg-white">
+                    <ForceGraph2D
+                      graphData={myData}
+                      width={256}
+                      height={168}
+                      nodeAutoColorBy="group"
+                      onNodeHover={(node: NodeObject | null) => {
+                        setHoverNode(node as CustomNode | null);
+                      }}
+                      nodeCanvasObject={(node: CustomNode, ctx, globalScale) => {
+                        const label = node.id;
+                        const fontSize = 10 / globalScale;
+                        ctx.font = `${fontSize}px Sans-Serif`;
+
+                        const textWidth = ctx.measureText(label).width;
+                        const bckgDimensions: [number, number] = [
+                          textWidth + fontSize * 0.2,
+                          fontSize + fontSize * 0.2,
+                        ];
+                        const x = node.x ?? 0;
+                        const y = node.y ?? 0;
+
+                        if (hoverNode?.id === node.id) {
+                          ctx.save();
+                          ctx.shadowColor = node.color || '#4f46e5';
+                          ctx.shadowBlur = 15;
+                          ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                          ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
+                          ctx.restore();
+                        } else {
+                          ctx.fillStyle = 'rgba(255, 255, 255, 0)';
+                          ctx.fillRect(x - bckgDimensions[0] / 2, y - bckgDimensions[1] / 2, ...bckgDimensions);
+                        }
+
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = node.color ?? '#000';
+                        ctx.fillText(label, x, y);
+
+                        node.__bckgDimensions = bckgDimensions;
+                      }}
+                      linkPointerAreaPaint={(node: CustomNode, color, ctx) => {
+                        const bckg = node.__bckgDimensions;
+                        if (bckg) {
+                          ctx.fillStyle = color;
+                          ctx.fillRect(
+                            (node.x ?? 0) - bckg[0] / 2,
+                            (node.y ?? 0) - bckg[1] / 2,
+                            ...bckg
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+
     </div >
   );
 }

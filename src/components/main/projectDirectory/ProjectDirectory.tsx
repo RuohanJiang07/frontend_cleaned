@@ -1,8 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../ui/card';
-import { useEffect, useState } from 'react';
-import { getAllWorkspaces, WorkspaceData } from '../../../api/main/workspaces';
-import { useToast } from '../../../hooks/useToast';
 
 interface ProjectDirectoryProps {
   selectedProject: string;
@@ -13,50 +10,87 @@ interface ProjectDirectoryProps {
 
 function ProjectDirectory({ selectedProject, selectedTime, searchQuery, activeTab }: ProjectDirectoryProps) {
   const navigate = useNavigate();
-  const { error } = useToast();
-  const [workspaces, setWorkspaces] = useState<WorkspaceData[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Project data for mapping
+  const projects = [
+    {
+      id: 1,
+      backgroundImage: "/main/landing_page/projectRectangle/rectangle-1.png",
+      title: "Computer Science",
+      editTime: "2025-03-20 14:30",
+      type: "published-projects"
+    },
+    {
+      id: 2,
+      backgroundImage: "/main/landing_page/projectRectangle/rectangle-2.png",
+      title: "Mathematics",
+      editTime: "2025-03-19 09:15",
+      type: "shared-projects"
+    },
+    {
+      id: 3,
+      backgroundImage: "/main/landing_page/projectRectangle/rectangle-3.png",
+      title: "Physics",
+      editTime: "2025-03-17 16:45",
+      type: "published-projects"
+    },
+    {
+      id: 4,
+      backgroundImage: "/main/landing_page/projectRectangle/rectangle-4.png",
+      title: "Chemistry",
+      editTime: "2025-03-13 11:20",
+      type: "published-projects"
+    },
+    {
+      id: 5,
+      backgroundImage: "/main/landing_page/projectRectangle/rectangle-5.png",
+      title: "Biology",
+      editTime: "2025-03-06 15:40",
+      type: "shared-projects"
+    },
+    {
+      id: 6,
+      backgroundImage: "/main/landing_page/projectRectangle/rectangle-6.png",
+      title: "Literature",
+      editTime: "2025-02-28 10:25",
+      type: "published-projects"
+    },
+    {
+      id: 7,
+      backgroundImage: "/main/landing_page/projectRectangle/rectangle-7.png",
+      title: "History",
+      editTime: "2025-02-20 13:50",
+      type: "shared-projects"
+    },
+    {
+      id: 8,
+      backgroundImage: "/main/landing_page/projectRectangle/rectangle-8.png",
+      title: "Philosophy",
+      editTime: "2025-01-20 08:35",
+      type: "shared-projects"
+    },
+  ];
 
-  // Fetch workspaces on component mount
-  useEffect(() => {
-    const fetchWorkspaces = async () => {
-      try {
-        setLoading(true);
-        const response = await getAllWorkspaces();
-        
-        if (response.success) {
-          setWorkspaces(response.workspaces);
-        } else {
-          error('Failed to load workspaces. Please try again.');
-        }
-      } catch (err) {
-        console.error('Error fetching workspaces:', err);
-        error('Failed to load workspaces. Please check your connection.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const filteredProjects = projects.filter(project => {
+    // Filter by tab type
+    if (activeTab !== "project-directory" && project.type !== activeTab) {
+      return false;
+    }
 
-    fetchWorkspaces();
-  }, [error]);
-
-  // Filter workspaces based on current filters
-  const filteredWorkspaces = workspaces.filter(workspace => {
     // Filter by project name
-    if (selectedProject !== "All Projects" && workspace.workspace_name !== selectedProject) {
+    if (selectedProject !== "All Projects" && project.title !== selectedProject) {
       return false;
     }
 
     // Filter by search query
-    if (searchQuery && !workspace.workspace_name.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (searchQuery && !project.title.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
 
     // Filter by time
     if (selectedTime !== "All Time") {
       const now = new Date();
-      const workspaceDate = new Date(workspace.created_at);
-      const diffTime = now.getTime() - workspaceDate.getTime();
+      const projectDate = new Date(project.editTime);
+      const diffTime = now.getTime() - projectDate.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
 
@@ -77,88 +111,31 @@ function ProjectDirectory({ selectedProject, selectedTime, searchQuery, activeTa
     return true;
   });
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Handle workspace click - save workspace_id to localStorage
-  const handleWorkspaceClick = (workspace: WorkspaceData) => {
-    // Save workspace_id to localStorage for future API calls
-    localStorage.setItem('current_workspace_id', workspace.workspace_id);
-    
-    // Navigate to workspace page
-    navigate(`/workspace?title=${encodeURIComponent(workspace.workspace_name)}`);
-  };
-
-  if (loading) {
-    return (
-      <section className="w-full py-[4px] px-8">
-        <div className="grid grid-cols-4 gap-7">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="w-full h-[230px]">
-              <Card className="relative w-full h-full p-0 overflow-hidden border-0 bg-gray-100 animate-pulse">
-                <div className="w-full h-full bg-gray-200">
-                  <div className="absolute bottom-0 left-0 w-full">
-                    <div className="w-full h-[53px] bg-white">
-                    </div>
-                    <div className="absolute bottom-[25px] left-[18px] w-24 h-4 bg-gray-300 rounded"></div>
-                    <div className="absolute bottom-[6px] left-[18px] w-32 h-3 bg-gray-300 rounded"></div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className="w-full py-[4px] px-8">
       <div className="grid grid-cols-4 gap-7">
-        {filteredWorkspaces.map((workspace) => (
-          <div key={workspace.workspace_id} className="w-full h-[230px]">
+        {filteredProjects.map((project) => (
+          <div key={project.id} className="w-full h-[230px]">
             <Card className="relative w-full h-full p-0 overflow-hidden border-0 transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
               <div
                 className="w-full h-full bg-cover bg-center"
-                style={{ 
-                  backgroundImage: `url(${workspace.cover_url})`,
-                  cursor: 'pointer' 
-                }}
-                onClick={() => handleWorkspaceClick(workspace)}
+                style={{ backgroundImage: `url(${project.backgroundImage})`, cursor: 'pointer' }}
+                onClick={() => navigate(`/workspace?title=${encodeURIComponent(project.title)}`)}
               >
                 <div className="absolute bottom-0 left-0 w-full">
                   <div className="w-full h-[53px] bg-white">
                   </div>
                   <div className="absolute bottom-[25px] left-[18px] font-normal text-black text-sm">
-                    {workspace.workspace_name}
+                    {project.title}
                   </div>
                   <div className="absolute bottom-[6px] left-[18px] font-normal text-black text-xs">
-                    {formatDate(workspace.created_at)}
+                    {project.editTime}
                   </div>
                 </div>
               </div>
             </Card>
           </div>
         ))}
-        
-        {/* Show message if no workspaces found */}
-        {filteredWorkspaces.length === 0 && !loading && (
-          <div className="col-span-4 flex flex-col items-center justify-center py-12">
-            <div className="text-gray-500 text-lg mb-2">No workspaces found</div>
-            <div className="text-gray-400 text-sm">
-              {searchQuery ? 'Try adjusting your search criteria' : 'Create your first workspace to get started'}
-            </div>
-          </div>
-        )}
       </div>
     </section>
   )
