@@ -3,7 +3,9 @@ import { GlobeIcon, PaperclipIcon, FolderIcon, ChevronDownIcon } from 'lucide-re
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
 import { useState } from 'react';
-import DeepLearnResponse from '../response/DeepLearnResponse';
+import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
+import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
+import { useToast } from '../../../../../hooks/useToast';
 
 interface DeepLearnProps {
   isSplit?: boolean;
@@ -71,14 +73,157 @@ const learningCards = [
 ];
 
 function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
+  const { success, error } = useToast();
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [selectedTab, setSelectedTab] = useState<'trending' | 'history'>('trending');
   const [inputText, setInputText] = useState('');
   const [additionalComments, setAdditionalComments] = useState('');
+  const [webSearchEnabled, setWebSearchEnabled] = useState(true);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [isAdditionalCommentsFocused, setIsAdditionalCommentsFocused] = useState(false);
+
+  // Helper function to save conversation ID and query for this tab
+  const saveTabData = (conversationId: string, query: string, mode: 'deep-learn' | 'quick-search') => {
+    // Get current tab ID from the URL or generate one if needed
+    const tabId = window.location.pathname + window.location.search;
+    localStorage.setItem(`deeplearn_conversation_${tabId}`, conversationId);
+    localStorage.setItem(`deeplearn_query_${tabId}`, query);
+    localStorage.setItem(`deeplearn_mode_${tabId}`, mode);
+  };
+
+  // Helper function to clear related content for new conversations
+  const clearRelatedContent = () => {
+    const tabId = window.location.pathname + window.location.search;
+    // Clear all related content data for this tab
+    localStorage.removeItem(`deeplearn_interactive_${tabId}`);
+    localStorage.removeItem(`deeplearn_streaming_content_${tabId}`);
+    localStorage.removeItem(`deeplearn_streaming_complete_${tabId}`);
+    localStorage.removeItem(`deeplearn_deep_content_${tabId}`);
+    localStorage.removeItem(`deeplearn_deep_complete_${tabId}`);
+    
+    console.log('Cleared related content for new conversation');
+  };
 
   const handleCardClick = (cardId: number) => {
     // Notify parent component to change view to response
     onViewChange?.('deep-learn-response');
+  };
+
+  const handleSubmitQuery = async () => {
+    if (!inputText.trim()) {
+      error('Please enter a topic to learn about');
+      return;
+    }
+
+    try {
+      // Clear related content when starting a new conversation
+      clearRelatedContent();
+
+      console.log('Submitting query with params:', {
+        query: inputText.trim(),
+        mode: selectedMode,
+        webSearch: webSearchEnabled,
+        additionalComments: additionalComments.trim() || undefined,
+        profile: 'profile-default',
+        references: null
+      });
+
+      if (selectedMode === 'quick-search') {
+        // For quick search, use the existing streaming endpoint
+        const tabId = window.location.pathname + window.location.search;
+        localStorage.setItem(`deeplearn_query_${tabId}`, inputText.trim());
+        localStorage.setItem(`deeplearn_mode_${tabId}`, selectedMode);
+        localStorage.setItem(`deeplearn_streaming_content_${tabId}`, ''); // Clear previous content
+        
+        // Navigate to response page immediately
+        onViewChange?.('deep-learn-response');
+        
+        // Start streaming in the background
+        await submitQuickSearchQuery(
+          inputText.trim(),
+          webSearchEnabled,
+          additionalComments.trim() || undefined,
+          'profile-default',
+          null,
+          (data: string) => {
+            // Update streaming content in localStorage
+            const currentContent = localStorage.getItem(`deeplearn_streaming_content_${tabId}`) || '';
+            localStorage.setItem(`deeplearn_streaming_content_${tabId}`, currentContent + data);
+            
+            // Trigger a custom event to notify the response component
+            window.dispatchEvent(new CustomEvent('deeplearn-streaming-update', {
+              detail: { tabId, content: currentContent + data }
+            }));
+          },
+          (errorMsg: string) => {
+            console.error('Quick search streaming error:', errorMsg);
+            error(`Streaming error: ${errorMsg}`);
+          },
+          () => {
+            console.log('Quick search streaming completed');
+            // Mark streaming as complete
+            localStorage.setItem(`deeplearn_streaming_complete_${tabId}`, 'true');
+            window.dispatchEvent(new CustomEvent('deeplearn-streaming-complete', {
+              detail: { tabId }
+            }));
+          }
+        );
+      } else {
+        // For deep learn, use the new deep learn endpoint
+        const tabId = window.location.pathname + window.location.search;
+        localStorage.setItem(`deeplearn_query_${tabId}`, inputText.trim());
+        localStorage.setItem(`deeplearn_mode_${tabId}`, selectedMode);
+        localStorage.setItem(`deeplearn_deep_content_${tabId}`, ''); // Clear previous content
+        
+        // Navigate to response page immediately
+        onViewChange?.('deep-learn-response');
+        
+        // Start deep learn streaming in the background
+        const conversationId = await submitDeepLearnDeepQuery(
+          inputText.trim(),
+          webSearchEnabled,
+          additionalComments.trim() || undefined,
+          'profile-default',
+          null,
+          (data) => {
+            // For deep learn, completely replace the content each time
+            const contentToStore = JSON.stringify(data);
+            localStorage.setItem(`deeplearn_deep_content_${tabId}`, contentToStore);
+            
+            // Trigger a custom event to notify the response component
+            window.dispatchEvent(new CustomEvent('deeplearn-deep-update', {
+              detail: { tabId, data }
+            }));
+          },
+          (errorMsg: string) => {
+            console.error('Deep learn streaming error:', errorMsg);
+            error(`Deep learn error: ${errorMsg}`);
+          },
+          () => {
+            console.log('Deep learn streaming completed');
+            // Mark deep learn as complete
+            localStorage.setItem(`deeplearn_deep_complete_${tabId}`, 'true');
+            window.dispatchEvent(new CustomEvent('deeplearn-deep-complete', {
+              detail: { tabId }
+            }));
+          }
+        );
+
+        // Save conversation ID for this tab
+        saveTabData(conversationId, inputText.trim(), selectedMode);
+      }
+
+    } catch (err) {
+      console.error('Error submitting query:', err);
+      error('Failed to start research. Please try again.');
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmitQuery();
+    }
   };
 
   const handleBackToEntry = () => {
@@ -86,8 +231,6 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     onViewChange?.(null);
   };
 
-  // If we're in response view, render the response component
-  // This will be handled by the parent component based on activeView
   return (
     <div className=" overflow-y-auto h-[calc(100vh-88px)]">
       <main className="flex-1 p-12 max-w-7xl mx-auto">
@@ -112,7 +255,17 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
 
         {/* Network icon + Deep Learn/Quick Search toggle - 与input box右对齐 */}
         <div className="w-full max-w-4xl mx-auto flex justify-end items-center gap-3 mb-4">
-          <GlobeIcon className="w-6 h-6 text-gray-600" />
+          <button
+            onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+            className={`p-1 rounded transition-colors ${
+              webSearchEnabled 
+                ? 'text-black' 
+                : 'text-gray-400'
+            }`}
+            title={webSearchEnabled ? 'Web search enabled' : 'Web search disabled'}
+          >
+            <GlobeIcon className="w-6 h-6" />
+          </button>
 
           {/* Deep Learn / Quick Search 可选择切换 */}
           <div
@@ -136,24 +289,40 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
           </div>
         </div>
 
-        {/* Search Input Section - 多行支持，无滚动条 */}
+        {/* Search Input Section - Enhanced hover effects matching Problem Help */}
         <div className="flex justify-center mb-4">
-          <Card className="w-full max-w-4xl h-[155px] rounded-[13px] border-[#d0d9e3] shadow-[0px_3px_60px_1px_#4870d00d]">
+          <Card className={`w-full max-w-4xl h-[155px] rounded-[13px] border shadow-[0px_3px_60px_1px_#4870d00d] transition-all duration-300 ${
+            isInputFocused 
+              ? 'border-[#80A5E4] shadow-[0px_2px_20px_0px_rgba(128,165,228,0.15)]' 
+              : 'border-[#d0d9e3]'
+          }`}>
             <CardContent className="p-5 h-full flex flex-col">
-              {/* 主要输入框 - 支持多行，无滚动条 */}
+              {/* 主要输入框 - 支持多行，无滚动条，增强焦点效果，文字颜色改为黑色 */}
               <textarea
-                className="flex-1 text-base font-medium font-['Inter',Helvetica] text-[#969696] border-0 resize-none outline-none bg-transparent placeholder:text-[#969696] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                className={`flex-1 text-base font-medium font-['Inter',Helvetica] text-black border-0 resize-none outline-none bg-transparent placeholder:text-[#969696] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] transition-all duration-300 ${
+                  isInputFocused ? 'caret-[#80A5E4]' : ''
+                }`}
                 placeholder="Enter the topic you'd like to learn..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
               />
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">
+                {/* Additional comments 输入框 - 添加 hover 效果 */}
                 <textarea
-                  className="w-full sm:w-[391px] h-[30px] bg-[#ecf1f6] rounded-[5px] text-xs font-medium font-['Inter',Helvetica] text-[#898989] border-0 resize-none outline-none px-3 py-2 placeholder:text-[#898989] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                  className={`w-full sm:w-[391px] h-[30px] bg-[#ecf1f6] rounded-[5px] text-xs font-medium font-['Inter',Helvetica] text-black border-0 resize-none outline-none px-3 py-2 placeholder:text-[#898989] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] transition-all duration-300 ${
+                    isAdditionalCommentsFocused 
+                      ? 'border border-[#80A5E4] shadow-[0px_1px_8px_0px_rgba(128,165,228,0.15)] caret-[#80A5E4]' 
+                      : 'border border-transparent'
+                  }`}
                   placeholder="Enter additional comments..."
                   value={additionalComments}
                   onChange={(e) => setAdditionalComments(e.target.value)}
+                  onFocus={() => setIsAdditionalCommentsFocused(true)}
+                  onBlur={() => setIsAdditionalCommentsFocused(false)}
                 />
 
                 <div className="flex flex-wrap gap-2">
