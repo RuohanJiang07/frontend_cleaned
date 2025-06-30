@@ -3,6 +3,7 @@ import { Button } from '../../../../../components/ui/button';
 import { ArrowLeftIcon, ShareIcon, PrinterIcon, MoreHorizontalIcon, CheckIcon, ThumbsUpIcon, ThumbsDownIcon, CopyIcon, PaperclipIcon, FolderIcon } from 'lucide-react';
 import { submitProblemSolverSolution } from '../../../../../api/workspaces/problem_help/ProblemHelpMain';
 import { useToast } from '../../../../../hooks/useToast';
+import { MarkdownRenderer } from '../../../../../components/ui/markdown';
 
 interface ProblemHelpResponseProps {
   onBack: () => void;
@@ -320,14 +321,18 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
 
         {/* Main Response Container - 65% left, 35% right */}
         <div className="flex gap-6">
-          {/* GPT Response - 65% */}
+          {/* GPT Response - 65% with Markdown Support */}
           <div className="w-[65%]">
-            <div className="text-sm text-black font-['Inter',Helvetica] whitespace-pre-wrap leading-relaxed">
-              {contentToRender}
-              {message.isStreaming && (
-                <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
-              )}
-            </div>
+            <MarkdownRenderer 
+              content={contentToRender}
+              variant="response"
+              className="text-sm leading-relaxed"
+            />
+            
+            {/* Streaming indicator */}
+            {message.isStreaming && (
+              <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
+            )}
 
             {/* Action Buttons - Only show for completed messages */}
             {!message.isStreaming && (

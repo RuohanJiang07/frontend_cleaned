@@ -1,5 +1,6 @@
 import React from 'react';
 import { DeepLearnStreamingData } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
+import { MarkdownRenderer } from '../../../../../components/ui/markdown';
 
 interface DeepLearnResponseDisplayProps {
   deepLearnData: DeepLearnStreamingData;
@@ -7,16 +8,18 @@ interface DeepLearnResponseDisplayProps {
 }
 
 function DeepLearnResponseDisplay({ deepLearnData, isStreaming }: DeepLearnResponseDisplayProps) {
-  // Helper function to render LLM response content as normal text
+  // Helper function to render LLM response content with markdown support
   const renderLLMResponse = (llmResponse: any) => {
     if (!llmResponse) return null;
 
-    // If it's a string, render it directly
+    // If it's a string, render it with markdown support
     if (typeof llmResponse === 'string') {
       return (
-        <div className="text-black font-['Inter',Helvetica] text-sm leading-relaxed whitespace-pre-wrap">
-          {llmResponse}
-        </div>
+        <MarkdownRenderer 
+          content={llmResponse}
+          variant="response"
+          className="text-sm leading-relaxed"
+        />
       );
     }
 
@@ -29,11 +32,24 @@ function DeepLearnResponseDisplay({ deepLearnData, isStreaming }: DeepLearnRespo
                     llmResponse.message ||
                     JSON.stringify(llmResponse, null, 2);
 
-      return (
-        <div className="text-black font-['Inter',Helvetica] text-sm leading-relaxed whitespace-pre-wrap">
-          {typeof content === 'string' ? content : JSON.stringify(content, null, 2)}
-        </div>
-      );
+      if (typeof content === 'string') {
+        return (
+          <MarkdownRenderer 
+            content={content}
+            variant="response"
+            className="text-sm leading-relaxed"
+          />
+        );
+      } else {
+        // Fallback to JSON display with markdown
+        return (
+          <MarkdownRenderer 
+            content={`\`\`\`json\n${JSON.stringify(content, null, 2)}\n\`\`\``}
+            variant="response"
+            className="text-sm leading-relaxed"
+          />
+        );
+      }
     }
 
     return null;
@@ -81,7 +97,7 @@ function DeepLearnResponseDisplay({ deepLearnData, isStreaming }: DeepLearnRespo
         </div>
       )}
 
-      {/* LLM Response content - Now rendered as normal text */}
+      {/* LLM Response content - Now rendered with Markdown support */}
       {deepLearnData.llm_response && (
         <div className="mb-4">
           {renderLLMResponse(deepLearnData.llm_response)}
