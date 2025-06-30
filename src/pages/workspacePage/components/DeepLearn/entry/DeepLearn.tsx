@@ -82,6 +82,21 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isAdditionalCommentsFocused, setIsAdditionalCommentsFocused] = useState(false);
 
+  // Helper function to generate UUID
+  const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
+  // Helper function to generate conversation ID in dl-c-{uuid} format
+  const generateConversationId = (): string => {
+    const uuid = generateUUID();
+    return `dl-c-${uuid}`;
+  };
+
   // Helper function to save conversation ID and query for this tab
   const saveTabData = (conversationId: string, query: string, mode: 'deep-learn' | 'quick-search') => {
     // Get current tab ID from the URL or generate one if needed
@@ -89,6 +104,12 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     localStorage.setItem(`deeplearn_conversation_${tabId}`, conversationId);
     localStorage.setItem(`deeplearn_query_${tabId}`, query);
     localStorage.setItem(`deeplearn_mode_${tabId}`, mode);
+    
+    console.log(`💾 Saved conversation data for tab ${tabId}:`, {
+      conversationId,
+      query,
+      mode
+    });
   };
 
   // Helper function to clear related content for new conversations
@@ -101,7 +122,7 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     localStorage.removeItem(`deeplearn_deep_content_${tabId}`);
     localStorage.removeItem(`deeplearn_deep_complete_${tabId}`);
     
-    console.log('Cleared related content for new conversation');
+    console.log('🧹 Cleared related content for new conversation');
   };
 
   const handleCardClick = (cardId: number) => {
@@ -119,14 +140,22 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
       // Clear related content when starting a new conversation
       clearRelatedContent();
 
-      console.log('Submitting query with params:', {
+      // Generate conversation ID for new conversation
+      const conversationId = generateConversationId();
+      
+      console.log('🆔 Generated conversation ID:', conversationId);
+      console.log('📝 Submitting query with params:', {
         query: inputText.trim(),
         mode: selectedMode,
         webSearch: webSearchEnabled,
         additionalComments: additionalComments.trim() || undefined,
         profile: 'profile-default',
-        references: null
+        references: null,
+        conversationId
       });
+
+      // Save conversation data immediately
+      saveTabData(conversationId, inputText.trim(), selectedMode);
 
       if (selectedMode === 'quick-search') {
         // For quick search, use the existing streaming endpoint
@@ -166,7 +195,9 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
             window.dispatchEvent(new CustomEvent('deeplearn-streaming-complete', {
               detail: { tabId }
             }));
-          }
+          },
+          undefined, // No existing conversation ID for new conversation
+          conversationId // Pass the generated conversation ID
         );
       } else {
         // For deep learn, use the new deep learn endpoint
@@ -179,7 +210,7 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
         onViewChange?.('deep-learn-response');
         
         // Start deep learn streaming in the background
-        const conversationId = await submitDeepLearnDeepQuery(
+        const returnedConversationId = await submitDeepLearnDeepQuery(
           inputText.trim(),
           webSearchEnabled,
           additionalComments.trim() || undefined,
@@ -206,11 +237,12 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
             window.dispatchEvent(new CustomEvent('deeplearn-deep-complete', {
               detail: { tabId }
             }));
-          }
+          },
+          undefined, // No existing conversation ID for new conversation
+          conversationId // Pass the generated conversation ID
         );
 
-        // Save conversation ID for this tab
-        saveTabData(conversationId, inputText.trim(), selectedMode);
+        console.log('✅ Deep learn started with conversation ID:', returnedConversationId);
       }
 
     } catch (err) {

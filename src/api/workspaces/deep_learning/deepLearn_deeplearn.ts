@@ -128,7 +128,8 @@ export interface DeepLearnDeepRequest {
     onData: (data: DeepLearnStreamingData) => void,
     onError: (error: string) => void,
     onComplete: () => void,
-    existingConversationId?: string // New parameter for continuous conversation
+    existingConversationId?: string, // Existing conversation ID for continuous conversation
+    generatedConversationId?: string // Generated conversation ID for new conversation
   ): Promise<string> => {
     try {
       const workspaceId = getWorkspaceId();
@@ -136,11 +137,12 @@ export interface DeepLearnDeepRequest {
         throw new Error('No workspace selected. Please select a workspace first.');
       }
   
-      // Use existing conversation ID or generate new one
-      const conversationId = existingConversationId || generateConversationId();
+      // Use existing conversation ID, generated conversation ID, or generate new one
+      const conversationId = existingConversationId || generatedConversationId || generateConversationId();
       const isNewConversation = !existingConversationId;
       
-      console.log('Generated/Using conversation ID for deep learn:', conversationId, 'isNew:', isNewConversation);
+      console.log('🆔 Deep Learn - Using conversation ID:', conversationId, 'isNew:', isNewConversation);
+      console.log('📤 Deep Learn - Displaying conversation ID before streaming...');
   
       const requestData: DeepLearnDeepRequest = {
         workspace_id: workspaceId,
@@ -154,7 +156,7 @@ export interface DeepLearnDeepRequest {
         references_selected: references || null
       };
   
-      console.log('Submitting Deep Learn (deep mode) request:', requestData);
+      console.log('📝 Submitting Deep Learn (deep mode) request:', requestData);
   
       // 🔧 修复问题：确保 Interactive API 在 Deep Learn 模式下也被调用
       const interactivePromise = new Promise<InteractiveResponse>((resolve, reject) => {

@@ -105,11 +105,26 @@ const AnswerBody: React.FC<{ children: React.ReactNode; isSplit?: boolean }> = (
   </div>
 );
 
+// Conversation ID Display Component
+const ConversationIdDisplay: React.FC<{ conversationId: string; isSplit?: boolean }> = ({ conversationId, isSplit = false }) => (
+  <div className={`${isSplit ? 'w-full' : 'w-[649px]'} mx-auto mb-4`}>
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-blue-800">Conversation ID:</span>
+        <code className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded font-mono">
+          {conversationId}
+        </code>
+      </div>
+    </div>
+  </div>
+);
+
 // Assistant message component
 const AssistantMessage: React.FC<{
   message: ConversationMessage;
   isSplit?: boolean;
-}> = ({ message, isSplit = false }) => {
+  conversationId?: string;
+}> = ({ message, isSplit = false, conversationId }) => {
   const renderContent = () => {
     if (message.mode === 'quick-search') {
       if (message.isStreaming && !message.streamingContent) {
@@ -161,6 +176,11 @@ const AssistantMessage: React.FC<{
 
   return (
     <div className="prose max-w-none font-['Inter',Helvetica] text-sm leading-relaxed mb-6">
+      {/* Show conversation ID for the first assistant message */}
+      {conversationId && message.id === 'initial-assistant' && (
+        <ConversationIdDisplay conversationId={conversationId} isSplit={isSplit} />
+      )}
+      
       <AnswerHeader 
         title={message.content.substring(0, 50) + (message.content.length > 50 ? '...' : '')} 
         tag={message.mode === 'deep-learn' ? 'Deep Learn' : 'Quick Search'} 
@@ -189,6 +209,21 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Helper function to generate UUID
+  const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
+  // Helper function to generate conversation ID in dl-c-{uuid} format
+  const generateConversationId = (): string => {
+    const uuid = generateUUID();
+    return `dl-c-${uuid}`;
+  };
+
   // Load saved data for this tab and initialize conversation history
   useEffect(() => {
     const tabId = window.location.pathname + window.location.search;
@@ -200,7 +235,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
     const isStreamingComplete = localStorage.getItem(`deeplearn_streaming_complete_${tabId}`) === 'true';
     const isDeepComplete = localStorage.getItem(`deeplearn_deep_complete_${tabId}`) === 'true';
 
-    console.log('Loading saved data for tab:', {
+    console.log('📂 Loading saved data for tab:', {
       tabId,
       conversationId: savedConversationId,
       query: savedQuery,
@@ -217,6 +252,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
       }
       if (savedConversationId) {
         setConversationId(savedConversationId);
+        console.log('🆔 Loaded conversation ID from localStorage:', savedConversationId);
       }
 
       // Initialize conversation history with the first message
@@ -340,6 +376,16 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
       try {
         setIsSubmitting(true);
         
+        // Use existing conversation ID for new topic in same conversation
+        const currentConversationId = conversationId || generateConversationId();
+        
+        console.log('🔄 Starting new topic in existing conversation:', {
+          conversationId: currentConversationId,
+          query: inputText.trim(),
+          mode: selectedMode,
+          isNewConversation: false
+        });
+        
         // Add user message to conversation history
         const newUserMessage: ConversationMessage = {
           id: `user-${Date.now()}`,
@@ -365,13 +411,6 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
         // Clear input immediately after submission
         const queryToSubmit = inputText.trim();
         setInputText('');
-        
-        console.log('Starting new topic conversation:', {
-          query: queryToSubmit,
-          mode: selectedMode,
-          conversationId,
-          newConversation: false
-        });
 
         if (selectedMode === 'quick-search') {
           // Start quick search with existing conversation ID
@@ -407,7 +446,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
               );
               setIsSubmitting(false);
             },
-            conversationId // Pass existing conversation ID
+            currentConversationId, // Pass existing conversation ID
+            currentConversationId // Also pass as the generated conversation ID parameter
           );
         } else {
           // Deep learn mode
@@ -443,7 +483,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
               );
               setIsSubmitting(false);
             },
-            conversationId // Pass existing conversation ID
+            currentConversationId, // Pass existing conversation ID
+            currentConversationId // Also pass as the generated conversation ID parameter
           );
         }
         
@@ -550,7 +591,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                     ) : (
                       <AssistantMessage 
                         message={message} 
-                        isSplit={isSplit} 
+                        isSplit={isSplit}
+                        conversationId={conversationId}
                       />
                     )}
                   </div>

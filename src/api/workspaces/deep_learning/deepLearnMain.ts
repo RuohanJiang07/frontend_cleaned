@@ -183,7 +183,8 @@ export const submitQuickSearchQuery = async (
   onData: (data: string) => void,
   onError: (error: string) => void,
   onComplete: () => void,
-  existingConversationId?: string // New parameter for continuous conversation
+  existingConversationId?: string, // Existing conversation ID for continuous conversation
+  generatedConversationId?: string // Generated conversation ID for new conversation
 ): Promise<string> => {
   try {
     const workspaceId = getWorkspaceId();
@@ -191,11 +192,12 @@ export const submitQuickSearchQuery = async (
       throw new Error('No workspace selected. Please select a workspace first.');
     }
 
-    // Use existing conversation ID or generate new one
-    const conversationId = existingConversationId || generateConversationId();
+    // Use existing conversation ID, generated conversation ID, or generate new one
+    const conversationId = existingConversationId || generatedConversationId || generateConversationId();
     const isNewConversation = !existingConversationId;
     
-    console.log('Generated/Using conversation ID:', conversationId, 'isNew:', isNewConversation);
+    console.log('🆔 Quick Search - Using conversation ID:', conversationId, 'isNew:', isNewConversation);
+    console.log('📤 Quick Search - Displaying conversation ID before streaming...');
 
     // Use real user input and settings
     const requestData: QuickSearchRequest = {
@@ -210,7 +212,7 @@ export const submitQuickSearchQuery = async (
       references_selected: references || []
     };
 
-    console.log('Submitting Quick Search request:', requestData);
+    console.log('📝 Submitting Quick Search request:', requestData);
 
     // Schedule interactive endpoint call for 4 seconds later
     const interactivePromise = new Promise<InteractiveResponse>((resolve, reject) => {
