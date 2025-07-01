@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import { cn } from '../../../lib/utils';
 
 interface MarkdownRendererProps {
@@ -29,7 +30,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     <div className={cn(baseClasses, variantClasses[variant], className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={[rehypeKatex, rehypeRaw]}
         components={{
           // Headings
           h1: ({ children, ...props }) => (

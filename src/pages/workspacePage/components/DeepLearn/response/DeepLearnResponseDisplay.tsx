@@ -1,25 +1,156 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DeepLearnStreamingData } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import { MarkdownRenderer } from '../../../../../components/ui/markdown';
+import { ChevronDownIcon, ChevronRightIcon, HelpCircleIcon } from 'lucide-react';
 
 interface DeepLearnResponseDisplayProps {
   deepLearnData: DeepLearnStreamingData;
   isStreaming: boolean;
 }
 
+// Question-Answer pair interface
+interface QuestionAnswerPair {
+  question: string;
+  answer: string;
+}
+
+// QuestionArea component for rendering collapsible Q&A sections
+const QuestionArea: React.FC<{ pairs: QuestionAnswerPair[] }> = ({ pairs }) => {
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
+
+  const toggleQuestion = (index: number) => {
+    const newExpanded = new Set(expandedQuestions);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedQuestions(newExpanded);
+  };
+
+  return (
+    <div className="my-6 space-y-3">
+      {pairs.map((pair, index) => (
+        <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+          {/* Question Header - Always Visible */}
+          <div
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => toggleQuestion(index)}
+          >
+            <div className="flex items-center gap-3 flex-1">
+              <HelpCircleIcon className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <span className="text-sm font-medium text-gray-900 font-['Inter',Helvetica] leading-relaxed">
+                {pair.question}
+              </span>
+            </div>
+            <div className="flex-shrink-0 ml-3">
+              {expandedQuestions.has(index) ? (
+                <ChevronDownIcon className="w-5 h-5 text-gray-500" />
+              ) : (
+                <ChevronRightIcon className="w-5 h-5 text-gray-500" />
+              )}
+            </div>
+          </div>
+
+          {/* Answer Content - Collapsible */}
+          {expandedQuestions.has(index) && (
+            <div className="border-t border-gray-100 bg-gray-50">
+              <div className="p-4">
+                <MarkdownRenderer 
+                  content={pair.answer}
+                  variant="response"
+                  className="text-sm leading-relaxed"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 function DeepLearnResponseDisplay({ deepLearnData, isStreaming }: DeepLearnResponseDisplayProps) {
-  // Helper function to render LLM response content with markdown support
+  // Helper function to process highlight tags in content
+  const processHighlightTags = (content: string): string => {
+    if (!content || typeof content !== 'string') return content;
+    
+    // Replace <highlight>...</highlight> tags with HTML mark elements with light blue background
+    return content.replace(
+      /<highlight>(.*?)<\/highlight>/g, 
+      '<mark class="bg-blue-100 text-blue-900 px-1 py-0.5 rounded font-medium">$1</mark>'
+    );
+  };
+
+  // Helper function to extract and parse question areas
+  const extractQuestionAreas = (content: string): { content: string; questionAreas: QuestionAnswerPair[][] } => {
+    if (!content || typeof content !== 'string') return { content, questionAreas: [] };
+
+    const questionAreas: QuestionAnswerPair[][] = [];
+    let processedContent = content;
+
+    // Find all question_area blocks
+    const questionAreaRegex = /<question_area>\s*([\s\S]*?)\s*<\/question_area>/g;
+    let match;
+
+    while ((match = questionAreaRegex.exec(content)) !== null) {
+      const questionAreaContent = match[1];
+      const pairs: QuestionAnswerPair[] = [];
+
+      // Extract question-answer pairs within this question_area
+      const qaRegex = /<question>(.*?)<\/question>\s*<answer>(.*?)<\/answer>/g;
+      let qaMatch;
+
+      while ((qaMatch = qaRegex.exec(questionAreaContent)) !== null) {
+        pairs.push({
+          question: qaMatch[1].trim(),
+          answer: qaMatch[2].trim()
+        });
+      }
+
+      if (pairs.length > 0) {
+        questionAreas.push(pairs);
+      }
+    }
+
+    // Remove question_area blocks from the main content
+    processedContent = processedContent.replace(questionAreaRegex, '<!-- QUESTION_AREA_PLACEHOLDER -->');
+
+    return { content: processedContent, questionAreas };
+  };
+
+  // Helper function to render LLM response content with markdown support, highlight processing, and question areas
   const renderLLMResponse = (llmResponse: any) => {
     if (!llmResponse) return null;
 
-    // If it's a string, render it with markdown support
+    // If it's a string, process highlights, extract question areas, and render with markdown support
     if (typeof llmResponse === 'string') {
+      const { content: mainContent, questionAreas } = extractQuestionAreas(llmResponse);
+      const processedContent = processHighlightTags(mainContent);
+
+      // Split content by question area placeholders
+      const contentParts = processedContent.split('<!-- QUESTION_AREA_PLACEHOLDER -->');
+
       return (
-        <MarkdownRenderer 
-          content={llmResponse}
-          variant="response"
-          className="text-sm leading-relaxed"
-        />
+        <div>
+          {contentParts.map((part, index) => (
+            <React.Fragment key={index}>
+              {/* Render main content part */}
+              {part.trim() && (
+                <MarkdownRenderer 
+                  content={part}
+                  variant="response"
+                  className="text-sm leading-relaxed"
+                />
+              )}
+              
+              {/* Render question area if it exists for this index */}
+              {questionAreas[index] && (
+                <QuestionArea pairs={questionAreas[index]} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
       );
     }
 
@@ -33,12 +164,32 @@ function DeepLearnResponseDisplay({ deepLearnData, isStreaming }: DeepLearnRespo
                     JSON.stringify(llmResponse, null, 2);
 
       if (typeof content === 'string') {
+        const { content: mainContent, questionAreas } = extractQuestionAreas(content);
+        const processedContent = processHighlightTags(mainContent);
+
+        // Split content by question area placeholders
+        const contentParts = processedContent.split('<!-- QUESTION_AREA_PLACEHOLDER -->');
+
         return (
-          <MarkdownRenderer 
-            content={content}
-            variant="response"
-            className="text-sm leading-relaxed"
-          />
+          <div>
+            {contentParts.map((part, index) => (
+              <React.Fragment key={index}>
+                {/* Render main content part */}
+                {part.trim() && (
+                  <MarkdownRenderer 
+                    content={part}
+                    variant="response"
+                    className="text-sm leading-relaxed"
+                  />
+                )}
+                
+                {/* Render question area if it exists for this index */}
+                {questionAreas[index] && (
+                  <QuestionArea pairs={questionAreas[index]} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
         );
       } else {
         // Fallback to JSON display with markdown
@@ -97,7 +248,7 @@ function DeepLearnResponseDisplay({ deepLearnData, isStreaming }: DeepLearnRespo
         </div>
       )}
 
-      {/* LLM Response content - Now rendered with Markdown support */}
+      {/* LLM Response content - Now rendered with Markdown support, highlight processing, and question areas */}
       {deepLearnData.llm_response && (
         <div className="mb-4">
           {renderLLMResponse(deepLearnData.llm_response)}

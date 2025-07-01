@@ -11,6 +11,7 @@ import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learn
 import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import Interactive from './Interactive';
 import DeepLearnResponseDisplay from './DeepLearnResponseDisplay';
+import QuickSearchResponseDisplay from './QuickSearchResponseDisplay';
 
 interface DeepLearnResponseProps {
   onBack: () => void;
@@ -135,18 +136,17 @@ const AssistantMessage: React.FC<{
         );
       } else if (message.streamingContent) {
         return (
-          <div className="whitespace-pre-wrap leading-relaxed">
-            {message.streamingContent}
-            {message.isStreaming && (
-              <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
-            )}
-          </div>
+          <QuickSearchResponseDisplay 
+            content={message.streamingContent}
+            isStreaming={message.isStreaming || false}
+          />
         );
       } else {
         return (
-          <div className="whitespace-pre-wrap leading-relaxed">
-            {message.content}
-          </div>
+          <QuickSearchResponseDisplay 
+            content={message.content}
+            isStreaming={false}
+          />
         );
       }
     } else {
