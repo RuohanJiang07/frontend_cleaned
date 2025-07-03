@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -34,6 +34,9 @@ interface NoteEditorProps {
 }
 
 function NoteEditor({ onBack }: NoteEditorProps) {
+  const [pageCount, setPageCount] = useState(1);
+  const [editorHeight, setEditorHeight] = useState(0);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -78,10 +81,35 @@ function NoteEditor({ onBack }: NoteEditorProps) {
     `,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm focus:outline-none min-h-[600px] font-inter text-sm leading-relaxed',
+        class: 'prose prose-sm focus:outline-none font-inter text-sm leading-relaxed',
       },
     },
+    onUpdate: ({ editor }) => {
+      // Calculate content height and update page count
+      const editorElement = editor.view.dom;
+      const contentHeight = editorElement.scrollHeight;
+      setEditorHeight(contentHeight);
+      
+      // Calculate pages needed (assuming ~1000px per page with margins)
+      const pageHeight = 1000; // Approximate content height per page
+      const calculatedPages = Math.max(1, Math.ceil(contentHeight / pageHeight));
+      setPageCount(calculatedPages);
+    },
   });
+
+  // Update page count when editor content changes
+  useEffect(() => {
+    if (editor) {
+      const editorElement = editor.view.dom;
+      const contentHeight = editorElement.scrollHeight;
+      setEditorHeight(contentHeight);
+      
+      // Calculate pages needed
+      const pageHeight = 1000;
+      const calculatedPages = Math.max(1, Math.ceil(contentHeight / pageHeight));
+      setPageCount(calculatedPages);
+    }
+  }, [editor]);
 
   const formatOptions = [
     { icon: BoldIcon, command: () => editor?.chain().focus().toggleBold().run(), isActive: () => editor?.isActive('bold') },
@@ -102,9 +130,9 @@ function NoteEditor({ onBack }: NoteEditorProps) {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-white font-inter">
+    <div className="h-[calc(100vh-88px)] flex flex-col bg-white font-inter overflow-hidden">
       {/* Header - Reduced height and aligned menu items with title */}
-      <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-200 bg-white">
+      <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-200 bg-white flex-shrink-0">
         <div className="flex items-center gap-4">
           {/* Left arrow positioned in the middle vertically */}
           <Button
@@ -144,7 +172,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
       </div>
 
       {/* Toolbar - Exactly matching the image */}
-      <div className="flex items-center gap-1 px-4 py-2 border-b border-gray-200 bg-white">
+      <div className="flex items-center gap-1 px-4 py-2 border-b border-gray-200 bg-white flex-shrink-0">
         {/* Undo/Redo */}
         <Button
           variant="ghost"
@@ -301,11 +329,12 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         </Button>
       </div>
 
-      {/* Main Editor Area */}
-      <div className="flex-1 bg-gray-50 overflow-auto relative">
-        {/* Page numbers sidebar */}
-        <div className="flex">
-          <div className="w-10 bg-gray-100 border-r border-gray-200 flex flex-col items-center py-4 text-xs text-gray-500 font-inter">
+      {/* Main Editor Area - Fixed height with proper overflow and pagination */}
+      <div className="flex-1 bg-gray-50 overflow-hidden relative">
+        {/* Page numbers sidebar and editor content */}
+        <div className="flex h-full">
+          {/* Restored original line number indicator - simple sequential numbers */}
+          <div className="w-10 bg-gray-100 border-r border-gray-200 flex flex-col items-center py-4 text-xs text-gray-500 font-inter flex-shrink-0">
             {Array.from({ length: 50 }, (_, i) => (
               <div key={i + 1} className="h-5 flex items-center">
                 {i + 1}
@@ -313,24 +342,46 @@ function NoteEditor({ onBack }: NoteEditorProps) {
             ))}
           </div>
 
-          {/* Editor content - Fixed centering and margins */}
-          <div className="flex-1 flex justify-center py-6 px-6">
-            <div className="w-[816px] min-h-[1056px] bg-white shadow-lg px-10 py-12">
-              <EditorContent 
-                editor={editor} 
-                className="h-full font-inter w-full max-w-none"
-              />
+          {/* Editor content - Multiple pages with proper spacing */}
+          <div className="flex-1 flex justify-center py-6 px-6 overflow-y-auto">
+            <div className="flex flex-col gap-8"> {/* Increased gap from 6 to 8 for better spacing */}
+              {/* Render multiple pages based on content */}
+              {Array.from({ length: pageCount }, (_, pageIndex) => (
+                <div 
+                  key={pageIndex} 
+                  className="w-[816px] min-h-[1056px] bg-white shadow-lg px-10 py-12 relative mb-8" // Added mb-8 for bottom spacing
+                  style={{
+                    pageBreakAfter: pageIndex < pageCount - 1 ? 'always' : 'auto'
+                  }}
+                >
+                  {/* Only render editor content in the first page */}
+                  {pageIndex === 0 && (
+                    <EditorContent 
+                      editor={editor} 
+                      className="h-full font-inter w-full max-w-none"
+                    />
+                  )}
+                  
+                  {/* Page number at bottom */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-xs text-gray-400 font-inter">
+                    {pageIndex + 1}
+                  </div>
+                </div>
+              ))}
+              
+              {/* Extra spacing at the end for visual breathing room */}
+              <div className="h-32"></div>
             </div>
           </div>
         </div>
 
-        {/* NoteCopilotButton - Positioned at bottom center of editor area */}
+        {/* NoteCopilotButton - Fixed position at bottom center */}
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
           <NoteCopilotButton />
         </div>
       </div>
 
-      {/* Custom styles for the editor content */}
+      {/* Enhanced custom styles for the editor content with pagination */}
       <style jsx global>{`
         .ProseMirror {
           font-family: 'Inter', sans-serif !important;
@@ -340,6 +391,8 @@ function NoteEditor({ onBack }: NoteEditorProps) {
           width: 100% !important;
           margin: 0 !important;
           padding: 0 !important;
+          min-height: 1000px !important;
+          overflow: visible !important;
         }
         
         .ProseMirror h1 {
@@ -348,6 +401,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
           font-weight: 600 !important;
           margin-bottom: 16px !important;
           margin-top: 0 !important;
+          page-break-after: avoid !important;
         }
         
         .ProseMirror h2 {
@@ -356,6 +410,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
           font-weight: 600 !important;
           margin-bottom: 12px !important;
           margin-top: 24px !important;
+          page-break-after: avoid !important;
         }
         
         .ProseMirror h3 {
@@ -364,6 +419,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
           font-weight: 600 !important;
           margin-bottom: 8px !important;
           margin-top: 20px !important;
+          page-break-after: avoid !important;
         }
         
         .ProseMirror p {
@@ -371,6 +427,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
           font-size: 14px !important;
           margin-bottom: 12px !important;
           margin-top: 0 !important;
+          page-break-inside: avoid !important;
         }
         
         .ProseMirror ul, .ProseMirror ol {
@@ -378,12 +435,14 @@ function NoteEditor({ onBack }: NoteEditorProps) {
           font-size: 14px !important;
           margin-bottom: 12px !important;
           padding-left: 24px !important;
+          page-break-inside: avoid !important;
         }
         
         .ProseMirror li {
           font-family: 'Inter', sans-serif !important;
           font-size: 14px !important;
           margin-bottom: 4px !important;
+          page-break-inside: avoid !important;
         }
         
         .ProseMirror strong {
@@ -411,6 +470,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
           padding-left: 16px !important;
           margin: 16px 0 !important;
           font-style: italic !important;
+          page-break-inside: avoid !important;
         }
         
         /* Remove prose max-width constraints */
@@ -420,6 +480,24 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         
         .prose-sm {
           max-width: none !important;
+        }
+
+        /* Page break styles for better pagination */
+        @media print {
+          .ProseMirror {
+            page-break-inside: auto !important;
+          }
+          
+          .ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
+            page-break-after: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          
+          .ProseMirror p, .ProseMirror li {
+            page-break-inside: avoid !important;
+            orphans: 2 !important;
+            widows: 2 !important;
+          }
         }
       `}</style>
     </div>
