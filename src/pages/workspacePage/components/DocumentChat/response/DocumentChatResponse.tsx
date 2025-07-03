@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import {
   ArrowLeftIcon,
@@ -10,57 +10,524 @@ import {
   UploadIcon,
   PlusIcon
 } from 'lucide-react';
+import { submitDocumentChatQuery } from '../../../../../api/workspaces/document_chat/DocumentChatMain';
+import { useToast } from '../../../../../hooks/useToast';
 
 interface DocumentChatResponseProps {
   onBack: () => void;
   isSplit?: boolean;
 }
 
-function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseProps) {
-  const [question, setQuestion] = useState('');
+// Conversation message interface
+interface ConversationMessage {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  isStreaming?: boolean;
+  streamingContent?: string;
+}
 
-  // Sample uploaded files
-  const uploadedFiles = [
+// Reference file interface
+interface ReferenceFile {
+  id: string;
+  name: string;
+  type: 'pdf' | 'doc' | 'txt' | 'docx' | 'ppt' | 'pptx' | 'xls' | 'xlsx';
+}
+
+function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseProps) {
+  const { error } = useToast();
+  const [userQuery, setUserQuery] = useState('');
+  const [conversationId, setConversationId] = useState('');
+  const [streamingContent, setStreamingContent] = useState('');
+  const [isStreaming, setIsStreaming] = useState(true);
+  const [followUpQuestion, setFollowUpQuestion] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // New state for conversation history
+  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+
+  // Reference files that match the hard-coded reference ID
+  const referenceFiles: ReferenceFile[] = [
     {
-      id: 1,
-      name: 'Introduction to Mechanics, K.K',
+      id: 'file-1bcf6d47fc704e63bf6b754b88668b08',
+      name: 'Introduction to Quantum Mechanics',
       type: 'pdf'
-    },
-    {
-      id: 2,
-      name: 'Cosmology and its origins, Cambridge',
-      type: 'pdf'
-    },
-    {
-      id: 3,
-      name: 'NASA ADS Library Investigations',
-      type: 'doc'
     }
   ];
 
   const getFileIcon = (type: string) => {
-    if (type === 'pdf') {
-      // Red version of the docs icon (same as docs but red stroke)
-      return (
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2">
-          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      );
-    }
-    // Note icon similar to NotePage (blue stroke)
+    // Import icons from your public/workspace/fileIcons folder
+    const iconPath = `/workspace/fileIcons/${type}.svg`;
     return (
-      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2">
-        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
+      <img 
+        src={iconPath} 
+        alt={`${type} icon`} 
+        className="w-4 h-4"
+        onError={(e) => {
+          // Fallback to generic file icon if specific type not found
+          const target = e.target as HTMLImageElement;
+          target.src = '/workspace/file_icon.svg';
+        }}
+      />
     );
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setQuestion(suggestion);
+  // Helper function to generate UUID
+  const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
+  // Helper function to generate conversation ID in chat-c-{uuid} format
+  const generateConversationId = (): string => {
+    const uuid = generateUUID();
+    return `chat-c-${uuid}`;
+  };
+
+  // Helper function to save conversation ID and query for this tab
+  const saveTabData = (conversationId: string, query: string) => {
+    // Get current tab ID from the URL or generate one if needed
+    const tabId = window.location.pathname + window.location.search;
+    localStorage.setItem(`documentchat_conversation_${tabId}`, conversationId);
+    localStorage.setItem(`documentchat_query_${tabId}`, query);
+    
+    console.log(`💾 Saved document chat conversation data for tab ${tabId}:`, {
+      conversationId,
+      query
+    });
+  };
+
+  // Helper function to clear related content for new conversations
+  const clearRelatedContent = () => {
+    const tabId = window.location.pathname + window.location.search;
+    // Clear all related content data for this tab
+    localStorage.removeItem(`documentchat_streaming_content_${tabId}`);
+    localStorage.removeItem(`documentchat_streaming_complete_${tabId}`);
+    
+    console.log('🧹 Cleared related content for new document chat conversation');
+  };
+
+  // Helper function to clear all conversation data for fresh start
+  const clearAllConversationData = () => {
+    const tabId = window.location.pathname + window.location.search;
+    localStorage.removeItem(`documentchat_conversation_${tabId}`);
+    localStorage.removeItem(`documentchat_query_${tabId}`);
+    localStorage.removeItem(`documentchat_streaming_content_${tabId}`);
+    localStorage.removeItem(`documentchat_streaming_complete_${tabId}`);
+    
+    console.log('🧹 Cleared ALL conversation data for fresh start');
+  };
+
+  // Load saved data for this tab and initialize conversation history
+  useEffect(() => {
+    const tabId = window.location.pathname + window.location.search;
+    const savedConversationId = localStorage.getItem(`documentchat_conversation_${tabId}`);
+    const savedQuery = localStorage.getItem(`documentchat_query_${tabId}`);
+    const savedStreamingContent = localStorage.getItem(`documentchat_streaming_content_${tabId}`) || '';
+    const isStreamingComplete = localStorage.getItem(`documentchat_streaming_complete_${tabId}`) === 'true';
+
+    console.log('📂 Loading saved document chat data for tab:', {
+      tabId,
+      conversationId: savedConversationId,
+      query: savedQuery,
+      streamingContentLength: savedStreamingContent.length,
+      isStreamingComplete
+    });
+
+    // Check if we're coming from "Create New Chat" by looking for a special flag
+    const isNewChatSession = sessionStorage.getItem('documentchat_new_session') === 'true';
+    if (isNewChatSession) {
+      console.log('🆕 Detected new chat session, clearing all data');
+      clearAllConversationData();
+      sessionStorage.removeItem('documentchat_new_session');
+      
+      // Start fresh with new conversation ID
+      const newConversationId = generateConversationId();
+      setConversationId(newConversationId);
+      setConversationHistory([]);
+      setIsStreaming(false);
+      console.log('🆔 Generated new conversation ID for fresh start:', newConversationId);
+      return;
+    }
+
+    if (savedQuery && savedConversationId) {
+      setUserQuery(savedQuery);
+      setConversationId(savedConversationId);
+
+      // Initialize conversation history with the first message
+      const initialUserMessage: ConversationMessage = {
+        id: 'initial-user',
+        type: 'user',
+        content: savedQuery,
+        timestamp: 'Me, ' + new Date().toLocaleString()
+      };
+
+      const initialAssistantMessage: ConversationMessage = {
+        id: 'initial-assistant',
+        type: 'assistant',
+        content: savedQuery,
+        timestamp: 'Assistant',
+        isStreaming: !isStreamingComplete,
+        streamingContent: savedStreamingContent
+      };
+
+      setConversationHistory([initialUserMessage, initialAssistantMessage]);
+      
+      if (savedStreamingContent) {
+        setStreamingContent(savedStreamingContent);
+      }
+      setIsStreaming(!isStreamingComplete);
+
+      // Listen for streaming updates
+      const handleStreamingUpdate = (event: CustomEvent) => {
+        if (event.detail.tabId === tabId) {
+          setStreamingContent(event.detail.content);
+          
+          // Update conversation history
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === 'initial-assistant'
+                ? { ...msg, streamingContent: event.detail.content }
+                : msg
+            )
+          );
+        }
+      };
+
+      const handleStreamingComplete = (event: CustomEvent) => {
+        if (event.detail.tabId === tabId) {
+          setIsStreaming(false);
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === 'initial-assistant'
+                ? { ...msg, isStreaming: false }
+                : msg
+            )
+          );
+        }
+      };
+
+      window.addEventListener('documentchat-streaming-update', handleStreamingUpdate as EventListener);
+      window.addEventListener('documentchat-streaming-complete', handleStreamingComplete as EventListener);
+
+      return () => {
+        window.removeEventListener('documentchat-streaming-update', handleStreamingUpdate as EventListener);
+        window.removeEventListener('documentchat-streaming-complete', handleStreamingComplete as EventListener);
+      };
+    } else {
+      // If no saved query, this means we're starting a new conversation
+      // Generate a conversation ID and wait for the first question
+      const newConversationId = generateConversationId();
+      setConversationId(newConversationId);
+      setConversationHistory([]);
+      setIsStreaming(false);
+      console.log('🆔 Generated new conversation ID for fresh start:', newConversationId);
+    }
+  }, []);
+
+  // Handle submitting the first question (when there's no conversation history)
+  const handleSubmitFirstQuestion = async (question: string) => {
+    if (!question.trim()) {
+      error('Please enter a question');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Clear related content when starting a new conversation
+      clearRelatedContent();
+
+      // Use existing conversation ID or generate new one
+      const currentConversationId = conversationId || generateConversationId();
+      
+      console.log('🆔 Starting first question with conversation ID:', currentConversationId);
+      console.log('📝 Submitting document chat with params:', {
+        query: question.trim(),
+        profile: 'profile-default',
+        references: null, // Will use hard-coded reference in API
+        conversationId: currentConversationId,
+        newConversation: true // First question is always new conversation
+      });
+
+      // Save conversation data immediately
+      saveTabData(currentConversationId, question.trim());
+      setConversationId(currentConversationId);
+
+      // Initialize conversation history with the first message
+      const initialUserMessage: ConversationMessage = {
+        id: 'initial-user',
+        type: 'user',
+        content: question.trim(),
+        timestamp: 'Me, ' + new Date().toLocaleString()
+      };
+
+      const initialAssistantMessage: ConversationMessage = {
+        id: 'initial-assistant',
+        type: 'assistant',
+        content: question.trim(),
+        timestamp: 'Assistant',
+        isStreaming: true,
+        streamingContent: ''
+      };
+
+      setConversationHistory([initialUserMessage, initialAssistantMessage]);
+      setUserQuery(question.trim());
+
+      // For document chat, use the document chat endpoint
+      const tabId = window.location.pathname + window.location.search;
+      localStorage.setItem(`documentchat_query_${tabId}`, question.trim());
+      localStorage.setItem(`documentchat_streaming_content_${tabId}`, ''); // Clear previous content
+      
+      // Start streaming
+      await submitDocumentChatQuery(
+        question.trim(),
+        'profile-default',
+        null, // Will use hard-coded reference in API
+        (data: string) => {
+          // Update streaming content in localStorage
+          const currentContent = localStorage.getItem(`documentchat_streaming_content_${tabId}`) || '';
+          localStorage.setItem(`documentchat_streaming_content_${tabId}`, currentContent + data);
+          
+          // Update conversation history
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === 'initial-assistant'
+                ? { ...msg, streamingContent: currentContent + data }
+                : msg
+            )
+          );
+          
+          // Trigger a custom event to notify the response component
+          window.dispatchEvent(new CustomEvent('documentchat-streaming-update', {
+            detail: { tabId, content: currentContent + data }
+          }));
+        },
+        (errorMsg: string) => {
+          console.error('Document chat streaming error:', errorMsg);
+          error(`Streaming error: ${errorMsg}`);
+        },
+        () => {
+          console.log('Document chat streaming completed');
+          // Mark streaming as complete
+          localStorage.setItem(`documentchat_streaming_complete_${tabId}`, 'true');
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === 'initial-assistant'
+                ? { ...msg, isStreaming: false }
+                : msg
+            )
+          );
+          window.dispatchEvent(new CustomEvent('documentchat-streaming-complete', {
+            detail: { tabId }
+          }));
+        },
+        undefined, // No existing conversation ID for new conversation
+        currentConversationId // Pass the generated conversation ID
+      );
+
+    } catch (err) {
+      console.error('Error submitting document chat:', err);
+      error('Failed to start document chat. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle submitting follow-up question
+  const handleSubmitFollowUp = async () => {
+    if (!followUpQuestion.trim() || isSubmitting) {
+      return;
+    }
+
+    if (!conversationId) {
+      error('No conversation ID found. Please start a new conversation.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      console.log('🔄 Submitting follow-up question in existing conversation:', {
+        conversationId,
+        query: followUpQuestion.trim(),
+        isNewConversation: false // Follow-up questions are NOT new conversations
+      });
+      
+      // Add user message to conversation history
+      const newUserMessage: ConversationMessage = {
+        id: `user-${Date.now()}`,
+        type: 'user',
+        content: followUpQuestion.trim(),
+        timestamp: new Date().toLocaleString()
+      };
+
+      // Add assistant message placeholder
+      const newAssistantMessage: ConversationMessage = {
+        id: `assistant-${Date.now()}`,
+        type: 'assistant',
+        content: followUpQuestion.trim(),
+        timestamp: 'Assistant',
+        isStreaming: true,
+        streamingContent: ''
+      };
+
+      setConversationHistory(prev => [...prev, newUserMessage, newAssistantMessage]);
+      
+      // Clear input immediately after submission
+      const queryToSubmit = followUpQuestion.trim();
+      setFollowUpQuestion('');
+
+      // Start document chat with existing conversation ID (new_conversation = false)
+      await submitDocumentChatQuery(
+        queryToSubmit,
+        'profile-default',
+        null, // Will use hard-coded reference in API
+        (data: string) => {
+          // Update the streaming content for the current assistant message
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === newAssistantMessage.id
+                ? { ...msg, streamingContent: (msg.streamingContent || '') + data }
+                : msg
+            )
+          );
+        },
+        (errorMsg: string) => {
+          console.error('Document chat follow-up streaming error:', errorMsg);
+          error(`Streaming error: ${errorMsg}`);
+          setIsSubmitting(false);
+        },
+        () => {
+          console.log('Document chat follow-up streaming completed');
+          setConversationHistory(prev => 
+            prev.map(msg => 
+              msg.id === newAssistantMessage.id
+                ? { ...msg, isStreaming: false }
+                : msg
+            )
+          );
+          setIsSubmitting(false);
+        },
+        conversationId, // Pass existing conversation ID
+        conversationId // Also pass as the generated conversation ID parameter
+      );
+      
+    } catch (err) {
+      console.error('Error submitting follow-up question:', err);
+      error('Failed to submit follow-up question. Please try again.');
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (conversationHistory.length === 0) {
+        // First question
+        handleSubmitFirstQuestion(followUpQuestion);
+        setFollowUpQuestion('');
+      } else {
+        // Follow-up question
+        handleSubmitFollowUp();
+      }
+    }
+  };
+
+  // Render the main response content for a message
+  const renderMessageContent = (message: ConversationMessage) => {
+    if (message.type === 'user') {
+      return (
+        <div className="flex flex-col items-end mb-6">
+          <span className="text-xs text-gray-500 font-['Inter',Helvetica] mb-2">
+            {message.timestamp}
+          </span>
+          <div className="bg-gray-100 rounded-lg p-3 max-w-xs">
+            <p className="text-sm text-black font-['Inter',Helvetica]">
+              {message.content}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Assistant message
+    const contentToRender = message.streamingContent || '';
+    
+    if (message.isStreaming && !contentToRender) {
+      return (
+        <div className="text-gray-500 italic mb-6">
+          Loading response...
+        </div>
+      );
+    }
+
+    return (
+      <div className="mb-6">
+        <div className="p-4">
+          <div className="prose max-w-none">
+            <div className="text-sm text-black font-['Inter',Helvetica] mb-4 whitespace-pre-wrap leading-relaxed">
+              {contentToRender}
+              
+              {/* Streaming indicator */}
+              {message.isStreaming && (
+                <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons - Only show for completed messages */}
+          {!message.isStreaming && (
+            <div className="flex items-center justify-between mt-4">
+              {/* Save to Notes Button - Left side */}
+              <Button
+                className="bg-[#E8F4FD] hover:bg-[#d1e9f8] text-gray-700 rounded-full px-6 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm border-none"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                Save to Notes
+              </Button>
+
+              {/* Action Icons - Right side */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8 text-gray-600 hover:text-gray-800"
+                >
+                  <ThumbsUpIcon className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8 text-gray-600 hover:text-gray-800"
+                >
+                  <ThumbsDownIcon className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-8 h-8 text-gray-600 hover:text-gray-800"
+                >
+                  <CopyIcon className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className=" flex flex-col bg-white">
+    <div className="h-screen flex flex-col bg-white overflow-hidden">
       {/* Fixed Header - No border */}
       <div className="flex items-center justify-between p-4 bg-white z-10">
         <div className="flex items-center gap-4">
@@ -73,7 +540,7 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
           <h1 className="font-medium text-base text-black font-['Inter',Helvetica]">
-            Learning Journey: Exploration of Black Hole and its Related Concepts
+            Learning Journey: {userQuery ? (userQuery.substring(0, 50) + (userQuery.length > 50 ? '...' : '')) : 'Document Chat'}
           </h1>
         </div>
 
@@ -101,7 +568,7 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
         </div>
       </div>
 
-      {/* Main Content Area - with doubled side margins for even more centered content */}
+      {/* Main Content Area - FIXED WIDTH to prevent quirky behavior */}
       <div className={`flex-1 flex overflow-hidden ${isSplit ? 'px-8' : 'px-32'}`}>
         {/* Left Sidebar - No border, moved even further in from edge */}
         <div className={`${isSplit ? 'w-[200px]' : 'w-[280px]'} p-4 bg-white flex-shrink-0 ${isSplit ? 'ml-0' : 'ml-16'}`}>
@@ -130,7 +597,7 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
             </Button>
           </div>
 
-          {/* Files Uploaded Section */}
+          {/* Files Uploaded Section - Now showing actual reference files */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className={`font-medium text-black font-['Inter',Helvetica] ${isSplit ? 'text-xs' : 'text-sm'}`}>
@@ -138,12 +605,12 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
               </h3>
               <div className="flex items-center gap-2">
                 <span className={`text-gray-600 font-['Inter',Helvetica] ${isSplit ? 'text-[10px]' : 'text-xs'}`}>Select All</span>
-                <input type="checkbox" className="w-4 h-4" />
+                <input type="checkbox" className="w-4 h-4" defaultChecked />
               </div>
             </div>
 
             <div className="space-y-2">
-              {uploadedFiles.map((file) => (
+              {referenceFiles.map((file) => (
                 <div key={file.id} className="flex items-center justify-between p-2">
                   <div className="flex items-center gap-3">
                     {getFileIcon(file.type)}
@@ -151,135 +618,91 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
                       {isSplit ? file.name.substring(0, 15) + '...' : file.name}
                     </span>
                   </div>
-                  <input type="checkbox" className="w-4 h-4" />
+                  <input type="checkbox" className="w-4 h-4" defaultChecked />
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Main Chat Area - moved even further in from right edge */}
-        <div className={`flex flex-col h-[calc(100vh-200px)] ${isSplit ? 'w-full ml-4' : 'mr-16'}`}>
-          {/* User Question - Time above message */}
-          <div className="flex flex-col items-end mb-6 pt-6">
-            <span className="text-xs text-gray-500 font-['Inter',Helvetica] mb-2">
-              Me, Jun 1, 9:50 PM
-            </span>
-            <div className="bg-gray-100 rounded-lg p-3 max-w-xs">
-              <p className="text-sm text-black font-['Inter',Helvetica]">
-                黑洞信息悖论如何解决？
-              </p>
-            </div>
-          </div>
-
+        {/* Main Chat Area - FIXED WIDTH to prevent quirky behavior */}
+        <div className={`flex flex-col h-[calc(100vh-200px)] ${isSplit ? 'w-full ml-4' : 'w-[calc(100%-280px-64px)] mr-16'}`}>
           {/* Scrollable Chat Content */}
           <div className="flex-1 overflow-y-auto">
-            {/* AI Response - No border/box, just content */}
-            <div className="mb-6">
-              <div className="p-4">
-                <div className="prose max-w-none">
-                  <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
-                    Based on the provided sources, Chen Duxiu did not write a "book" discussed in these excerpts, but rather an article titled "On Theater" <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span>. This article was written under his pen name, <strong>Sanai</strong>, and was first published in <strong>1904</strong> <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span>.
+            {/* Show welcome message if no conversation history */}
+            {conversationHistory.length === 0 && (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <h2 className="text-xl font-medium text-gray-700 mb-2 font-['Inter',Helvetica]">
+                    Welcome to Document Chat
+                  </h2>
+                  <p className="text-gray-500 font-['Inter',Helvetica]">
+                    Ask questions about your uploaded documents
                   </p>
-
-                  <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
-                    The article "On Theater" is primarily about Chen Duxiu's views on the <strong>importance and potential of theater as a tool for social change and education</strong> in China <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span> <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He considered theater to be an <strong>important didactic tool</strong> <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span>. In his view, "theater is in fact a great big school for all the people under heaven; theater workers are in fact influential teachers of the people" <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">1</span> <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>.
-                  </p>
-
-                  <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
-                    Chen Duxiu argued that theater is an art form that people love and that can easily reach their minds and hearts, having the power to strongly influence their thoughts and emotions quickly <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He contrasted this view with that of "pedantic and stuffy scholars" who looked down upon theater and actors, considering them vulgar, bawdy, licentious, wasteful, and useless <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. Chen argued that judging a person based on their profession rather than moral character is prejudiced <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. He noted that in Western countries, actors were considered equals to the learned, as theater was believed important for fostering morals and values <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>.
-                  </p>
-                  <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
-                    Chen Duxiu argued that theater is an art form that people love and that can easily reach their minds and hearts, having the power to strongly influence their thoughts and emotions quickly <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He contrasted this view with that of "pedantic and stuffy scholars" who looked down upon theater and actors, considering them vulgar, bawdy, licentious, wasteful, and useless <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. Chen argued that judging a person based on their profession rather than moral character is prejudiced <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. He noted that in Western countries, actors were considered equals to the learned, as theater was believed important for fostering morals and values <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>.
-                  </p>
-                  <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
-                    Chen Duxiu argued that theater is an art form that people love and that can easily reach their minds and hearts, having the power to strongly influence their thoughts and emotions quickly <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He contrasted this view with that of "pedantic and stuffy scholars" who looked down upon theater and actors, considering them vulgar, bawdy, licentious, wasteful, and useless <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. Chen argued that judging a person based on their profession rather than moral character is prejudiced <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. He noted that in Western countries, actors were considered equals to the learned, as theater was believed important for fostering morals and values <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>.
-                  </p>
-                  <p className="text-sm text-black font-['Inter',Helvetica] mb-4">
-                    Chen Duxiu argued that theater is an art form that people love and that can easily reach their minds and hearts, having the power to strongly influence their thoughts and emotions quickly <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">2</span>. He contrasted this view with that of "pedantic and stuffy scholars" who looked down upon theater and actors, considering them vulgar, bawdy, licentious, wasteful, and useless <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. Chen argued that judging a person based on their profession rather than moral character is prejudiced <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>. He noted that in Western countries, actors were considered equals to the learned, as theater was believed important for fostering morals and values <span className="inline-flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full text-xs">3</span>.
-                  </p>
-                </div>
-
-                {/* Action Buttons - Save to Notes on left, other buttons on right */}
-                <div className="flex items-center justify-between mt-4">
-                  {/* Save to Notes Button - Left side */}
-                  <Button
-                    className="bg-[#E8F4FD] hover:bg-[#d1e9f8] text-gray-700 rounded-full px-6 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm border-none"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                    </svg>
-                    Save to Notes
-                  </Button>
-
-                  {/* Action Icons - Right side */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 text-gray-600 hover:text-gray-800"
-                    >
-                      <ThumbsUpIcon className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 text-gray-600 hover:text-gray-800"
-                    >
-                      <ThumbsDownIcon className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 text-gray-600 hover:text-gray-800"
-                    >
-                      <CopyIcon className="w-4 h-4" />
-                    </Button>
-                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Render conversation history */}
+            {conversationHistory.map((message) => (
+              <div key={message.id}>
+                {renderMessageContent(message)}
+              </div>
+            ))}
           </div>
 
-          {/* Fixed Bottom Input Area - No border */}
+          {/* Fixed Bottom Input Area - Enhanced hover effects matching Deep Learn */}
           <div className="p-4 bg-white">
-            {/* Source Tags - At the top of input area */}
+            {/* Source Tags - At the top of input area - Now showing actual reference files */}
             <div className="flex gap-2 mb-3">
-              <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-['Inter',Helvetica]">
-                Cosmology and Its Origins
-              </span>
-              <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-['Inter',Helvetica]">
-                Introduction to Mechanics, K.K
-              </span>
+              {referenceFiles.map((file) => (
+                <span key={file.id} className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-['Inter',Helvetica]">
+                  {file.name}
+                </span>
+              ))}
             </div>
 
-            {/* Input Box with Suggestions Inside - No border */}
+            {/* Input Box with enhanced hover effects exactly like Deep Learn */}
             <div className="relative">
-              <textarea
-                className="w-full h-24 border-0 rounded-lg p-3 pb-12 resize-none outline-none bg-gray-50 font-['Inter',Helvetica] text-sm"
-                placeholder="Type your question here..."
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-              />
+              <div className={`relative bg-white border rounded-2xl h-24 p-3 transition-all duration-300 ${
+                isInputFocused 
+                  ? 'border-[#80A5E4] shadow-[0px_2px_20px_0px_rgba(128,165,228,0.15)]' 
+                  : 'border-gray-300'
+              }`}>
+                <textarea
+                  className={`w-full h-full resize-none border-none outline-none bg-transparent font-['Inter',Helvetica] text-sm placeholder:text-gray-400 transition-all duration-300 ${
+                    isInputFocused ? 'caret-[#80A5E4]' : ''
+                  }`}
+                  placeholder="Type your question here..."
+                  value={followUpQuestion}
+                  onChange={(e) => setFollowUpQuestion(e.target.value)}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => setIsInputFocused(false)}
+                  onKeyPress={handleKeyPress}
+                  disabled={isSubmitting}
+                />
 
-              {/* Suggestion Buttons Inside Input Box */}
-              <div className={`absolute bottom-3 left-3 flex gap-2 ${isSplit ? 'flex-wrap' : ''}`}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`text-xs text-gray-600 border-gray-300 rounded-full px-3 py-1 font-['Inter',Helvetica] hover:bg-gray-50 ${isSplit ? 'text-[10px] px-2' : ''}`}
-                  onClick={() => handleSuggestionClick("What's the content of this file?")}
-                >
-                  {isSplit ? "What's in this file?" : "What's the content of this file?"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={`text-xs text-gray-600 border-gray-300 rounded-full px-3 py-1 font-['Inter',Helvetica] hover:bg-gray-50 ${isSplit ? 'text-[10px] px-2' : ''}`}
-                  onClick={() => handleSuggestionClick("Tell me more about Black Holes.")}
-                >
-                  {isSplit ? "Tell me about Black Holes" : "Tell me more about Black Holes."}
-                </Button>
+                {/* Submit button - only show when there's text */}
+                {followUpQuestion.trim() && (
+                  <div className="absolute bottom-3 right-3">
+                    <Button
+                      onClick={() => {
+                        if (conversationHistory.length === 0) {
+                          // First question
+                          handleSubmitFirstQuestion(followUpQuestion);
+                          setFollowUpQuestion('');
+                        } else {
+                          // Follow-up question
+                          handleSubmitFollowUp();
+                        }
+                      }}
+                      disabled={isSubmitting}
+                      className="bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-lg px-3 py-1 text-xs font-['Inter',Helvetica]"
+                    >
+                      {isSubmitting ? 'Asking...' : 'Ask'}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
