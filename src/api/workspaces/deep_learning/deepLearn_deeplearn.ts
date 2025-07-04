@@ -142,8 +142,8 @@ export interface DeepLearnDeepRequest {
       const isNewConversation = !existingConversationId;
       
       console.log('🆔 Deep Learn - Using conversation ID:', conversationId, 'isNew:', isNewConversation);
-      console.log('📤 Deep Learn - Displaying conversation ID before streaming...');
-  
+      console.log('📤 Deep Learn - Starting deep learn endpoint first...');
+
       const requestData: DeepLearnDeepRequest = {
         workspace_id: workspaceId,
         conversation_id: conversationId,
@@ -155,24 +155,37 @@ export interface DeepLearnDeepRequest {
         profile_selected: profile || null,
         references_selected: references || null
       };
-  
+
       console.log('📝 Submitting Deep Learn (deep mode) request:', requestData);
-  
-      // 🔧 修复问题：确保 Interactive API 在 Deep Learn 模式下也被正确调用和等待
-      // 立即获取 tabId 并开始 interactive 调用
+
+      // Start the deep learn endpoint FIRST
+      console.log('🚀 Starting Deep Learn endpoint...');
+      const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/start/deep_learn`, {
+        method: 'POST',
+        headers: createAuthHeaders(),
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Immediately start the interactive endpoint call (no delay)
+      console.log('🔧 Starting interactive endpoint call simultaneously...');
       const tabId = window.location.pathname + window.location.search;
-      console.log('🔧 Starting interactive call for Deep Learn with tabId:', tabId);
       
-      // 启动 interactive 调用（4秒后）
       const interactivePromise = callInteractiveEndpoint(conversationId, query, additionalComments)
         .then(interactiveData => {
           console.log('✅ Interactive endpoint returned data for Deep Learn:', interactiveData);
           
-          // 立即存储 interactive 数据
+          // Store interactive data
           localStorage.setItem(`deeplearn_interactive_${tabId}`, JSON.stringify(interactiveData));
           console.log('💾 Stored interactive data to localStorage with key:', `deeplearn_interactive_${tabId}`);
           
-          // 立即触发事件来更新 sidebar
+          // Trigger event to update sidebar
           window.dispatchEvent(new CustomEvent('deeplearn-interactive-update', {
             detail: { tabId, data: interactiveData }
           }));
@@ -182,68 +195,46 @@ export interface DeepLearnDeepRequest {
         })
         .catch(error => {
           console.error('❌ Interactive endpoint error for Deep Learn:', error);
-          throw error;
+          // Don't throw error to avoid breaking the main deep learn flow
         });
-  
-      // 4秒后开始 interactive 调用
-      setTimeout(() => {
-        console.log('⏰ Starting interactive endpoint call for Deep Learn (4 seconds after deep learn start)...');
-        interactivePromise.catch(error => {
-          console.error('⚠️ Interactive call failed but continuing with Deep Learn:', error);
-        });
-      }, 4000);
-  
-      const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/start/deep_learn`, {
-        method: 'POST',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(requestData),
-      });
-  
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please login again.');
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-  
+
+      // Start processing the deep learn response stream
       const reader = response.body?.getReader();
       if (!reader) {
         throw new Error('Failed to get response reader');
       }
-  
+
       const decoder = new TextDecoder();
       let buffer = '';
-  
-      // 🔧 修复问题1：通过监听后端返回来处理刷新，而不是读取boolean json
+
       while (true) {
         const { done, value } = await reader.read();
         
         if (done) {
-          console.log('Deep learn streaming completed');
+          console.log('✅ Deep learn streaming completed');
           onComplete();
           break;
         }
-  
+
         // Decode the chunk and add to buffer
         buffer += decoder.decode(value, { stream: true });
         
         // Process complete lines (backend sends Server-Sent Events format)
         const lines = buffer.split('\n');
         buffer = lines.pop() || ''; // Keep incomplete line in buffer
-  
+
         for (const line of lines) {
           if (line.trim() && line.startsWith('data: ')) {
             const jsonData = line.substring(6); // Remove 'data: ' prefix
             
             try {
-              // 🔧 修复：添加更好的错误处理和空数据检查
               if (!jsonData.trim()) {
                 console.warn('Received empty data line, skipping...');
                 continue;
               }
               
               const data: DeepLearnStreamingData = JSON.parse(jsonData);
-              console.log('Received deep learn streaming data:', data);
+              console.log('📥 Received deep learn streaming data:', data);
               
               // Check for error in the data
               if (data.error) {
@@ -251,32 +242,31 @@ export interface DeepLearnDeepRequest {
                 return conversationId;
               }
               
-              // 🔧 修复问题1：每次收到后端返回就立即更新前端，完全替换内容
+              // Send data to callback
               onData(data);
               
               // Check for completion
               if (data.final || data.status === 'completed') {
-                console.log('Deep learn streaming marked as final/completed');
+                console.log('🏁 Deep learn streaming marked as final/completed');
                 onComplete();
                 return conversationId;
               }
             } catch (parseError) {
-              console.warn('Failed to parse deep learn streaming data:', jsonData, parseError);
-              // 🔧 修复：如果解析失败，不要立即报错，继续处理下一行
+              console.warn('⚠️ Failed to parse deep learn streaming data:', jsonData, parseError);
               if (jsonData.includes('error') || jsonData.includes('Error')) {
                 onError(`Parse error: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`);
                 return conversationId;
               }
             }
           } else if (line.trim() && !line.startsWith('data: ')) {
-            // 🔧 修复：处理不是 SSE 格式的数据
+            // Handle non-SSE format data
             try {
               if (!line.trim()) {
                 continue;
               }
               
               const data: DeepLearnStreamingData = JSON.parse(line.trim());
-              console.log('Received deep learn streaming data (non-SSE):', data);
+              console.log('📥 Received deep learn streaming data (non-SSE):', data);
               
               if (data.error) {
                 onError(data.error);
@@ -286,13 +276,12 @@ export interface DeepLearnDeepRequest {
               onData(data);
               
               if (data.final || data.status === 'completed') {
-                console.log('Deep learn streaming marked as final/completed');
+                console.log('🏁 Deep learn streaming marked as final/completed');
                 onComplete();
                 return conversationId;
               }
             } catch (parseError) {
-              console.warn('Failed to parse non-SSE deep learn streaming data:', line, parseError);
-              // 只有在明确是错误信息时才报错
+              console.warn('⚠️ Failed to parse non-SSE deep learn streaming data:', line, parseError);
               if (line.includes('error') || line.includes('Error')) {
                 onError(`Parse error: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`);
                 return conversationId;
@@ -301,10 +290,15 @@ export interface DeepLearnDeepRequest {
           }
         }
       }
-  
+
+      // Wait for interactive endpoint to complete (but don't block the main flow)
+      interactivePromise.catch(error => {
+        console.warn('⚠️ Interactive call failed but continuing with Deep Learn:', error);
+      });
+
       return conversationId;
     } catch (error) {
-      console.error('Deep Learn (deep mode) API error:', error);
+      console.error('❌ Deep Learn (deep mode) API error:', error);
       onError(error instanceof Error ? error.message : 'Unknown deep learn error');
       throw error;
     }
@@ -320,34 +314,34 @@ export interface DeepLearnDeepRequest {
       if (!workspaceId) {
         throw new Error('No workspace selected for interactive call.');
       }
-  
+
       const requestData: InteractiveRequest = {
         workspace_id: workspaceId,
         conversation_id: conversationId,
         user_query: userQuery,
         user_additional_comment: userAdditionalComment || null
       };
-  
+
       console.log('📞 Calling interactive endpoint for deep learn:', requestData);
-  
+
       const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/interactive`, {
         method: 'POST',
         headers: createAuthHeaders(),
         body: JSON.stringify(requestData),
       });
-  
+
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Authentication failed. Please login again.');
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
+
       const data: InteractiveResponse = await response.json();
       console.log('✅ Interactive endpoint returned data for Deep Learn:', data);
       return data;
     } catch (error) {
-      console.error('Interactive API error for deep learn:', error);
+      console.error('❌ Interactive API error for deep learn:', error);
       throw error;
     }
   };

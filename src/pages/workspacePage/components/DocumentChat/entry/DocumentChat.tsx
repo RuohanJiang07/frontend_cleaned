@@ -30,10 +30,13 @@ interface DocumentChatProps {
 }
 
 function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatProps) {
+  // Hard-coded reference file that matches the API - THIS IS THE ACTUAL SELECTED REFERENCE
   const [selectedDocuments, setSelectedDocuments] = useState<DocumentTag[]>([
-    { id: '1', name: 'Introduction to Me...', type: 'pdf' },
-    { id: '2', name: 'Cosmology and Its...', type: 'pdf' },
-    { id: '3', name: 'NASA ADS Library...', type: 'txt' }
+    { 
+      id: 'file-1bcf6d47fc704e63bf6b754b88668b08', 
+      name: 'Introduction to Quantum Mechanics', 
+      type: 'pdf' 
+    }
   ]);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -71,32 +74,20 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   };
 
   const getDocumentIcon = (type: string) => {
-    switch (type) {
-      case 'pdf':
-        return (
-          <div className="w-4 h-4 bg-red-500 rounded-sm flex items-center justify-center">
-            <span className="text-white text-[10px] font-bold">PDF</span>
-          </div>
-        );
-      case 'doc':
-        return (
-          <div className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center">
-            <span className="text-white text-[10px] font-bold">DOC</span>
-          </div>
-        );
-      case 'txt':
-        return (
-          <div className="w-4 h-4 bg-gray-500 rounded-sm flex items-center justify-center">
-            <span className="text-white text-[10px] font-bold">TXT</span>
-          </div>
-        );
-      default:
-        return (
-          <div className="w-4 h-4 bg-gray-500 rounded-sm flex items-center justify-center">
-            <span className="text-white text-[10px] font-bold">FILE</span>
-          </div>
-        );
-    }
+    // Import icons from your public/workspace/fileIcons folder
+    const iconPath = `/workspace/fileIcons/${type}.svg`;
+    return (
+      <img 
+        src={iconPath} 
+        alt={`${type} icon`} 
+        className="w-[18px] h-[17.721px] flex-shrink-0"
+        onError={(e) => {
+          // Fallback to generic file icon if specific type not found
+          const target = e.target as HTMLImageElement;
+          target.src = '/workspace/file_icon.svg';
+        }}
+      />
+    );
   };
 
   const getCardBackgroundColor = (index: number) => {
@@ -105,7 +96,16 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   };
 
   const handleCreateNewChat = () => {
+    // Set a flag in sessionStorage to indicate this is a new chat session
+    sessionStorage.setItem('documentchat_new_session', 'true');
+    
     // Notify parent component to change view to response
+    onViewChange?.('document-chat-response');
+  };
+
+  const handleHistoryItemClick = (item: HistoryItem) => {
+    // For history items, don't set the new session flag
+    // This will load the existing conversation
     onViewChange?.('document-chat-response');
   };
 
@@ -169,17 +169,14 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
             <div className="w-[505px]">
               <Card className="w-full h-[154px] bg-white rounded-lg border border-[#B3B3B3] shadow-[0px_3px_60px_1px_rgba(2,119,189,0.05)]">
                 <CardContent className="p-4 h-full flex flex-col">
+                  {/* Display the ACTUAL selected documents, not hardcoded examples */}
                   <div className="flex flex-wrap gap-[9px] mb-4">
                     {selectedDocuments.map((doc) => (
                       <div
                         key={doc.id}
                         className="h-[25px] max-w-[160px] bg-[#ECF1F6] border border-[#88ABFF] rounded-[8px] flex items-center px-2"
                       >
-                        <img
-                          src={`/workspace/fileIcons/${doc.type}.svg`}
-                          alt={`${doc.type} icon`}
-                          className="w-[18px] h-[17.721px] flex-shrink-0"
-                        />
+                        {getDocumentIcon(doc.type)}
                         <span className="ml-1 font-['Inter'] text-[12px] font-normal text-black leading-normal truncate">
                           {doc.name}
                         </span>
@@ -254,7 +251,7 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
                   key={item.id}
                   className="w-[90%] h-[154px] rounded-[8px] shadow-[0px_3px_20px_1px_rgba(2,119,189,0.13),0px_2px_4px_0px_rgba(0,0,0,0.25)] hover:shadow-md transition-shadow cursor-pointer mx-auto"
                   style={{ backgroundColor: bgColor }}
-                  onClick={handleCreateNewChat}
+                  onClick={() => handleHistoryItemClick(item)}
                 >
                   <CardContent className="p-4 h-full flex flex-col justify-between relative">
                     <div>

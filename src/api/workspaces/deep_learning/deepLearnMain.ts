@@ -138,7 +138,7 @@ export const submitQuickSearchQuery = async (
     const isNewConversation = !existingConversationId;
     
     console.log('🆔 Quick Search - Using conversation ID:', conversationId, 'isNew:', isNewConversation);
-    console.log('📤 Quick Search - Displaying conversation ID before streaming...');
+    console.log('📤 Quick Search - Starting quick search endpoint first...');
 
     // Use real user input and settings
     const requestData: QuickSearchRequest = {
@@ -155,19 +155,8 @@ export const submitQuickSearchQuery = async (
 
     console.log('📝 Submitting Quick Search request:', requestData);
 
-    // Schedule interactive endpoint call for 4 seconds later
-    const interactivePromise = new Promise<InteractiveResponse>((resolve, reject) => {
-      setTimeout(async () => {
-        try {
-          console.log('Starting interactive endpoint call (4 seconds after quicksearch)...');
-          const interactiveData = await callInteractiveEndpoint(conversationId, query, additionalComments);
-          resolve(interactiveData);
-        } catch (error) {
-          reject(error);
-        }
-      }, 3000); // 3 seconds delay
-    });
-
+    // Start the quick search endpoint FIRST
+    console.log('🚀 Starting Quick Search endpoint...');
     const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/start/quicksearch`, {
       method: 'POST',
       headers: createAuthHeaders(),
@@ -181,6 +170,32 @@ export const submitQuickSearchQuery = async (
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
+    // Immediately start the interactive endpoint call (no delay)
+    console.log('🔧 Starting interactive endpoint call simultaneously...');
+    const tabId = window.location.pathname + window.location.search;
+    
+    const interactivePromise = callInteractiveEndpoint(conversationId, query, additionalComments)
+      .then(interactiveData => {
+        console.log('✅ Interactive endpoint returned data for Quick Search:', interactiveData);
+        
+        // Store interactive data for the sidebar
+        localStorage.setItem(`deeplearn_interactive_${tabId}`, JSON.stringify(interactiveData));
+        console.log('💾 Stored interactive data to localStorage with key:', `deeplearn_interactive_${tabId}`);
+        
+        // Trigger event to update sidebar
+        window.dispatchEvent(new CustomEvent('deeplearn-interactive-update', {
+          detail: { tabId, data: interactiveData }
+        }));
+        console.log('📡 Triggered deeplearn-interactive-update event for tabId:', tabId);
+        
+        return interactiveData;
+      })
+      .catch(error => {
+        console.error('❌ Interactive endpoint error for Quick Search:', error);
+        // Don't throw error to avoid breaking the main quick search flow
+      });
+
+    // Start processing the quick search response stream
     const reader = response.body?.getReader();
     if (!reader) {
       throw new Error('Failed to get response reader');
@@ -193,7 +208,7 @@ export const submitQuickSearchQuery = async (
       const { done, value } = await reader.read();
       
       if (done) {
-        console.log('Quick search streaming completed');
+        console.log('✅ Quick search streaming completed');
         onComplete();
         break;
       }
@@ -207,7 +222,7 @@ export const submitQuickSearchQuery = async (
 
       for (const line of lines) {
         if (line.trim()) {
-          console.log('Received streaming line:', line);
+          console.log('📥 Received quick search streaming line:', line);
           
           // Check for error in the line
           if (line.includes('"error"')) {
@@ -228,27 +243,14 @@ export const submitQuickSearchQuery = async (
       }
     }
 
-    // Wait for interactive endpoint to complete and handle the response
-    try {
-      const interactiveData = await interactivePromise;
-      console.log('Interactive endpoint response (after 3 second delay):', interactiveData);
-      
-      // Store interactive data for the sidebar
-      const tabId = window.location.pathname + window.location.search;
-      localStorage.setItem(`deeplearn_interactive_${tabId}`, JSON.stringify(interactiveData));
-      
-      // Trigger event to update sidebar
-      window.dispatchEvent(new CustomEvent('deeplearn-interactive-update', {
-        detail: { tabId, data: interactiveData }
-      }));
-    } catch (interactiveError) {
-      console.error('Interactive endpoint error (after 3 second delay):', interactiveError);
-      // Don't fail the main request if interactive fails
-    }
+    // Wait for interactive endpoint to complete (but don't block the main flow)
+    interactivePromise.catch(error => {
+      console.warn('⚠️ Interactive call failed but continuing with Quick Search:', error);
+    });
 
     return conversationId;
   } catch (error) {
-    console.error('Quick Search API error:', error);
+    console.error('❌ Quick Search API error:', error);
     onError(error instanceof Error ? error.message : 'Unknown quick search error');
     throw error;
   }
@@ -272,7 +274,7 @@ const callInteractiveEndpoint = async (
       user_additional_comment: userAdditionalComment || null
     };
 
-    console.log('Calling interactive endpoint:', requestData);
+    console.log('📞 Calling interactive endpoint for quick search:', requestData);
 
     const response = await fetch(`${API_BASE_URL}/api/v1/deep_research/interactive`, {
       method: 'POST',
@@ -288,9 +290,10 @@ const callInteractiveEndpoint = async (
     }
 
     const data: InteractiveResponse = await response.json();
+    console.log('✅ Interactive endpoint returned data for Quick Search:', data);
     return data;
   } catch (error) {
-    console.error('Interactive API error:', error);
+    console.error('❌ Interactive API error for quick search:', error);
     throw error;
   }
 };
