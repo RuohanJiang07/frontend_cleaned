@@ -233,36 +233,19 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
   // Load saved data for this tab and initialize conversation history
   useEffect(() => {
     const tabId = window.location.pathname + window.location.search;
-    const savedConversationId = localStorage.getItem(`deeplearn_conversation_${tabId}`);
-    const savedQuery = localStorage.getItem(`deeplearn_query_${tabId}`);
-    const savedMode = localStorage.getItem(`deeplearn_mode_${tabId}`) as 'deep-learn' | 'quick-search';
-    const savedStreamingContent = localStorage.getItem(`deeplearn_streaming_content_${tabId}`) || '';
-    const savedDeepContent = localStorage.getItem(`deeplearn_deep_content_${tabId}`);
-    const isStreamingComplete = localStorage.getItem(`deeplearn_streaming_complete_${tabId}`) === 'true';
-    const isDeepComplete = localStorage.getItem(`deeplearn_deep_complete_${tabId}`) === 'true';
     const historyDataString = localStorage.getItem(`deeplearn_history_data_${tabId}`);
     const isHistoryLoaded = localStorage.getItem(`deeplearn_history_loaded_${tabId}`) === 'true';
 
-    console.log('📂 Loading saved data for tab:', {
-      tabId,
-      conversationId: savedConversationId,
-      query: savedQuery,
-      mode: savedMode,
-      streamingContentLength: savedStreamingContent.length,
-      hasDeepContent: !!savedDeepContent,
-      isStreamingComplete,
-      isDeepComplete,
-      isHistoryLoaded,
-      hasHistoryData: !!historyDataString
-    });
-
     // Check if this is a loaded history conversation
     if (isHistoryLoaded && historyDataString) {
+      console.log('📂 Loading history conversation data for tab:', tabId);
+      
       try {
         const historyData: ConversationHistoryItem[] = JSON.parse(historyDataString);
         setLoadedHistoryData(historyData);
         setIsHistoryConversation(true);
         
+        const savedConversationId = localStorage.getItem(`deeplearn_conversation_${tabId}`);
         if (savedConversationId) {
           setConversationId(savedConversationId);
         }
@@ -303,12 +286,38 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
         setConversationHistory(messages);
         console.log('✅ Loaded history conversation with', messages.length, 'messages');
         
-        return; // Exit early for history conversations
+        // Exit early for history conversations - don't load any streaming data
+        return;
       } catch (error) {
         console.error('❌ Error parsing history data:', error);
-        // Fall through to normal conversation loading
+        // If parsing fails, clear the history flags and fall through to normal loading
+        localStorage.removeItem(`deeplearn_history_data_${tabId}`);
+        localStorage.removeItem(`deeplearn_history_loaded_${tabId}`);
       }
     }
+    
+    // This code only runs for NON-history conversations (new streaming conversations)
+    console.log('📂 Loading saved streaming data for NON-history conversation, tab:', tabId);
+    
+    const savedConversationId = localStorage.getItem(`deeplearn_conversation_${tabId}`);
+    const savedQuery = localStorage.getItem(`deeplearn_query_${tabId}`);
+    const savedMode = localStorage.getItem(`deeplearn_mode_${tabId}`) as 'deep-learn' | 'quick-search';
+    const savedStreamingContent = localStorage.getItem(`deeplearn_streaming_content_${tabId}`) || '';
+    const savedDeepContent = localStorage.getItem(`deeplearn_deep_content_${tabId}`);
+    const isStreamingComplete = localStorage.getItem(`deeplearn_streaming_complete_${tabId}`) === 'true';
+    const isDeepComplete = localStorage.getItem(`deeplearn_deep_complete_${tabId}`) === 'true';
+
+    console.log('📂 Streaming data found:', {
+      tabId,
+      conversationId: savedConversationId,
+      query: savedQuery,
+      mode: savedMode,
+      streamingContentLength: savedStreamingContent.length,
+      hasDeepContent: !!savedDeepContent,
+      isStreamingComplete,
+      isDeepComplete
+    });
+
     if (savedQuery) {
       if (savedMode) {
         setSelectedMode(savedMode);

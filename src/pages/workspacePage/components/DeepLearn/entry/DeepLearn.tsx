@@ -186,21 +186,21 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     try {
       console.log('📖 Loading history conversation:', conversation.conversation_id);
       
-      // Show loading state or navigate immediately
-      onViewChange?.('deep-learn-response');
-      
       // Fetch the conversation history
       const historyData = await getHistoryConversation(conversation.conversation_id);
       
       if (historyData.success && historyData.conversation_json.length > 0) {
         const tabId = window.location.pathname + window.location.search;
         
-        // Clear any existing conversation data
+        // Clear ALL existing conversation data for this tab
         localStorage.removeItem(`deeplearn_streaming_content_${tabId}`);
         localStorage.removeItem(`deeplearn_streaming_complete_${tabId}`);
         localStorage.removeItem(`deeplearn_deep_content_${tabId}`);
         localStorage.removeItem(`deeplearn_deep_complete_${tabId}`);
         localStorage.removeItem(`deeplearn_interactive_${tabId}`);
+        localStorage.removeItem(`deeplearn_conversation_${tabId}`);
+        localStorage.removeItem(`deeplearn_query_${tabId}`);
+        localStorage.removeItem(`deeplearn_mode_${tabId}`);
         
         // Save the conversation data for loading in response view
         localStorage.setItem(`deeplearn_conversation_${tabId}`, conversation.conversation_id);
@@ -252,6 +252,9 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
         localStorage.setItem(`deeplearn_history_loaded_${tabId}`, 'true');
         
         console.log('✅ Successfully loaded and stored history conversation data');
+        
+        // NOW navigate to response view after all data is properly stored
+        onViewChange?.('deep-learn-response');
       } else {
         error('Failed to load conversation history');
       }
