@@ -30,14 +30,8 @@ interface DocumentChatProps {
 }
 
 function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatProps) {
-  // Hard-coded reference file that matches the API - THIS IS THE ACTUAL SELECTED REFERENCE
-  const [selectedDocuments, setSelectedDocuments] = useState<DocumentTag[]>([
-    { 
-      id: 'file-1bcf6d47fc704e63bf6b754b88668b08', 
-      name: 'Introduction to Quantum Mechanics', 
-      type: 'pdf' 
-    }
-  ]);
+  // State for selected documents from upload modal
+  const [selectedDocuments, setSelectedDocuments] = useState<DocumentTag[]>([]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,8 +68,24 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   };
 
   const getDocumentIcon = (type: string) => {
-    // Import icons from your public/workspace/fileIcons folder
-    const iconPath = `/workspace/fileIcons/${type}.svg`;
+    // Map file types to icon names (handle specific mappings)
+    const getIconName = (type: string) => {
+      switch (type) {
+        case 'pptx':
+          return 'ppt';
+        case 'docx':
+        case 'txt':
+          return 'txt'; // Both docx and txt use txt.svg
+        case 'doc':
+          return 'txt'; // doc files also use txt.svg
+        default:
+          return type;
+      }
+    };
+    
+    const iconName = getIconName(type);
+    const iconPath = `/workspace/fileIcons/${iconName}.svg`;
+    
     return (
       <img 
         src={iconPath} 
@@ -96,8 +106,18 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   };
 
   const handleCreateNewChat = () => {
+    // Check if any documents are selected
+    if (selectedDocuments.length === 0) {
+      // You could show a toast or alert here
+      console.warn('No documents selected for chat');
+      return;
+    }
+    
     // Set a flag in sessionStorage to indicate this is a new chat session
     sessionStorage.setItem('documentchat_new_session', 'true');
+    
+    // Store selected documents for the chat session
+    sessionStorage.setItem('documentchat_selected_files', JSON.stringify(selectedDocuments));
     
     // Notify parent component to change view to response
     onViewChange?.('document-chat-response');
@@ -120,8 +140,40 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
 
   const handleUpload = (files: any[]) => {
     console.log('Uploaded files:', files);
-    // Handle the uploaded files here
-    // You can convert them to DocumentTag format and add to selectedDocuments
+    
+    // Convert uploaded files to DocumentTag format
+    const newDocuments: DocumentTag[] = files
+      .filter(file => file.source === 'drive' && file.type === 'file') // Only include drive files that are actual files
+      .map(file => ({
+        id: file.id,
+        name: file.name,
+        type: mapFileTypeToDocumentType(file.file_type || 'other')
+      }));
+    
+    // Add new documents to selected documents (avoid duplicates)
+    setSelectedDocuments(prev => {
+      const existingIds = prev.map(doc => doc.id);
+      const uniqueNewDocs = newDocuments.filter(doc => !existingIds.includes(doc.id));
+      return [...prev, ...uniqueNewDocs];
+    });
+    
+    console.log('📁 Added documents to selection:', newDocuments);
+  };
+  
+  // Helper function to map file types to DocumentTag types
+  const mapFileTypeToDocumentType = (fileType: string): 'pdf' | 'doc' | 'txt' | 'other' => {
+    switch (fileType.toLowerCase()) {
+      case 'pdf':
+        return 'pdf';
+      case 'doc':
+      case 'docx':
+        return 'doc';
+      case 'txt':
+      case 'md':
+        return 'txt';
+      default:
+        return 'other';
+    }
   };
 
   // If we're in response view, render the response component
@@ -169,7 +221,7 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
             <div className="w-[505px]">
               <Card className="w-full h-[154px] bg-white rounded-lg border border-[#B3B3B3] shadow-[0px_3px_60px_1px_rgba(2,119,189,0.05)]">
                 <CardContent className="p-4 h-full flex flex-col">
-                  {/* Display the ACTUAL selected documents, not hardcoded examples */}
+                  {/* Display the selected documents from upload modal */}
                   <div className="flex flex-wrap gap-[9px] mb-4">
                     {selectedDocuments.map((doc) => (
                       <div
@@ -190,6 +242,15 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
                         </Button>
                       </div>
                     ))}
+                    
+                    {/* Show placeholder when no documents selected */}
+                    {selectedDocuments.length === 0 && (
+                      <div className="flex items-center justify-center w-full h-full text-gray-400">
+                        <span className="text-sm font-['Inter'] text-center">
+                          Upload files to start chatting with your documents
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-auto flex items-center justify-end">
                     <Button variant="outline" size="sm" className="w-[81px] h-[26px] bg-[#ECF1F6] border-none rounded-lg flex items-center px-[8px] gap-[4px] hover:bg-[#e2e8f0]">

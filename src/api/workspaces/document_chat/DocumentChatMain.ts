@@ -64,7 +64,8 @@ export const submitDocumentChatQuery = async (
   onError: (error: string) => void,
   onComplete: () => void,
   existingConversationId?: string, // Existing conversation ID for continuous conversation
-  generatedConversationId?: string // Generated conversation ID for new conversation
+  generatedConversationId?: string, // Generated conversation ID for new conversation
+  selectedFileIds?: string[] // Array of selected file IDs to use instead of hardcoded reference
 ): Promise<string> => {
   try {
     const workspaceId = getWorkspaceId();
@@ -78,8 +79,10 @@ export const submitDocumentChatQuery = async (
     
     console.log('🆔 Document Chat - Using conversation ID:', conversationId, 'isNew:', isNewConversation);
 
-    // Hard-coded reference for now as requested
-    const hardCodedReferences = ["file-1bcf6d47fc704e63bf6b754b88668b08"];
+    // Use selected file IDs or fall back to hardcoded reference
+    const referencesToUse = selectedFileIds && selectedFileIds.length > 0 
+      ? selectedFileIds 
+      : ["file-1bcf6d47fc704e63bf6b754b88668b08"]; // Fallback to hardcoded reference
 
     const requestData: DocumentChatRequest = {
       workspace_id: workspaceId,
@@ -87,7 +90,7 @@ export const submitDocumentChatQuery = async (
       user_query: query,
       new_conversation: isNewConversation,
       profile_selected: profile || null,
-      references_selected: hardCodedReferences // Using hard-coded reference as requested
+      references_selected: referencesToUse
     };
 
     console.log('📝 Submitting Document Chat request:', requestData);

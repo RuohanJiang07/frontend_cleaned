@@ -48,18 +48,59 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
   // New state for conversation history
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
 
-  // Reference files that match the hard-coded reference ID
-  const referenceFiles: ReferenceFile[] = [
-    {
-      id: 'file-1bcf6d47fc704e63bf6b754b88668b08',
-      name: 'Introduction to Quantum Mechanics',
-      type: 'pdf'
+  // State for reference files loaded from session storage
+  const [referenceFiles, setReferenceFiles] = useState<ReferenceFile[]>([]);
+
+  // Load selected files from session storage on component mount
+  useEffect(() => {
+    const selectedFilesData = sessionStorage.getItem('documentchat_selected_files');
+    if (selectedFilesData) {
+      try {
+        const selectedFiles = JSON.parse(selectedFilesData);
+        const convertedFiles: ReferenceFile[] = selectedFiles.map((file: any) => ({
+          id: file.id,
+          name: file.name,
+          type: file.type
+        }));
+        setReferenceFiles(convertedFiles);
+        console.log('📁 Loaded selected files for document chat:', convertedFiles);
+      } catch (error) {
+        console.error('Error parsing selected files:', error);
+        // Fallback to default file if parsing fails
+        setReferenceFiles([{
+          id: 'file-1bcf6d47fc704e63bf6b754b88668b08',
+          name: 'Introduction to Quantum Mechanics',
+          type: 'pdf'
+        }]);
+      }
+    } else {
+      // Fallback to default file if no selection found
+      setReferenceFiles([{
+        id: 'file-1bcf6d47fc704e63bf6b754b88668b08',
+        name: 'Introduction to Quantum Mechanics',
+        type: 'pdf'
+      }]);
     }
-  ];
+  }, []);
 
   const getFileIcon = (type: string) => {
-    // Import icons from your public/workspace/fileIcons folder
-    const iconPath = `/workspace/fileIcons/${type}.svg`;
+    // Map file types to icon names (handle specific mappings)
+    const getIconName = (type: string) => {
+      switch (type) {
+        case 'pptx':
+          return 'ppt';
+        case 'docx':
+        case 'txt':
+        case 'doc':
+          return 'txt'; // All text-based documents use txt.svg
+        default:
+          return type;
+      }
+    };
+    
+    const iconName = getIconName(type);
+    const iconPath = `/workspace/fileIcons/${iconName}.svg`;
+    
     return (
       <img 
         src={iconPath} 
@@ -246,11 +287,14 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
       // Use existing conversation ID or generate new one
       const currentConversationId = conversationId || generateConversationId();
       
+      // Get selected file IDs from reference files
+      const selectedFileIds = referenceFiles.map(file => file.id);
+      
       console.log('🆔 Starting first question with conversation ID:', currentConversationId);
       console.log('📝 Submitting document chat with params:', {
         query: question.trim(),
         profile: 'profile-default',
-        references: null, // Will use hard-coded reference in API
+        references: selectedFileIds,
         conversationId: currentConversationId,
         newConversation: true // First question is always new conversation
       });
@@ -288,7 +332,7 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
       await submitDocumentChatQuery(
         question.trim(),
         'profile-default',
-        null, // Will use hard-coded reference in API
+        selectedFileIds, // Pass selected file IDs
         (data: string) => {
           // Update streaming content in localStorage
           const currentContent = localStorage.getItem(`documentchat_streaming_content_${tabId}`) || '';
@@ -328,7 +372,8 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
           }));
         },
         undefined, // No existing conversation ID for new conversation
-        currentConversationId // Pass the generated conversation ID
+        currentConversationId, // Pass the generated conversation ID
+        selectedFileIds // Pass selected file IDs
       );
 
     } catch (err) {
@@ -353,9 +398,13 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
     try {
       setIsSubmitting(true);
       
+      // Get selected file IDs from reference files
+      const selectedFileIds = referenceFiles.map(file => file.id);
+      
       console.log('🔄 Submitting follow-up question in existing conversation:', {
         conversationId,
         query: followUpQuestion.trim(),
+        selectedFileIds,
         isNewConversation: false // Follow-up questions are NOT new conversations
       });
       
@@ -387,7 +436,7 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
       await submitDocumentChatQuery(
         queryToSubmit,
         'profile-default',
-        null, // Will use hard-coded reference in API
+        selectedFileIds, // Pass selected file IDs
         (data: string) => {
           // Update the streaming content for the current assistant message
           setConversationHistory(prev => 
@@ -415,7 +464,8 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
           setIsSubmitting(false);
         },
         conversationId, // Pass existing conversation ID
-        conversationId // Also pass as the generated conversation ID parameter
+        conversationId, // Also pass as the generated conversation ID parameter
+        selectedFileIds // Pass selected file IDs
       );
       
     } catch (err) {
@@ -653,13 +703,18 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
 
           {/* Fixed Bottom Input Area - Enhanced hover effects matching Deep Learn */}
           <div className="p-4 bg-white">
-            {/* Source Tags - At the top of input area - Now showing actual reference files */}
+            {/* Source Tags - At the top of input area - Show selected reference files */}
             <div className="flex gap-2 mb-3">
               {referenceFiles.map((file) => (
                 <span key={file.id} className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-['Inter',Helvetica]">
                   {file.name}
                 </span>
               ))}
+              {referenceFiles.length === 0 && (
+                <span className="inline-block bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-['Inter',Helvetica]">
+                  No files selected
+                </span>
+              )}
             </div>
 
             {/* Input Box with enhanced hover effects exactly like Deep Learn */}
