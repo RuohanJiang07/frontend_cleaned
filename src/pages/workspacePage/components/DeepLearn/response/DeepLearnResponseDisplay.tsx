@@ -71,6 +71,11 @@ const QuestionArea: React.FC<{ pairs: QuestionAnswerPair[] }> = ({ pairs }) => {
 };
 
 function DeepLearnResponseDisplay({ deepLearnData, isStreaming }: DeepLearnResponseDisplayProps) {
+  // Handle case where deepLearnData might be a string (from history)
+  const processedData = typeof deepLearnData === 'string' 
+    ? { llm_response: deepLearnData, final: true } 
+    : deepLearnData;
+
   // Helper function to process highlight tags in content
   const processHighlightTags = (content: string): string => {
     if (!content || typeof content !== 'string') return content;
@@ -209,83 +214,83 @@ function DeepLearnResponseDisplay({ deepLearnData, isStreaming }: DeepLearnRespo
   return (
     <div className="space-y-4">
       {/* Progress information */}
-      {deepLearnData.progress && (
+      {processedData.progress && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-blue-800 font-['Inter',Helvetica]">
-              Progress: {deepLearnData.progress.current_completions}/{deepLearnData.progress.total_expected_completions}
+              Progress: {processedData.progress.current_completions}/{processedData.progress.total_expected_completions}
             </span>
             <span className="text-sm text-blue-600 font-['Inter',Helvetica]">
-              {deepLearnData.progress.progress_percentage}%
+              {processedData.progress.progress_percentage}%
             </span>
           </div>
           <div className="w-full bg-blue-200 rounded-full h-2">
             <div 
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${deepLearnData.progress.progress_percentage}%` }}
+              style={{ width: `${processedData.progress.progress_percentage}%` }}
             ></div>
           </div>
         </div>
       )}
 
       {/* Stream info */}
-      {deepLearnData.stream_info && (
+      {processedData.stream_info && (
         <div className="text-sm text-gray-600 mb-4 font-['Inter',Helvetica]">
-          {deepLearnData.stream_info}
+          {processedData.stream_info}
         </div>
       )}
 
       {/* Newly completed item */}
-      {deepLearnData.newly_completed_item && (
+      {processedData.newly_completed_item && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
           <div className="text-sm font-medium text-green-800 font-['Inter',Helvetica]">
-            ✅ Completed: {deepLearnData.newly_completed_item.description}
+            ✅ Completed: {processedData.newly_completed_item.description}
           </div>
           <div className="text-xs text-green-600 mt-1 font-['Inter',Helvetica]">
-            Section: {deepLearnData.newly_completed_item.section} | 
-            Type: {deepLearnData.newly_completed_item.type}
+            Section: {processedData.newly_completed_item.section} | 
+            Type: {processedData.newly_completed_item.type}
           </div>
         </div>
       )}
 
       {/* LLM Response content - Now rendered with Markdown support, highlight processing, and question areas */}
-      {deepLearnData.llm_response && (
+      {processedData.llm_response && (
         <div className="mb-4">
-          {renderLLMResponse(deepLearnData.llm_response)}
+          {renderLLMResponse(processedData.llm_response)}
         </div>
       )}
 
       {/* Generation status - Only show if it contains useful information */}
-      {deepLearnData.generation_status && (
+      {processedData.generation_status && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
           <div className="text-sm font-medium text-yellow-800 mb-2 font-['Inter',Helvetica]">
             Generation Status
           </div>
           <div className="text-sm text-yellow-700 font-['Inter',Helvetica]">
-            {typeof deepLearnData.generation_status === 'string' 
-              ? deepLearnData.generation_status 
-              : JSON.stringify(deepLearnData.generation_status, null, 2)
+            {typeof processedData.generation_status === 'string' 
+              ? processedData.generation_status 
+              : JSON.stringify(processedData.generation_status, null, 2)
             }
           </div>
         </div>
       )}
 
       {/* Final status */}
-      {deepLearnData.final && (
+      {processedData.final && (
         <div className="bg-green-100 border border-green-300 rounded-lg p-3">
           <div className="text-green-800 font-medium font-['Inter',Helvetica]">
             🎉 Deep learning process completed!
           </div>
-          {deepLearnData.total_streams_sent && (
+          {processedData.total_streams_sent && (
             <div className="text-sm text-green-600 mt-1 font-['Inter',Helvetica]">
-              Total streams sent: {deepLearnData.total_streams_sent}
+              Total streams sent: {processedData.total_streams_sent}
             </div>
           )}
         </div>
       )}
 
       {/* Loading indicator for ongoing process */}
-      {isStreaming && !deepLearnData.final && (
+      {isStreaming && !processedData.final && (
         <div className="flex items-center gap-2 text-blue-600">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
           <span className="text-sm font-['Inter',Helvetica]">Processing deep learning content...</span>
