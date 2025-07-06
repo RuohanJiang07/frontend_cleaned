@@ -96,13 +96,18 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit, activeV
     onViewChange?.("drive");
   };
 
+  // Handle back navigation from response pages to entry pages
+  const handleBackToEntry = (entryView: string) => {
+    onViewChange?.(entryView);
+  };
+
   // Render specific component based on activeView
   if (activeView === "deep-learn") {
     return <DeepLearn isSplit={isSplit} onBack={handleBackToDefault} onViewChange={onViewChange} />;
   }
 
   if (activeView === "deep-learn-response") {
-    return <DeepLearnResponse isSplit={isSplit} onBack={handleBackToDefault} />;
+    return <DeepLearnResponse isSplit={isSplit} onBack={() => handleBackToEntry('deep-learn')} />;
   }
 
   if (activeView === "problem-help") {
@@ -110,7 +115,7 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit, activeV
   }
 
   if (activeView === "problem-help-response") {
-    return <ProblemHelpResponse onBack={handleBackToDefault} />;
+    return <ProblemHelpResponse onBack={() => handleBackToEntry('problem-help')} />;
   }
 
   if (activeView === "document-chat") {
@@ -118,7 +123,7 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit, activeV
   }
 
   if (activeView === "document-chat-response") {
-    return <DocumentChatResponse isSplit={isSplit} onBack={handleBackToDefault} />;
+    return <DocumentChatResponse isSplit={isSplit} onBack={() => handleBackToEntry('document-chat')} />;
   }
 
   if (activeView === "smart-note") {
@@ -126,7 +131,7 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit, activeV
   }
 
   if (activeView === "smart-note-editor") {
-    return <NoteEditor onBack={handleBackToDefault} />;
+    return <NoteEditor onBack={() => handleBackToEntry('smart-note')} />;
   }
 
   if (activeView === "drive") {
