@@ -2,10 +2,11 @@ import { Tabs, TabsList, TabsTrigger } from '@radix-ui/react-tabs';
 import { GlobeIcon, PaperclipIcon, FolderIcon, ChevronDownIcon } from 'lucide-react';
 import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent } from '../../../../../components/ui/card';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
 import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import { useToast } from '../../../../../hooks/useToast';
+import { getDeepLearningHistory, DeepLearningConversation } from '../../../../../api/workspaces/deep_learning/getHistory';
 
 interface DeepLearnProps {
   isSplit?: boolean;
@@ -75,12 +76,40 @@ const learningCards = [
 function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
   const { success, error } = useToast();
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
-  const [selectedTab, setSelectedTab] = useState<'trending' | 'history'>('trending');
+  const [selectedTab, setSelectedTab] = useState<'trending' | 'history'>('history'); // Changed default to 'history'
   const [inputText, setInputText] = useState('');
   const [additionalComments, setAdditionalComments] = useState('');
   const [webSearchEnabled, setWebSearchEnabled] = useState(true);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isAdditionalCommentsFocused, setIsAdditionalCommentsFocused] = useState(false);
+  const [historyConversations, setHistoryConversations] = useState<DeepLearningConversation[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // Load history when component mounts or when tab changes to history
+  useEffect(() => {
+    if (selectedTab === 'history') {
+      loadHistory();
+    }
+  }, [selectedTab]);
+
+  const loadHistory = async () => {
+    try {
+      setIsLoadingHistory(true);
+      const historyData = await getDeepLearningHistory();
+      
+      if (historyData.success) {
+        setHistoryConversations(historyData.deep_learning_conversations.items);
+        console.log('📚 Loaded history conversations:', historyData.deep_learning_conversations.items.length);
+      } else {
+        error('Failed to load conversation history');
+      }
+    } catch (err) {
+      console.error('Error loading history:', err);
+      error('Failed to load conversation history. Please try again.');
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   // Helper function to generate UUID
   const generateUUID = (): string => {
@@ -125,7 +154,38 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     console.log('🧹 Cleared related content for new conversation');
   };
 
+  // Helper function to format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Helper function to get tag color based on concept tags
+  const getTagColor = (tags: string[], index: number) => {
+    const colors = ['bg-[#ffdd89]', 'bg-[#96d8ff]', 'bg-[#c2dcdc]', 'bg-[#f9aaaa]', 'bg-[#c88eff]'];
+    return colors[index % colors.length];
+  };
+
   const handleCardClick = (cardId: number) => {
+    // Notify parent component to change view to response
+    onViewChange?.('deep-learn-response');
+  };
+
+  const handleHistoryCardClick = (conversation: DeepLearningConversation) => {
+    // Save the conversation data for loading in response view
+    const tabId = window.location.pathname + window.location.search;
+    localStorage.setItem(`deeplearn_conversation_${tabId}`, conversation.conversation_id);
+    localStorage.setItem(`deeplearn_query_${tabId}`, conversation.title);
+    localStorage.setItem(`deeplearn_mode_${tabId}`, 'deep-learn'); // Default to deep-learn mode for history
+    
+    console.log('📖 Loading history conversation:', conversation.conversation_id);
+    
     // Notify parent component to change view to response
     onViewChange?.('deep-learn-response');
   };
@@ -409,40 +469,129 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
           </div>
         </div>
 
-        {/* Learning cards grid - 确保每行4个卡片 */}
-        <div className="grid grid-cols-4 gap-x-3 gap-y-6 max-w-[860px] mx-auto">
-          {learningCards.map((card) => (
-            <Card
-              key={card.id}
-              className="w-[203px] rounded-[10px] shadow-[0px_3px_60px_1px_#476fcf21] overflow-hidden hover:shadow-[0px_6px_80px_2px_#476fcf35] transition-all duration-200 cursor-pointer"
-              onClick={() => handleCardClick(card.id)}
-            >
-              <CardContent className="p-0">
-                <div className="flex justify-center pt-[15px]">
-                  <img
-                    className="w-[163px] h-[106px] object-cover rounded"
-                    alt="Topic illustration"
-                    src={card.image}
-                  />
-                </div>
-
-                <div className="p-3.5 pt-6">
-                  <h3 className="font-['Inter',Helvetica] font-medium text-[#0064a2] text-[13px] mb-4 line-clamp-3">
-                    {card.title}
-                  </h3>
-
-                  <div
-                    className={`${card.tagColor} rounded-[10px] px-2.5 py-1 inline-block`}
-                  >
-                    <span className="font-['Inter',Helvetica] font-medium text-white text-[11px]">
-                      {card.tag}
-                    </span>
+        {/* Content based on selected tab */}
+        {selectedTab === 'trending' ? (
+          /* Learning cards grid - 确保每行4个卡片 */
+          <div className="grid grid-cols-4 gap-x-3 gap-y-6 max-w-[860px] mx-auto">
+            {learningCards.map((card) => (
+              <Card
+                key={card.id}
+                className="w-[203px] rounded-[10px] shadow-[0px_3px_60px_1px_#476fcf21] overflow-hidden hover:shadow-[0px_6px_80px_2px_#476fcf35] transition-all duration-200 cursor-pointer"
+                onClick={() => handleCardClick(card.id)}
+              >
+                <CardContent className="p-0">
+                  <div className="flex justify-center pt-[15px]">
+                    <img
+                      className="w-[163px] h-[106px] object-cover rounded"
+                      alt="Topic illustration"
+                      src={card.image}
+                    />
                   </div>
+
+                  <div className="p-3.5 pt-6">
+                    <h3 className="font-['Inter',Helvetica] font-medium text-[#0064a2] text-[13px] mb-4 line-clamp-3">
+                      {card.title}
+                    </h3>
+
+                    <div
+                      className={`${card.tagColor} rounded-[10px] px-2.5 py-1 inline-block`}
+                    >
+                      <span className="font-['Inter',Helvetica] font-medium text-white text-[11px]">
+                        {card.tag}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          /* History cards grid */
+          <div className="grid grid-cols-4 gap-x-3 gap-y-6 max-w-[860px] mx-auto">
+            {isLoadingHistory ? (
+              // Loading state
+              Array.from({ length: 8 }, (_, index) => (
+                <Card
+                  key={`loading-${index}`}
+                  className="w-[203px] h-[200px] rounded-[10px] shadow-[0px_3px_60px_1px_#476fcf21] overflow-hidden animate-pulse"
+                >
+                  <CardContent className="p-0 h-full">
+                    <div className="flex justify-center pt-[15px]">
+                      <div className="w-[163px] h-[106px] bg-gray-200 rounded" />
+                    </div>
+                    <div className="p-3.5 pt-6">
+                      <div className="h-4 bg-gray-200 rounded mb-4" />
+                      <div className="h-6 bg-gray-200 rounded w-20" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : historyConversations.length > 0 ? (
+              // Real history data
+              historyConversations.map((conversation, index) => (
+                <Card
+                  key={conversation.conversation_id}
+                  className="w-[203px] rounded-[10px] shadow-[0px_3px_60px_1px_#476fcf21] overflow-hidden hover:shadow-[0px_6px_80px_2px_#476fcf35] transition-all duration-200 cursor-pointer"
+                  onClick={() => handleHistoryCardClick(conversation)}
+                >
+                  <CardContent className="p-0">
+                    <div className="flex justify-center pt-[15px]">
+                      <img
+                        className="w-[163px] h-[106px] object-cover rounded"
+                        alt="Conversation cover"
+                        src={conversation.cover_img}
+                        onError={(e) => {
+                          // Fallback to a default image if cover image fails to load
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=400';
+                        }}
+                      />
+                    </div>
+
+                    <div className="p-3.5 pt-6">
+                      <h3 className="font-['Inter',Helvetica] font-medium text-[#0064a2] text-[13px] mb-4 line-clamp-3">
+                        {conversation.title}
+                      </h3>
+
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {conversation.concept_tags.length > 0 ? (
+                          conversation.concept_tags.slice(0, 2).map((tag, tagIndex) => (
+                            <div
+                              key={tagIndex}
+                              className={`${getTagColor(conversation.concept_tags, tagIndex)} rounded-[10px] px-2.5 py-1 inline-block`}
+                            >
+                              <span className="font-['Inter',Helvetica] font-medium text-white text-[11px]">
+                                {tag}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="bg-[#96d8ff] rounded-[10px] px-2.5 py-1 inline-block">
+                            <span className="font-['Inter',Helvetica] font-medium text-white text-[11px]">
+                              Deep Learn
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-xs text-gray-500 font-['Inter',Helvetica]">
+                        {formatDate(conversation.created_at)}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              // Empty state
+              <div className="col-span-4 flex flex-col items-center justify-center py-12">
+                <div className="text-gray-500 text-lg mb-2">No conversation history found</div>
+                <div className="text-gray-400 text-sm">
+                  Start a new deep learning session to see your conversations here
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )
