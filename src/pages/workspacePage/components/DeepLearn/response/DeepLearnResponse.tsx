@@ -9,6 +9,7 @@ import { useToast } from '../../../../../hooks/useToast';
 import { DeepLearnStreamingData } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
 import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
+import { ConversationHistoryItem } from '../../../../../api/workspaces/deep_learning/getHistory';
 import Interactive from './Interactive';
 import DeepLearnResponseDisplay from './DeepLearnResponseDisplay';
 import QuickSearchResponseDisplay from './QuickSearchResponseDisplay';
@@ -204,6 +205,10 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
   // New state for conversation history
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   
+  // New state for loaded history data
+  const [loadedHistoryData, setLoadedHistoryData] = useState<ConversationHistoryItem[] | null>(null);
+  const [isHistoryConversation, setIsHistoryConversation] = useState(false);
+  
   // New state for continuous conversation
   const [conversationMode, setConversationMode] = useState<'follow-up' | 'new-topic' | null>(null);
   const [inputText, setInputText] = useState('');
@@ -235,6 +240,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
     const savedDeepContent = localStorage.getItem(`deeplearn_deep_content_${tabId}`);
     const isStreamingComplete = localStorage.getItem(`deeplearn_streaming_complete_${tabId}`) === 'true';
     const isDeepComplete = localStorage.getItem(`deeplearn_deep_complete_${tabId}`) === 'true';
+    const historyDataString = localStorage.getItem(`deeplearn_history_data_${tabId}`);
+    const isHistoryLoaded = localStorage.getItem(`deeplearn_history_loaded_${tabId}`) === 'true';
 
     console.log('📂 Loading saved data for tab:', {
       tabId,
@@ -244,9 +251,64 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
       streamingContentLength: savedStreamingContent.length,
       hasDeepContent: !!savedDeepContent,
       isStreamingComplete,
-      isDeepComplete
+      isDeepComplete,
+      isHistoryLoaded,
+      hasHistoryData: !!historyDataString
     });
 
+    // Check if this is a loaded history conversation
+    if (isHistoryLoaded && historyDataString) {
+      try {
+        const historyData: ConversationHistoryItem[] = JSON.parse(historyDataString);
+        setLoadedHistoryData(historyData);
+        setIsHistoryConversation(true);
+        
+        if (savedConversationId) {
+          setConversationId(savedConversationId);
+        }
+        
+        // Convert history data to conversation messages
+        const messages: ConversationMessage[] = [];
+        
+        historyData.forEach((item, index) => {
+          // Add user message
+          messages.push({
+            id: `history-user-${index}`,
+            type: 'user',
+            content: item.user_query,
+            timestamp: new Date(item.time).toLocaleString(),
+            mode: item.question_type === 'deep_learn' ? 'deep-learn' : 'quick-search'
+          });
+          
+          // Add assistant message
+          messages.push({
+            id: `history-assistant-${index}`,
+            type: 'assistant',
+            content: item.user_query,
+            timestamp: 'Assistant',
+            mode: item.question_type === 'deep_learn' ? 'deep-learn' : 'quick-search',
+            isStreaming: false,
+            streamingContent: item.question_type === 'deep_learn' ? undefined : item.llm_response,
+            deepLearnData: item.question_type === 'deep_learn' ? {
+              stream_info: 'Loaded from history',
+              conversation_id: savedConversationId || '',
+              llm_response: item.llm_response,
+              generation_status: item.generation_status,
+              final: true,
+              timestamp: item.time
+            } : undefined
+          });
+        });
+        
+        setConversationHistory(messages);
+        console.log('✅ Loaded history conversation with', messages.length, 'messages');
+        
+        return; // Exit early for history conversations
+      } catch (error) {
+        console.error('❌ Error parsing history data:', error);
+        // Fall through to normal conversation loading
+      }
+    }
     if (savedQuery) {
       if (savedMode) {
         setSelectedMode(savedMode);
@@ -382,6 +444,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
       try {
         setIsSubmitting(true);
         
+        // For history conversations, we can continue with the same conversation ID
+        // For new conversations, we generate a new one
         // Use existing conversation ID for new topic in same conversation
         const currentConversationId = conversationId || generateConversationId();
         
@@ -390,7 +454,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
           query: inputText.trim(),
           mode: selectedMode,
           webSearch: webSearchEnabled, // Use the web search state
-          isNewConversation: false
+          isNewConversation: false,
+          isHistoryConversation
         });
         
         // Add user message to conversation history
@@ -525,7 +590,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
           <h1 className="font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal">
-            Learning Journey: {conversationHistory[0]?.content || 'Research Topic'}
+            Learning Journey: {isHistoryConversation && loadedHistoryData ? loadedHistoryData[0]?.user_query : (conversationHistory[0]?.content || 'Research Topic')}
           </h1>
         </div>
 
@@ -599,7 +664,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                       <AssistantMessage 
                         message={message} 
                         isSplit={isSplit}
-                        conversationId={conversationId}
+                        conversationId={message.id === 'initial-assistant' || message.id.startsWith('history-assistant-0') ? conversationId : undefined}
                       />
                     )}
                   </div>

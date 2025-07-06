@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
 import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import { useToast } from '../../../../../hooks/useToast';
-import { getDeepLearningHistory, DeepLearningConversation } from '../../../../../api/workspaces/deep_learning/getHistory';
+import { getDeepLearningHistory, DeepLearningConversation, getHistoryConversation } from '../../../../../api/workspaces/deep_learning/getHistory';
 
 interface DeepLearnProps {
   isSplit?: boolean;
@@ -178,16 +178,87 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
   };
 
   const handleHistoryCardClick = (conversation: DeepLearningConversation) => {
-    // Save the conversation data for loading in response view
-    const tabId = window.location.pathname + window.location.search;
-    localStorage.setItem(`deeplearn_conversation_${tabId}`, conversation.conversation_id);
-    localStorage.setItem(`deeplearn_query_${tabId}`, conversation.title);
-    localStorage.setItem(`deeplearn_mode_${tabId}`, 'deep-learn'); // Default to deep-learn mode for history
-    
-    console.log('📖 Loading history conversation:', conversation.conversation_id);
-    
-    // Notify parent component to change view to response
-    onViewChange?.('deep-learn-response');
+    // Load the historical conversation data
+    loadHistoryConversation(conversation);
+  };
+
+  const loadHistoryConversation = async (conversation: DeepLearningConversation) => {
+    try {
+      console.log('📖 Loading history conversation:', conversation.conversation_id);
+      
+      // Show loading state or navigate immediately
+      onViewChange?.('deep-learn-response');
+      
+      // Fetch the conversation history
+      const historyData = await getHistoryConversation(conversation.conversation_id);
+      
+      if (historyData.success && historyData.conversation_json.length > 0) {
+        const tabId = window.location.pathname + window.location.search;
+        
+        // Clear any existing conversation data
+        localStorage.removeItem(`deeplearn_streaming_content_${tabId}`);
+        localStorage.removeItem(`deeplearn_streaming_complete_${tabId}`);
+        localStorage.removeItem(`deeplearn_deep_content_${tabId}`);
+        localStorage.removeItem(`deeplearn_deep_complete_${tabId}`);
+        localStorage.removeItem(`deeplearn_interactive_${tabId}`);
+        
+        // Save the conversation data for loading in response view
+        localStorage.setItem(`deeplearn_conversation_${tabId}`, conversation.conversation_id);
+        localStorage.setItem(`deeplearn_query_${tabId}`, conversation.title);
+        localStorage.setItem(`deeplearn_mode_${tabId}`, 'deep-learn'); // Default to deep-learn mode for history
+        
+        // Store the full conversation history
+        localStorage.setItem(`deeplearn_history_data_${tabId}`, JSON.stringify(historyData.conversation_json));
+        
+        // Store the latest interactive data (from the last conversation item)
+        const latestConversation = historyData.conversation_json[historyData.conversation_json.length - 1];
+        if (latestConversation.interactive) {
+          localStorage.setItem(`deeplearn_interactive_${tabId}`, JSON.stringify({
+            success: true,
+            conversation_title: latestConversation.interactive.conversation_title,
+            topic: latestConversation.interactive.conversation_title,
+            roadmap_node_index: latestConversation.roadmap_node_index,
+            concept_map: { nodes: [] }, // Placeholder for concept map
+            interactive_content: latestConversation.interactive,
+            files_updated: {
+              conversation_json: '',
+              concept_map_json: ''
+            },
+            timestamp: latestConversation.time
+          }));
+          
+          // Trigger event to update sidebar
+          window.dispatchEvent(new CustomEvent('deeplearn-interactive-update', {
+            detail: { 
+              tabId, 
+              data: {
+                success: true,
+                conversation_title: latestConversation.interactive.conversation_title,
+                topic: latestConversation.interactive.conversation_title,
+                roadmap_node_index: latestConversation.roadmap_node_index,
+                concept_map: { nodes: [] },
+                interactive_content: latestConversation.interactive,
+                files_updated: {
+                  conversation_json: '',
+                  concept_map_json: ''
+                },
+                timestamp: latestConversation.time
+              }
+            }
+          }));
+        }
+        
+        // Mark as history conversation loaded
+        localStorage.setItem(`deeplearn_history_loaded_${tabId}`, 'true');
+        
+        console.log('✅ Successfully loaded and stored history conversation data');
+      } else {
+        error('Failed to load conversation history');
+      }
+    } catch (err) {
+      console.error('❌ Error loading history conversation:', err);
+      error('Failed to load conversation history. Please try again.');
+    }
   };
 
   const handleSubmitQuery = async () => {
