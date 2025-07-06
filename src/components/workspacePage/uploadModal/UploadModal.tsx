@@ -17,6 +17,12 @@ interface UploadModalProps {
 const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) => {
   const [selectedSource, setSelectedSource] = useState<SourceType>('My Drive');
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
+  
+  // Track uploaded file IDs to pass to MyDriveContent
+  const uploadedFileIds = selectedFiles
+    .filter(f => f.source === 'upload' && f.uploadStatus === 'completed')
+    .map(f => f.fileId)
+    .filter(Boolean);
 
   if (!isOpen) return null;
 
@@ -27,15 +33,22 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) 
   };
 
   const handleUpload = () => {
-    onUpload(selectedFiles);
+    // Only pass completed files to the parent
+    const completedFiles = selectedFiles.filter(file => 
+      file.uploadStatus === 'completed' || !file.uploadStatus
+    );
+    onUpload(completedFiles);
     onClose();
-    setSelectedFiles([]);
+    // Clear only the completed files, keep any that are still uploading
+    setSelectedFiles(prev => prev.filter(file => 
+      file.uploadStatus === 'uploading' || file.uploadStatus === 'processing'
+    ));
   };
 
   const renderContent = () => {
     switch (selectedSource) {
       case 'My Drive':
-        return <MyDriveContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} />;
+        return <MyDriveContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} uploadedFileIds={uploadedFileIds} />;
       case 'Upload':
         return <UploadContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} />;
       case 'Websites':
@@ -43,22 +56,42 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) 
       case 'Paste':
         return <PasteContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} />;
       default:
-        return <MyDriveContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} />;
+        return <MyDriveContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} uploadedFileIds={uploadedFileIds} />;
     }
   };
 
   const getSelectedCount = () => {
-    const driveCount = selectedFiles.filter(f => f.source === 'drive').length;
-    const computerCount = selectedFiles.filter(f => f.source === 'computer').length;
+    // Count drive files that are ready
+    const driveCount = selectedFiles.filter(f => 
+      f.source === 'drive'
+    ).length;
+    
+    // Count uploaded files that are completed
+    const uploadCount = selectedFiles.filter(f => 
+      f.source === 'upload' && f.uploadStatus === 'completed'
+    ).length;
+    
     const websiteCount = selectedFiles.filter(f => f.source === 'website').length;
+    const pasteCount = selectedFiles.filter(f => f.source === 'paste').length;
+    const uploadingCount = selectedFiles.filter(f => f.uploadStatus === 'uploading' || f.uploadStatus === 'processing').length;
     
     const parts = [];
     if (driveCount > 0) parts.push(`${driveCount} files from Drive`);
-    if (computerCount > 0) parts.push(`${computerCount} file from Computer`);
+    if (uploadCount > 0) parts.push(`${uploadCount} files from Upload`);
     if (websiteCount > 0) parts.push(`${websiteCount} Websites selected`);
+    if (pasteCount > 0) parts.push(`${pasteCount} Text content added`);
+    if (uploadingCount > 0) parts.push(`${uploadingCount} files uploading`);
     
-    return parts.join(', ') || 'No files selected';
+    return parts.join(', ') || 'No files ready';
   };
+
+  // Check if there are any completed files ready for upload
+  const hasCompletedFiles = selectedFiles.some(file => 
+    file.source === 'drive' ||
+    (file.source === 'upload' && file.uploadStatus === 'completed') ||
+    file.source === 'website' ||
+    file.source === 'paste'
+  );
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -141,10 +174,15 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) 
             </Button>
             <Button
               onClick={handleUpload}
-              disabled={selectedFiles.length === 0}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-['Inter',Helvetica]"
+              disabled={!hasCompletedFiles}
+              className={`px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-['Inter',Helvetica] ${
+                !hasCompletedFiles ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              Upload
+              {selectedFiles.some(f => f.uploadStatus === 'uploading' || f.uploadStatus === 'processing') 
+                ? 'Use Ready Files' 
+                : 'Use Selected Files'
+              }
             </Button>
           </div>
         </div>

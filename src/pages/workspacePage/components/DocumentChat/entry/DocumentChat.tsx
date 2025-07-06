@@ -141,11 +141,14 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   const handleUpload = (files: any[]) => {
     console.log('Uploaded files:', files);
     
-    // Convert uploaded files to DocumentTag format
+    // Convert files to DocumentTag format, handling both upload and drive sources
     const newDocuments: DocumentTag[] = files
-      .filter(file => file.source === 'drive' && file.type === 'file') // Only include drive files that are actual files
+      .filter(file => 
+        (file.source === 'drive' && file.type === 'file') || // Drive files
+        (file.source === 'upload' && file.uploadStatus === 'completed') // Completed uploads
+      )
       .map(file => ({
-        id: file.id,
+        id: file.fileId || file.id, // Use fileId for uploaded files, id for drive files
         name: file.name,
         type: mapFileTypeToDocumentType(file.file_type || 'other')
       }));
@@ -157,7 +160,7 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
       return [...prev, ...uniqueNewDocs];
     });
     
-    console.log('📁 Added documents to selection:', newDocuments);
+    console.log('📁 Added documents to selection (including uploads):', newDocuments);
   };
   
   // Helper function to map file types to DocumentTag types

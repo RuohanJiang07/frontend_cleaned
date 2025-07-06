@@ -32,9 +32,10 @@ interface BreadcrumbItem {
 interface MyDriveContentProps {
   onFileSelection: (files: FileItem[]) => void;
   selectedFiles: FileItem[];
+  uploadedFileIds?: string[]; // File IDs that were uploaded via upload modal
 }
 
-const MyDriveContent: React.FC<MyDriveContentProps> = ({ onFileSelection, selectedFiles }) => {
+const MyDriveContent: React.FC<MyDriveContentProps> = ({ onFileSelection, selectedFiles, uploadedFileIds = [] }) => {
   const { error } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [currentFolderId, setCurrentFolderId] = useState('root');
@@ -139,10 +140,17 @@ const MyDriveContent: React.FC<MyDriveContentProps> = ({ onFileSelection, select
   const isSelected = (fileId: string) => {
     return selectedFiles.some(f => f.id === fileId);
   };
+  
+  const isUploadedFile = (fileId: string) => {
+    return uploadedFileIds.includes(fileId);
+  };
 
   const toggleFileSelection = (file: FileItem) => {
     // Only allow selection of files, not folders
     if (file.type === 'folder') return;
+    
+    // Don't allow toggling uploaded files - they should remain selected
+    if (isUploadedFile(file.id)) return;
     
     const currentSelected = selectedFiles.filter(f => f.source !== 'drive');
     const driveSelected = selectedFiles.filter(f => f.source === 'drive');
@@ -376,6 +384,12 @@ const MyDriveContent: React.FC<MyDriveContentProps> = ({ onFileSelection, select
                       Double-click to open
                     </span>
                   )}
+                  {/* Show indicator for uploaded files */}
+                  {isUploadedFile(file.id) && (
+                    <span className="ml-2 text-xs text-blue-600 font-['Inter',Helvetica]">
+                      (Uploaded)
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="col-span-2 flex items-center justify-center">
@@ -389,11 +403,18 @@ const MyDriveContent: React.FC<MyDriveContentProps> = ({ onFileSelection, select
               <div className="col-span-3 flex items-center justify-center">
                 {file.type === 'folder' ? (
                   <span className="text-sm text-gray-400 font-['Inter',Helvetica]">—</span>
+                ) : isUploadedFile(file.id) ? (
+                  // Uploaded files: gray disabled checkmark
+                  <div className="w-5 h-5 bg-gray-400 rounded flex items-center justify-center opacity-60">
+                    <CheckIcon className="w-3 h-3 text-white" />
+                  </div>
                 ) : isSelected(file.id) ? (
+                  // Regular selected files: blue checkmark
                   <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center">
                     <CheckIcon className="w-3 h-3 text-white" />
                   </div>
                 ) : (
+                  // Unselected files: empty checkbox
                   <div className="w-5 h-5 border-2 border-gray-300 rounded"></div>
                 )}
               </div>
