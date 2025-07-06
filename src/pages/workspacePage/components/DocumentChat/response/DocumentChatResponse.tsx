@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { submitDocumentChatQuery } from '../../../../../api/workspaces/document_chat/DocumentChatMain';
 import { useToast } from '../../../../../hooks/useToast';
+import { DocumentChatHistoryItem } from '../../../../../api/workspaces/document_chat/getHistory';
+import { getDriveFiles, DriveFileItem } from '../../../../../api/workspaces/drive/getFiles';
 
 interface DocumentChatResponseProps {
   onBack: () => void;
@@ -50,6 +52,53 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
 
   // State for reference files loaded from session storage
   const [referenceFiles, setReferenceFiles] = useState<ReferenceFile[]>([]);
+
+  // State for drive files to map reference IDs to actual file names
+  const [driveFiles, setDriveFiles] = useState<DriveFileItem[]>([]);
+  const [isLoadingDriveFiles, setIsLoadingDriveFiles] = useState(false);
+
+  // New state for loaded history data
+  const [loadedHistoryData, setLoadedHistoryData] = useState<DocumentChatHistoryItem[] | null>(null);
+  const [isHistoryConversation, setIsHistoryConversation] = useState(false);
+
+  // Load drive files to map reference IDs to file names
+  useEffect(() => {
+    loadDriveFiles();
+  }, []);
+
+  const loadDriveFiles = async () => {
+    try {
+      setIsLoadingDriveFiles(true);
+      const response = await getDriveFiles();
+      
+      if (response.success) {
+        setDriveFiles(response.drive_files.items);
+        console.log('📁 Loaded drive files for reference mapping:', response.drive_files.items.length, 'items');
+      }
+    } catch (err) {
+      console.error('Error loading drive files:', err);
+    } finally {
+      setIsLoadingDriveFiles(false);
+    }
+  };
+
+  // Helper function to get file name from reference ID
+  const getFileNameFromId = (fileId: string): string => {
+    const file = driveFiles.find(f => f.id === fileId);
+    return file ? file.name : `File ${fileId.substring(0, 8)}`;
+  };
+
+  // Helper function to get file type from reference ID
+  const getFileTypeFromId = (fileId: string): 'pdf' | 'doc' | 'txt' | 'other' => {
+    const file = driveFiles.find(f => f.id === fileId);
+    if (!file) return 'other';
+    
+    const fileType = file.file_type?.toLowerCase() || '';
+    if (fileType === 'pdf') return 'pdf';
+    if (fileType === 'doc' || fileType === 'docx') return 'doc';
+    if (fileType === 'txt' || fileType === 'md') return 'txt';
+    return 'other';
+  };
 
   // Load selected files from session storage on component mount
   useEffect(() => {
@@ -167,6 +216,77 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
   // Load saved data for this tab and initialize conversation history
   useEffect(() => {
     const tabId = window.location.pathname + window.location.search;
+    const historyDataString = localStorage.getItem(`documentchat_history_data_${tabId}`);
+    const isHistoryLoaded = localStorage.getItem(`documentchat_history_loaded_${tabId}`) === 'true';
+
+    // Check if this is a loaded history conversation
+    if (isHistoryLoaded && historyDataString) {
+      console.log('📂 Loading document chat history conversation data for tab:', tabId);
+      
+      try {
+        const historyData: DocumentChatHistoryItem[] = JSON.parse(historyDataString);
+        setLoadedHistoryData(historyData);
+        setIsHistoryConversation(true);
+        
+        const savedConversationId = localStorage.getItem(`documentchat_conversation_${tabId}`);
+        if (savedConversationId) {
+          setConversationId(savedConversationId);
+          
+          // Extract reference files from history data
+          if (historyData.length > 0 && historyData[0].references_selected) {
+            const referenceIds = historyData[0].references_selected;
+            
+            // Create reference files from the IDs
+            const historyReferenceFiles: ReferenceFile[] = referenceIds.map((refId, index) => ({
+              id: refId,
+              name: getFileNameFromId(refId),
+              type: getFileTypeFromId(refId)
+            }));
+            
+            setReferenceFiles(historyReferenceFiles);
+            console.log('📄 Loaded reference files from history:', historyReferenceFiles);
+          }
+        }
+        
+        // Convert history data to conversation messages
+        const messages: ConversationMessage[] = [];
+        
+        historyData.forEach((item, index) => {
+          // Add user message
+          messages.push({
+            id: `history-user-${index}`,
+            type: 'user',
+            content: item.user_query,
+            timestamp: new Date(item.time).toLocaleString(),
+          });
+          
+          // Add assistant message
+          messages.push({
+            id: `history-assistant-${index}`,
+            type: 'assistant',
+            content: item.user_query,
+            timestamp: 'Assistant',
+            isStreaming: false,
+            streamingContent: item.llm_response,
+          });
+        });
+        
+        setConversationHistory(messages);
+        console.log('✅ Loaded document chat history conversation with', messages.length, 'messages');
+        
+        // Exit early for history conversations - don't load any streaming data
+        return;
+      } catch (error) {
+        console.error('❌ Error parsing document chat history data:', error);
+        // If parsing fails, clear the history flags and fall through to normal loading
+        localStorage.removeItem(`documentchat_history_data_${tabId}`);
+        localStorage.removeItem(`documentchat_history_loaded_${tabId}`);
+      }
+    }
+    
+    // This code only runs for NON-history conversations (new streaming conversations)
+    console.log('📂 Loading saved document chat streaming data for NON-history conversation, tab:', tabId);
+    
     const savedConversationId = localStorage.getItem(`documentchat_conversation_${tabId}`);
     const savedQuery = localStorage.getItem(`documentchat_query_${tabId}`);
     const savedStreamingContent = localStorage.getItem(`documentchat_streaming_content_${tabId}`) || '';
@@ -490,6 +610,21 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
     }
   };
 
+  // Update reference files when rendering a history message
+  useEffect(() => {
+    if (isHistoryConversation && loadedHistoryData && loadedHistoryData.length > 0) {
+      const referenceIds = loadedHistoryData[0].references_selected;
+      if (referenceIds && referenceIds.length > 0) {
+        const historyReferenceFiles: ReferenceFile[] = referenceIds.map(refId => ({
+          id: refId,
+          name: getFileNameFromId(refId),
+          type: getFileTypeFromId(refId)
+        }));
+        setReferenceFiles(historyReferenceFiles);
+      }
+    }
+  }, [isHistoryConversation, loadedHistoryData, driveFiles]);
+
   // Render the main response content for a message
   const renderMessageContent = (message: ConversationMessage) => {
     if (message.type === 'user') {
@@ -521,15 +656,15 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
     return (
       <div className="mb-6">
         <div className="p-4">
-          <div className="prose max-w-none">
+          <div className="prose max-w-none font-['Inter',Helvetica]">
             <div className="text-sm text-black font-['Inter',Helvetica] mb-4 whitespace-pre-wrap leading-relaxed">
               {contentToRender}
-              
-              {/* Streaming indicator */}
-              {message.isStreaming && (
-                <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
-              )}
             </div>
+            
+            {/* Streaming indicator */}
+            {message.isStreaming && (
+              <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
+            )}
           </div>
 
           {/* Action Buttons - Only show for completed messages */}
@@ -590,7 +725,7 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
           <h1 className="font-medium text-base text-black font-['Inter',Helvetica]">
-            Learning Journey: {userQuery ? (userQuery.substring(0, 50) + (userQuery.length > 50 ? '...' : '')) : 'Document Chat'}
+            Learning Journey: {isHistoryConversation && loadedHistoryData ? loadedHistoryData[0]?.user_query : (userQuery ? (userQuery.substring(0, 50) + (userQuery.length > 50 ? '...' : '')) : 'Document Chat')}
           </h1>
         </div>
 

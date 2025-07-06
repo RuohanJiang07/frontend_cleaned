@@ -9,18 +9,13 @@ import {
 } from 'lucide-react';
 import DocumentChatResponse from '../response/DocumentChatResponse';
 import { UploadModal } from '../../../../../components/workspacePage/uploadModal';
+import { getDocumentChatHistory, DocumentChatConversation, getDocumentChatHistoryConversation } from '../../../../../api/workspaces/document_chat/getHistory';
+import { useToast } from '../../../../../hooks/useToast';
 
 interface DocumentTag {
   id: string;
   name: string;
   type: 'pdf' | 'doc' | 'txt' | 'other';
-}
-
-interface HistoryItem {
-  id: string;
-  title: string;
-  date: string;
-  fileCount: number;
 }
 
 interface DocumentChatProps {
@@ -30,6 +25,7 @@ interface DocumentChatProps {
 }
 
 function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatProps) {
+  const { error } = useToast();
   // State for selected documents from upload modal
   const [selectedDocuments, setSelectedDocuments] = useState<DocumentTag[]>([]);
 
@@ -38,22 +34,41 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   const [filteredItems, setFilteredItems] = useState<HistoryItem[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [historyConversations, setHistoryConversations] = useState<DocumentChatConversation[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const itemsPerPage = 8;
 
-  const historyItems: HistoryItem[] = Array.from({ length: 24 }, (_, i) => ({
-    id: (i + 1).toString(),
-    title: 'Cosmological Coupling and Black Holes',
-    date: 'Jun 1, 9:50 PM',
-    fileCount: 8
-  }));
+  // Load history when component mounts
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      setIsLoadingHistory(true);
+      const historyData = await getDocumentChatHistory();
+      
+      if (historyData.success) {
+        setHistoryConversations(historyData.document_chat_conversations.items);
+        console.log('📚 Loaded document chat history conversations:', historyData.document_chat_conversations.items.length);
+      } else {
+        error('Failed to load conversation history');
+      }
+    } catch (err) {
+      console.error('Error loading document chat history:', err);
+      error('Failed to load conversation history. Please try again.');
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   useEffect(() => {
-    const filtered = historyItems.filter(item =>
+    const filtered = historyConversations.filter(item =>
       item.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredItems(filtered);
     setCurrentPage(1); // Reset to first page when search changes
-  }, [searchQuery]);
+  }, [searchQuery, historyConversations]);
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
@@ -123,10 +138,58 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
     onViewChange?.('document-chat-response');
   };
 
-  const handleHistoryItemClick = (item: HistoryItem) => {
-    // For history items, don't set the new session flag
-    // This will load the existing conversation
-    onViewChange?.('document-chat-response');
+  const handleHistoryItemClick = (conversation: DocumentChatConversation) => {
+    // Load the historical conversation data
+    loadHistoryConversation(conversation);
+  };
+
+  const loadHistoryConversation = async (conversation: DocumentChatConversation) => {
+    try {
+      console.log('📖 Loading document chat history conversation:', conversation.conversation_id);
+      
+      // Fetch the conversation history
+      const historyData = await getDocumentChatHistoryConversation(conversation.conversation_id);
+      
+      if (historyData.success && historyData.conversation_json.length > 0) {
+        const tabId = window.location.pathname + window.location.search;
+        
+        // Clear ALL existing conversation data for this tab
+        localStorage.removeItem(`documentchat_streaming_content_${tabId}`);
+        localStorage.removeItem(`documentchat_streaming_complete_${tabId}`);
+        localStorage.removeItem(`documentchat_conversation_${tabId}`);
+        localStorage.removeItem(`documentchat_query_${tabId}`);
+        
+        // Save the conversation data for loading in response view
+        localStorage.setItem(`documentchat_conversation_${tabId}`, conversation.conversation_id);
+        localStorage.setItem(`documentchat_query_${tabId}`, conversation.title);
+        
+        // Store the full conversation history
+        localStorage.setItem(`documentchat_history_data_${tabId}`, JSON.stringify(historyData.conversation_json));
+        
+        // Mark as history conversation loaded
+        localStorage.setItem(`documentchat_history_loaded_${tabId}`, 'true');
+        
+        // Store reference files for the conversation
+        if (conversation.references_selected && conversation.references_selected.length > 0) {
+          const referenceFiles = conversation.references_selected.map((refId, index) => ({
+            id: refId,
+            name: `Reference File ${index + 1}`, // We don't have the actual file names from the API
+            type: 'pdf' // Default type since we don't have this info
+          }));
+          sessionStorage.setItem('documentchat_selected_files', JSON.stringify(referenceFiles));
+        }
+        
+        console.log('✅ Successfully loaded and stored document chat history conversation data');
+        
+        // NOW navigate to response view after all data is properly stored
+        onViewChange?.('document-chat-response');
+      } else {
+        error('Failed to load conversation history');
+      }
+    } catch (err) {
+      console.error('❌ Error loading document chat history conversation:', err);
+      error('Failed to load conversation history. Please try again.');
+    }
   };
 
   const handleBackToEntry = () => {
@@ -163,6 +226,18 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
     console.log('📁 Added documents to selection (including uploads):', newDocuments);
   };
   
+  // Helper function to format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   // Helper function to map file types to DocumentTag types
   const mapFileTypeToDocumentType = (fileType: string): 'pdf' | 'doc' | 'txt' | 'other' => {
     switch (fileType.toLowerCase()) {
@@ -307,72 +382,101 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
           </div>
 
           <div className="grid grid-cols-4 gap-x-6 gap-y-[36px] mt-[41px] mb-8">
-            {getCurrentPageItems().map((item, index) => {
-              const colors = ['#E5F6FF', '#ECF4F4', '#ECF1F6', '#DEEEFF'];
-              const bgColor = colors[index % 4];
-              return (
+            {isLoadingHistory ? (
+              // Loading state
+              Array.from({ length: 8 }, (_, index) => (
                 <Card
-                  key={item.id}
-                  className="w-[90%] h-[154px] rounded-[8px] shadow-[0px_3px_20px_1px_rgba(2,119,189,0.13),0px_2px_4px_0px_rgba(0,0,0,0.25)] hover:shadow-md transition-shadow cursor-pointer mx-auto"
-                  style={{ backgroundColor: bgColor }}
-                  onClick={() => handleHistoryItemClick(item)}
+                  key={`loading-${index}`}
+                  className="w-[90%] h-[154px] rounded-[8px] shadow-[0px_3px_20px_1px_rgba(2,119,189,0.13),0px_2px_4px_0px_rgba(0,0,0,0.25)] mx-auto animate-pulse"
                 >
-                  <CardContent className="p-4 h-full flex flex-col justify-between relative">
-                    <div>
-                      <svg className="w-[40px] h-[39px]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 39" fill="none">
-                        <path d="M28.2875 5.86219C27.2128 4.77789 25.9251 3.91582 24.5013 3.32742C23.0774 2.73902 21.5465 2.43636 20 2.4375C17.0163 2.4375 14.1548 3.59314 12.045 5.65018C9.93526 7.70721 8.75 10.4972 8.75 13.4063C8.86256 15.4541 9.46165 17.4484 10.5 19.2319C10.8258 19.8626 11.1179 20.5094 11.375 21.1697L13.875 27.2634C13.9652 27.4845 14.1198 27.675 14.3197 27.8115C14.5196 27.9479 14.7561 28.0243 15 28.0313H25C25.2503 28.0315 25.495 27.9584 25.7023 27.8215C25.9095 27.6846 26.0699 27.4902 26.1625 27.2634L28.6625 21.1697C28.95 20.475 29.25 19.8291 29.5375 19.1953C30.5142 17.4024 31.0975 15.4309 31.25 13.4063C31.3025 12.0191 31.0671 10.6359 30.5581 9.33957C30.049 8.04324 29.2767 6.86048 28.2875 5.86219Z" fill="#FBC02D" />
-                        <path d="M25 29.25H15C14.6685 29.25 14.3506 29.3784 14.1161 29.607C13.8817 29.8355 13.75 30.1455 13.75 30.4688V34.125C13.7484 34.3521 13.8119 34.5752 13.9334 34.769C14.0549 34.9628 14.2295 35.1197 14.4375 35.2219L16.9375 36.4406C17.1127 36.5234 17.3054 36.5651 17.5 36.5625H22.5C22.6947 36.5651 22.8873 36.5234 23.0625 36.4406L25.5625 35.2219C25.7706 35.1197 25.9452 34.9628 26.0667 34.769C26.1881 34.5752 26.2517 34.3521 26.25 34.125V30.4688C26.25 30.1455 26.1183 29.8355 25.8839 29.607C25.6495 29.3784 25.3316 29.25 25 29.25Z" fill="#FF6F00" />
-                        <path d="M25.0005 17.0625H15.0005C14.788 17.0629 14.579 17.0105 14.3931 16.9103C14.2072 16.8101 14.0506 16.6653 13.938 16.4897C13.8283 16.3044 13.7705 16.0942 13.7705 15.8803C13.7705 15.6664 13.8283 15.4562 13.938 15.2709L16.438 10.3959C16.5412 10.2067 16.6937 10.0473 16.8803 9.93391C17.0668 9.8205 17.2808 9.75706 17.5005 9.75H22.5005C22.832 9.75 23.1499 9.8784 23.3844 10.107C23.6188 10.3355 23.7505 10.6455 23.7505 10.9688C23.7505 11.292 23.6188 11.602 23.3844 11.8305C23.1499 12.0591 22.832 12.1875 22.5005 12.1875H18.3255L17.0755 14.625H25.0005C25.332 14.625 25.6499 14.7534 25.8844 14.982C26.1188 15.2105 26.2505 15.5205 26.2505 15.8438C26.2505 16.167 26.1188 16.477 25.8844 16.7055C25.6499 16.9341 25.332 17.0625 25.0005 17.0625Z" fill="#FAFAFA" />
-                        <path d="M20 21.9375C19.6685 21.9375 19.3505 21.8091 19.1161 21.5805C18.8817 21.352 18.75 21.042 18.75 20.7188V15.8438C18.75 15.5205 18.8817 15.2105 19.1161 14.982C19.3505 14.7534 19.6685 14.625 20 14.625C20.3315 14.625 20.6495 14.7534 20.8839 14.982C21.1183 15.2105 21.25 15.5205 21.25 15.8438V20.7188C21.25 21.042 21.1183 21.352 20.8839 21.5805C20.6495 21.8091 20.3315 21.9375 20 21.9375Z" fill="#FAFAFA" />
-                        <path d="M20 2.4375C17.0163 2.4375 14.1548 3.59313 12.045 5.65017C9.93526 7.70721 8.75 10.4972 8.75 13.4062C8.85088 15.4489 9.4417 17.44 10.475 19.2197C10.8 19.89 11.1 20.5116 11.35 21.1697L13.85 27.2634C13.9418 27.4883 14.1002 27.6814 14.3051 27.8181C14.5099 27.9549 14.7518 28.0291 15 28.0312H20V2.4375Z" fill="#FFEE58" />
-                        <path d="M15 29.25C14.6685 29.25 14.3505 29.3784 14.1161 29.607C13.8817 29.8355 13.75 30.1455 13.75 30.4688V34.125C13.7519 34.3513 13.8183 34.5727 13.942 34.7643C14.0656 34.9559 14.2415 35.1101 14.45 35.2097L16.95 36.4284C17.1204 36.5136 17.3086 36.5595 17.5 36.5625H20V29.25H15Z" fill="#FF8F00" />
-                        <path d="M22.5 12.1875C22.8315 12.1875 23.1495 12.0591 23.3839 11.8305C23.6183 11.602 23.75 11.292 23.75 10.9688C23.75 10.6455 23.6183 10.3355 23.3839 10.107C23.1495 9.8784 22.8315 9.75 22.5 9.75H20V12.1875H22.5Z" fill="#FF6F00" />
-                        <path d="M25 14.625H20V17.0625H25C25.3315 17.0625 25.6495 16.9341 25.8839 16.7055C26.1183 16.477 26.25 16.167 26.25 15.8438C26.25 15.5205 26.1183 15.2105 25.8839 14.982C25.6495 14.7534 25.3315 14.625 25 14.625Z" fill="#FF6F00" />
-                        <path d="M16.9997 14.625L18.2497 12.1875H19.9997V9.75H17.4997C17.2689 9.75068 17.0427 9.81367 16.8464 9.93199C16.65 10.0503 16.4911 10.2193 16.3872 10.4203L13.8872 15.2953C13.7775 15.4806 13.7197 15.6908 13.7197 15.9047C13.7197 16.1186 13.7775 16.3288 13.8872 16.5141C14.0072 16.6924 14.1731 16.8369 14.3683 16.9331C14.5635 17.0294 14.7813 17.074 14.9997 17.0625H19.9997V14.625H16.9997Z" fill="#FF8F00" />
-                        <path d="M18.75 15.8438V20.7188C18.75 21.042 18.8817 21.352 19.1161 21.5805C19.3505 21.8091 19.6685 21.9375 20 21.9375V14.625C19.6685 14.625 19.3505 14.7534 19.1161 14.982C18.8817 15.2105 18.75 15.5205 18.75 15.8438Z" fill="#FF8F00" />
-                        <path d="M20 14.625V21.9375C20.3315 21.9375 20.6495 21.8091 20.8839 21.5805C21.1183 21.352 21.25 21.042 21.25 20.7188V15.8438C21.25 15.5205 21.1183 15.2105 20.8839 14.982C20.6495 14.7534 20.3315 14.625 20 14.625Z" fill="#FF6F00" />
-                        <path d="M25 28.0312H15C14.7518 28.0291 14.5099 27.9549 14.3051 27.8181C14.1002 27.6814 13.9418 27.4883 13.85 27.2634L11.35 21.1697C11.1 20.5116 10.8 19.89 10.475 19.2197C9.4417 17.44 8.85088 15.4489 8.75 13.4062C8.75 10.4972 9.93526 7.70721 12.045 5.65017C14.1548 3.59313 17.0163 2.4375 20 2.4375C21.5425 2.43824 23.0691 2.74185 24.4886 3.33024C25.9082 3.91862 27.1916 4.77973 28.2625 5.86219C29.2592 6.85639 30.038 8.03788 30.5516 9.33481C31.0652 10.6317 31.3028 12.017 31.25 13.4062C31.0928 15.4092 30.5141 17.3591 29.55 19.1344C29.25 19.7559 28.95 20.3531 28.675 21.1087L26.175 27.2025C26.0918 27.4426 25.934 27.6515 25.7234 27.8C25.5128 27.9485 25.2599 28.0294 25 28.0312ZM15.85 25.5938H24.1625L26.25 20.2678C26.5375 19.5244 26.8625 18.8419 27.175 18.1716C28.0251 16.7033 28.5609 15.0822 28.75 13.4062C28.7894 12.3349 28.6047 11.267 28.2071 10.2676C27.8095 9.26814 27.2074 8.35807 26.4375 7.59281C25.6057 6.74268 24.6073 6.06405 23.5015 5.5972C22.3957 5.13034 21.205 4.88475 20 4.875C17.6794 4.875 15.4538 5.77383 13.8128 7.37374C12.1719 8.97366 11.25 11.1436 11.25 13.4062C11.3633 15.0834 11.8677 16.7133 12.725 18.1716C13.0798 18.8657 13.3969 19.5777 13.675 20.3044L15.85 25.5938Z" fill="#263238" />
-                        <path d="M22.5 36.5625H17.5C17.3086 36.5595 17.1204 36.5136 16.95 36.4284L14.45 35.2097C14.2415 35.1101 14.0656 34.9559 13.942 34.7643C13.8183 34.5727 13.7519 34.3513 13.75 34.125V30.4688C13.75 30.1455 13.8817 29.8355 14.1161 29.607C14.3505 29.3784 14.6685 29.25 15 29.25H25C25.3315 29.25 25.6495 29.3784 25.8839 29.607C26.1183 29.8355 26.25 30.1455 26.25 30.4688V34.125C26.2493 34.3501 26.1847 34.5705 26.0633 34.762C25.942 34.9535 25.7686 35.1084 25.5625 35.2097L23.0625 36.4284C22.8883 36.5154 22.6957 36.5614 22.5 36.5625ZM17.8 34.125H22.2125L23.75 33.3694V31.6875H16.25V33.3694L17.8 34.125Z" fill="#263238" />
-                      </svg>
+                  <CardContent className="p-4 h-full flex flex-col justify-between">
+                    <div className="w-[40px] h-[39px] bg-gray-200 rounded" />
+                    <div className="flex flex-col space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-3/4" />
+                      <div className="h-3 bg-gray-200 rounded w-1/2" />
                     </div>
-
-                    <div className="flex flex-col">
-                      <h3 className="font-['Inter'] text-[12px] font-medium text-[#1C1C1C] leading-normal line-clamp-2">
-                        {item.title}
-                      </h3>
-                      <p className="font-['Inter'] text-[10px] font-medium text-[#636363] leading-normal mt-2">
-                        {item.date}
-                      </p>
-                    </div>
-
-                    <span className="absolute top-4 right-4 text-xs font-['Inter'] text-gray-600">
-                      {item.fileCount} Files
-                    </span>
                   </CardContent>
                 </Card>
-              );
-            })}
+              ))
+            ) : filteredItems.length > 0 ? (
+              // Real history data
+              getCurrentPageItems().map((conversation, index) => {
+                const colors = ['#E5F6FF', '#ECF4F4', '#ECF1F6', '#DEEEFF'];
+                const bgColor = colors[index % 4];
+                return (
+                  <Card
+                    key={conversation.conversation_id}
+                    className="w-[90%] h-[154px] rounded-[8px] shadow-[0px_3px_20px_1px_rgba(2,119,189,0.13),0px_2px_4px_0px_rgba(0,0,0,0.25)] hover:shadow-md transition-shadow cursor-pointer mx-auto"
+                    style={{ backgroundColor: bgColor }}
+                    onClick={() => handleHistoryItemClick(conversation)}
+                  >
+                    <CardContent className="p-4 h-full flex flex-col justify-between relative">
+                      <div>
+                        <svg className="w-[40px] h-[39px]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 39" fill="none">
+                          <path d="M28.2875 5.86219C27.2128 4.77789 25.9251 3.91582 24.5013 3.32742C23.0774 2.73902 21.5465 2.43636 20 2.4375C17.0163 2.4375 14.1548 3.59314 12.045 5.65018C9.93526 7.70721 8.75 10.4972 8.75 13.4063C8.86256 15.4541 9.46165 17.4484 10.5 19.2319C10.8258 19.8626 11.1179 20.5094 11.375 21.1697L13.875 27.2634C13.9652 27.4845 14.1198 27.675 14.3197 27.8115C14.5196 27.9479 14.7561 28.0243 15 28.0313H25C25.2503 28.0315 25.495 27.9584 25.7023 27.8215C25.9095 27.6846 26.0699 27.4902 26.1625 27.2634L28.6625 21.1697C28.95 20.475 29.25 19.8291 29.5375 19.1953C30.5142 17.4024 31.0975 15.4309 31.25 13.4063C31.3025 12.0191 31.0671 10.6359 30.5581 9.33957C30.049 8.04324 29.2767 6.86048 28.2875 5.86219Z" fill="#FBC02D" />
+                          <path d="M25 29.25H15C14.6685 29.25 14.3506 29.3784 14.1161 29.607C13.8817 29.8355 13.75 30.1455 13.75 30.4688V34.125C13.7484 34.3521 13.8119 34.5752 13.9334 34.769C14.0549 34.9628 14.2295 35.1197 14.4375 35.2219L16.9375 36.4406C17.1127 36.5234 17.3054 36.5651 17.5 36.5625H22.5C22.6947 36.5651 22.8873 36.5234 23.0625 36.4406L25.5625 35.2219C25.7706 35.1197 25.9452 34.9628 26.0667 34.769C26.1881 34.5752 26.2517 34.3521 26.25 34.125V30.4688C26.25 30.1455 26.1183 29.8355 25.8839 29.607C25.6495 29.3784 25.3316 29.25 25 29.25Z" fill="#FF6F00" />
+                          <path d="M25.0005 17.0625H15.0005C14.788 17.0629 14.579 17.0105 14.3931 16.9103C14.2072 16.8101 14.0506 16.6653 13.938 16.4897C13.8283 16.3044 13.7705 16.0942 13.7705 15.8803C13.7705 15.6664 13.8283 15.4562 13.938 15.2709L16.438 10.3959C16.5412 10.2067 16.6937 10.0473 16.8803 9.93391C17.0668 9.8205 17.2808 9.75706 17.5005 9.75H22.5005C22.832 9.75 23.1499 9.8784 23.3844 10.107C23.6188 10.3355 23.7505 10.6455 23.7505 10.9688C23.7505 11.292 23.6188 11.602 23.3844 11.8305C23.1499 12.0591 22.832 12.1875 22.5005 12.1875H18.3255L17.0755 14.625H25.0005C25.332 14.625 25.6499 14.7534 25.8844 14.982C26.1188 15.2105 26.2505 15.5205 26.2505 15.8438C26.2505 16.167 26.1188 16.477 25.8844 16.7055C25.6499 16.9341 25.332 17.0625 25.0005 17.0625Z" fill="#FAFAFA" />
+                          <path d="M20 21.9375C19.6685 21.9375 19.3505 21.8091 19.1161 21.5805C18.8817 21.352 18.75 21.042 18.75 20.7188V15.8438C18.75 15.5205 18.8817 15.2105 19.1161 14.982C19.3505 14.7534 19.6685 14.625 20 14.625C20.3315 14.625 20.6495 14.7534 20.8839 14.982C21.1183 15.2105 21.25 15.5205 21.25 15.8438V20.7188C21.25 21.042 21.1183 21.352 20.8839 21.5805C20.6495 21.8091 20.3315 21.9375 20 21.9375Z" fill="#FAFAFA" />
+                          <path d="M20 2.4375C17.0163 2.4375 14.1548 3.59313 12.045 5.65017C9.93526 7.70721 8.75 10.4972 8.75 13.4062C8.85088 15.4489 9.4417 17.44 10.475 19.2197C10.8 19.89 11.1 20.5116 11.35 21.1697L13.85 27.2634C13.9418 27.4883 14.1002 27.6814 14.3051 27.8181C14.5099 27.9549 14.7518 28.0291 15 28.0312H20V2.4375Z" fill="#FFEE58" />
+                          <path d="M15 29.25C14.6685 29.25 14.3505 29.3784 14.1161 29.607C13.8817 29.8355 13.75 30.1455 13.75 30.4688V34.125C13.7519 34.3513 13.8183 34.5727 13.942 34.7643C14.0656 34.9559 14.2415 35.1101 14.45 35.2097L16.95 36.4284C17.1204 36.5136 17.3086 36.5595 17.5 36.5625H20V29.25H15Z" fill="#FF8F00" />
+                          <path d="M22.5 12.1875C22.8315 12.1875 23.1495 12.0591 23.3839 11.8305C23.6183 11.602 23.75 11.292 23.75 10.9688C23.75 10.6455 23.6183 10.3355 23.3839 10.107C23.1495 9.8784 22.8315 9.75 22.5 9.75H20V12.1875H22.5Z" fill="#FF6F00" />
+                          <path d="M25 14.625H20V17.0625H25C25.3315 17.0625 25.6495 16.9341 25.8839 16.7055C26.1183 16.477 26.25 16.167 26.25 15.8438C26.25 15.5205 26.1183 15.2105 25.8839 14.982C25.6495 14.7534 25.3315 14.625 25 14.625Z" fill="#FF6F00" />
+                          <path d="M16.9997 14.625L18.2497 12.1875H19.9997V9.75H17.4997C17.2689 9.75068 17.0427 9.81367 16.8464 9.93199C16.65 10.0503 16.4911 10.2193 16.3872 10.4203L13.8872 15.2953C13.7775 15.4806 13.7197 15.6908 13.7197 15.9047C13.7197 16.1186 13.7775 16.3288 13.8872 16.5141C14.0072 16.6924 14.1731 16.8369 14.3683 16.9331C14.5635 17.0294 14.7813 17.074 14.9997 17.0625H19.9997V14.625H16.9997Z" fill="#FF8F00" />
+                          <path d="M18.75 15.8438V20.7188C18.75 21.042 18.8817 21.352 19.1161 21.5805C19.3505 21.8091 19.6685 21.9375 20 21.9375V14.625C19.6685 14.625 19.3505 14.7534 19.1161 14.982C18.8817 15.2105 18.75 15.5205 18.75 15.8438Z" fill="#FF8F00" />
+                          <path d="M20 14.625V21.9375C20.3315 21.9375 20.6495 21.8091 20.8839 21.5805C21.1183 21.352 21.25 21.042 21.25 20.7188V15.8438C21.25 15.5205 21.1183 15.2105 20.8839 14.982C20.6495 14.7534 20.3315 14.625 20 14.625Z" fill="#FF6F00" />
+                          <path d="M25 28.0312H15C14.7518 28.0291 14.5099 27.9549 14.3051 27.8181C14.1002 27.6814 13.9418 27.4883 13.85 27.2634L11.35 21.1697C11.1 20.5116 10.8 19.89 10.475 19.2197C9.4417 17.44 8.85088 15.4489 8.75 13.4062C8.75 10.4972 9.93526 7.70721 12.045 5.65017C14.1548 3.59313 17.0163 2.4375 20 2.4375C21.5425 2.43824 23.0691 2.74185 24.4886 3.33024C25.9082 3.91862 27.1916 4.77973 28.2625 5.86219C29.2592 6.85639 30.038 8.03788 30.5516 9.33481C31.0652 10.6317 31.3028 12.017 31.25 13.4062C31.0928 15.4092 30.5141 17.3591 29.55 19.1344C29.25 19.7559 28.95 20.3531 28.675 21.1087L26.175 27.2025C26.0918 27.4426 25.934 27.6515 25.7234 27.8C25.5128 27.9485 25.2599 28.0294 25 28.0312ZM15.85 25.5938H24.1625L26.25 20.2678C26.5375 19.5244 26.8625 18.8419 27.175 18.1716C28.0251 16.7033 28.5609 15.0822 28.75 13.4062C28.7894 12.3349 28.6047 11.267 28.2071 10.2676C27.8095 9.26814 27.2074 8.35807 26.4375 7.59281C25.6057 6.74268 24.6073 6.06405 23.5015 5.5972C22.3957 5.13034 21.205 4.88475 20 4.875C17.6794 4.875 15.4538 5.77383 13.8128 7.37374C12.1719 8.97366 11.25 11.1436 11.25 13.4062C11.3633 15.0834 11.8677 16.7133 12.725 18.1716C13.0798 18.8657 13.3969 19.5777 13.675 20.3044L15.85 25.5938Z" fill="#263238" />
+                          <path d="M22.5 36.5625H17.5C17.3086 36.5595 17.1204 36.5136 16.95 36.4284L14.45 35.2097C14.2415 35.1101 14.0656 34.9559 13.942 34.7643C13.8183 34.5727 13.7519 34.3513 13.75 34.125V30.4688C13.75 30.1455 13.8817 29.8355 14.1161 29.607C14.3505 29.3784 14.6685 29.25 15 29.25H25C25.3315 29.25 25.6495 29.3784 25.8839 29.607C26.1183 29.8355 26.25 30.1455 26.25 30.4688V34.125C26.2493 34.3501 26.1847 34.5705 26.0633 34.762C25.942 34.9535 25.7686 35.1084 25.5625 35.2097L23.0625 36.4284C22.8883 36.5154 22.6957 36.5614 22.5 36.5625ZM17.8 34.125H22.2125L23.75 33.3694V31.6875H16.25V33.3694L17.8 34.125Z" fill="#263238" />
+                        </svg>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <h3 className="font-['Inter'] text-[12px] font-medium text-[#1C1C1C] leading-normal line-clamp-2">
+                          {conversation.title}
+                        </h3>
+                        <p className="font-['Inter'] text-[10px] font-medium text-[#636363] leading-normal mt-2">
+                          {formatDate(conversation.created_at)}
+                        </p>
+                      </div>
+
+                      <span className="absolute top-4 right-4 text-xs font-['Inter'] text-gray-600">
+                        {conversation.references_selected && Array.isArray(conversation.references_selected) ? conversation.references_selected.length : 0} Files
+                      </span>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              // Empty state
+              <div className="col-span-4 flex flex-col items-center justify-center py-12">
+                <div className="text-gray-500 text-lg mb-2">No conversation history found</div>
+                <div className="text-gray-400 text-sm">
+                  Start a new document chat to see your conversations here
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Pagination */}
-          <div className="flex justify-center items-center gap-[9px] mt-[60px]">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+          {!isLoadingHistory && totalPages > 1 && (
+            <div className="flex justify-center items-center gap-[9px] mt-[60px]">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-[19px] h-[20px] font-['Inter'] text-[14px] font-medium text-black leading-normal ${currentPage === pageNum ? 'bg-[#ECF1F6] rounded-[6px]' : ''
+                    }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
               <button
-                key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={`w-[19px] h-[20px] font-['Inter'] text-[14px] font-medium text-black leading-normal ${currentPage === pageNum ? 'bg-[#ECF1F6] rounded-[6px]' : ''
-                  }`}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className="w-[45px] h-[23px] bg-[#ECF1F6] rounded-[6px] font-['Inter'] text-[14px] font-medium text-black leading-normal ml-[9px]"
               >
-                {pageNum}
+                Next
               </button>
-            ))}
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              className="w-[45px] h-[23px] bg-[#ECF1F6] rounded-[6px] font-['Inter'] text-[14px] font-medium text-black leading-normal ml-[9px]"
-            >
-              Next
-            </button>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Upload Modal */}
