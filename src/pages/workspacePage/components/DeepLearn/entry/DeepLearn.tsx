@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
 import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import { useToast } from '../../../../../hooks/useToast';
-import { getDeepLearningHistory, getHistoryConversation, DeepLearningConversation, ConversationEntry } from '../../../../../api/workspaces/deep_learning/getHistory';
+import { getDeepLearningHistory, DeepLearningConversation } from '../../../../../api/workspaces/deep_learning/getHistory';
 
 interface DeepLearnProps {
   isSplit?: boolean;
@@ -178,87 +178,16 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
   };
 
   const handleHistoryCardClick = (conversation: DeepLearningConversation) => {
-    // Load the historical conversation
-    loadHistoryConversation(conversation);
-  };
-
-  const loadHistoryConversation = async (conversation: DeepLearningConversation) => {
-    try {
-      console.log('📖 Loading history conversation:', conversation.conversation_id);
-      
-      // Show loading state
-      const tabId = window.location.pathname + window.location.search;
-      localStorage.setItem(`deeplearn_conversation_${tabId}`, conversation.conversation_id);
-      localStorage.setItem(`deeplearn_query_${tabId}`, conversation.title);
-      localStorage.setItem(`deeplearn_mode_${tabId}`, 'deep-learn');
-      localStorage.setItem(`deeplearn_loading_history_${tabId}`, 'true');
-      
-      // Clear any existing content
-      localStorage.removeItem(`deeplearn_streaming_content_${tabId}`);
-      localStorage.removeItem(`deeplearn_deep_content_${tabId}`);
-      localStorage.removeItem(`deeplearn_interactive_${tabId}`);
-      localStorage.removeItem(`deeplearn_history_conversation_${tabId}`);
-      
-      // Navigate to response page immediately to show loading
-      onViewChange?.('deep-learn-response');
-      
-      // Fetch the conversation data
-      const historyData = await getHistoryConversation(conversation.conversation_id);
-      
-      if (historyData.success && historyData.conversation_json) {
-        console.log('✅ Successfully loaded history conversation:', historyData);
-        
-        // Store the full conversation data
-        localStorage.setItem(`deeplearn_history_conversation_${tabId}`, JSON.stringify(historyData.conversation_json));
-        
-        // Store the latest interactive data (from the last conversation entry)
-        const lastEntry = historyData.conversation_json[historyData.conversation_json.length - 1];
-        if (lastEntry && lastEntry.interactive) {
-          localStorage.setItem(`deeplearn_interactive_${tabId}`, JSON.stringify({
-            success: true,
-            conversation_title: lastEntry.interactive.conversation_title,
-            topic: lastEntry.interactive.conversation_title,
-            roadmap_node_index: lastEntry.roadmap_node_index,
-            concept_map: { nodes: [] }, // Placeholder
-            interactive_content: {
-              conversation_title: lastEntry.interactive.conversation_title,
-              recommended_videos: lastEntry.interactive.recommended_videos,
-              related_webpages: lastEntry.interactive.related_webpages,
-              related_concepts: lastEntry.interactive.related_concepts
-            },
-            files_updated: {
-              conversation_json: '',
-              concept_map_json: ''
-            },
-            timestamp: new Date().toISOString()
-          }));
-        }
-        
-        // Mark as loaded
-        localStorage.setItem(`deeplearn_history_loaded_${tabId}`, 'true');
-        localStorage.removeItem(`deeplearn_loading_history_${tabId}`);
-        
-        // Trigger events to update the response view
-        window.dispatchEvent(new CustomEvent('deeplearn-history-loaded', {
-          detail: { tabId, conversationData: historyData.conversation_json }
-        }));
-        
-        if (lastEntry && lastEntry.interactive) {
-          window.dispatchEvent(new CustomEvent('deeplearn-interactive-update', {
-            detail: { tabId, data: lastEntry.interactive }
-          }));
-        }
-      } else {
-        error('Failed to load conversation history');
-        localStorage.removeItem(`deeplearn_loading_history_${tabId}`);
-      }
-    } catch (err) {
-      console.error('❌ Error loading history conversation:', err);
-      error('Failed to load conversation. Please try again.');
-      
-      const tabId = window.location.pathname + window.location.search;
-      localStorage.removeItem(`deeplearn_loading_history_${tabId}`);
-    }
+    // Save the conversation data for loading in response view
+    const tabId = window.location.pathname + window.location.search;
+    localStorage.setItem(`deeplearn_conversation_${tabId}`, conversation.conversation_id);
+    localStorage.setItem(`deeplearn_query_${tabId}`, conversation.title);
+    localStorage.setItem(`deeplearn_mode_${tabId}`, 'deep-learn'); // Default to deep-learn mode for history
+    
+    console.log('📖 Loading history conversation:', conversation.conversation_id);
+    
+    // Notify parent component to change view to response
+    onViewChange?.('deep-learn-response');
   };
 
   const handleSubmitQuery = async () => {

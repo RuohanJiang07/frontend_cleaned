@@ -10,7 +10,6 @@ import { DeepLearnStreamingData } from '../../../../../api/workspaces/deep_learn
 import { submitQuickSearchQuery } from '../../../../../api/workspaces/deep_learning/deepLearnMain';
 import { submitDeepLearnDeepQuery } from '../../../../../api/workspaces/deep_learning/deepLearn_deeplearn';
 import Interactive from './Interactive';
-import { ConversationEntry } from '../../../../../api/workspaces/deep_learning/getHistory';
 import DeepLearnResponseDisplay from './DeepLearnResponseDisplay';
 import QuickSearchResponseDisplay from './QuickSearchResponseDisplay';
 
@@ -200,15 +199,10 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
   const { error, success } = useToast();
   const [selectedMode, setSelectedMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
   const [conversationId, setConversationId] = useState<string>('');
-  const [userQuery, setUserQuery] = useState<string>('');
   const [webSearchEnabled, setWebSearchEnabled] = useState(true); // Add web search state
 
   // New state for conversation history
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
-  
-  // New state for loaded history conversation
-  const [historyConversation, setHistoryConversation] = useState<ConversationEntry[] | null>(null);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   
   // New state for continuous conversation
   const [conversationMode, setConversationMode] = useState<'follow-up' | 'new-topic' | null>(null);
@@ -237,9 +231,6 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
     const savedConversationId = localStorage.getItem(`deeplearn_conversation_${tabId}`);
     const savedQuery = localStorage.getItem(`deeplearn_query_${tabId}`);
     const savedMode = localStorage.getItem(`deeplearn_mode_${tabId}`) as 'deep-learn' | 'quick-search';
-    const isLoadingHistory = localStorage.getItem(`deeplearn_loading_history_${tabId}`) === 'true';
-    const isHistoryLoaded = localStorage.getItem(`deeplearn_history_loaded_${tabId}`) === 'true';
-    const savedHistoryConversation = localStorage.getItem(`deeplearn_history_conversation_${tabId}`);
     const savedStreamingContent = localStorage.getItem(`deeplearn_streaming_content_${tabId}`) || '';
     const savedDeepContent = localStorage.getItem(`deeplearn_deep_content_${tabId}`);
     const isStreamingComplete = localStorage.getItem(`deeplearn_streaming_complete_${tabId}`) === 'true';
@@ -250,83 +241,11 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
       conversationId: savedConversationId,
       query: savedQuery,
       mode: savedMode,
-      isLoadingHistory,
-      isHistoryLoaded,
-      hasHistoryConversation: !!savedHistoryConversation,
       streamingContentLength: savedStreamingContent.length,
       hasDeepContent: !!savedDeepContent,
       isStreamingComplete,
       isDeepComplete
     });
-
-    // Handle loading history conversation
-    if (isLoadingHistory) {
-      setIsLoadingHistory(true);
-      if (savedQuery && savedConversationId) {
-        setUserQuery(savedQuery);
-        setConversationId(savedConversationId);
-        if (savedMode) {
-          setSelectedMode(savedMode);
-        }
-      }
-      return;
-    }
-
-    // Handle loaded history conversation
-    if (isHistoryLoaded && savedHistoryConversation) {
-      try {
-        const historyData: ConversationEntry[] = JSON.parse(savedHistoryConversation);
-        setHistoryConversation(historyData);
-        
-        if (savedQuery && savedConversationId) {
-          setUserQuery(savedQuery);
-          setConversationId(savedConversationId);
-          if (savedMode) {
-            setSelectedMode(savedMode);
-          }
-        }
-        
-        // Convert history data to conversation messages
-        const messages: ConversationMessage[] = [];
-        historyData.forEach((entry, index) => {
-          // Add user message
-          messages.push({
-            id: `history-user-${index}`,
-            type: 'user',
-            content: entry.user_query,
-            timestamp: new Date(entry.time).toLocaleString()
-          });
-          
-          // Add assistant message
-          messages.push({
-            id: `history-assistant-${index}`,
-            type: 'assistant',
-            content: entry.user_query,
-            timestamp: 'Assistant',
-            mode: entry.question_type === 'deep_learn' ? 'deep-learn' : 'quick-search',
-            isStreaming: false,
-            streamingContent: entry.question_type === 'deep_learn' ? undefined : entry.llm_response,
-            deepLearnData: entry.question_type === 'deep_learn' ? {
-              stream_info: 'Loaded from history',
-              conversation_id: savedConversationId || '',
-              llm_response: entry.llm_response,
-              generation_status: entry.generation_status,
-              final: true,
-              timestamp: entry.time
-            } : undefined
-          });
-        });
-        
-        setConversationHistory(messages);
-        setIsLoadingHistory(false);
-        
-        console.log('✅ Successfully loaded history conversation with', messages.length, 'messages');
-        return;
-      } catch (error) {
-        console.error('❌ Error parsing history conversation:', error);
-        setIsLoadingHistory(false);
-      }
-    }
 
     if (savedQuery) {
       if (savedMode) {
@@ -412,24 +331,11 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
       window.addEventListener('deeplearn-deep-update', handleDeepUpdate as EventListener);
       window.addEventListener('deeplearn-deep-complete', handleDeepComplete as EventListener);
 
-      // Listen for history loaded events
-      const handleHistoryLoaded = (event: CustomEvent) => {
-        if (event.detail.tabId === tabId) {
-          console.log('📖 History conversation loaded event received');
-          setIsLoadingHistory(false);
-          // The component will re-render and pick up the saved history data
-          window.location.reload(); // Simple approach to reload with new data
-        }
-      };
-
-      window.addEventListener('deeplearn-history-loaded', handleHistoryLoaded as EventListener);
-
       return () => {
         window.removeEventListener('deeplearn-streaming-update', handleStreamingUpdate as EventListener);
         window.removeEventListener('deeplearn-streaming-complete', handleStreamingComplete as EventListener);
         window.removeEventListener('deeplearn-deep-update', handleDeepUpdate as EventListener);
         window.removeEventListener('deeplearn-deep-complete', handleDeepComplete as EventListener);
-        window.removeEventListener('deeplearn-history-loaded', handleHistoryLoaded as EventListener);
       };
     } else {
       console.log('No saved data found, using defaults');
@@ -619,7 +525,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
           <h1 className="font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal">
-            Learning Journey: {historyConversation ? historyConversation[0]?.user_query || 'Research Topic' : conversationHistory[0]?.content || 'Research Topic'}
+            Learning Journey: {conversationHistory[0]?.content || 'Research Topic'}
           </h1>
         </div>
 
@@ -680,19 +586,8 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             {/* Main Content - Scrollable - 固定宽度649px */}
             <div className={`${isSplit ? 'max-w-[449px]' : 'w-[649px]'}`}>
               <div className="h-[calc(100vh-280px)] overflow-y-auto py-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] flex-shrink-0">
-                {/* Show loading state for history */}
-                {isLoadingHistory && (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-gray-600 font-['Inter',Helvetica]">Loading conversation history...</p>
-                      <p className="text-sm text-gray-500 font-['Inter',Helvetica] mt-2">This may take a few seconds...</p>
-                    </div>
-                  </div>
-                )}
-                
                 {/* Render conversation history */}
-                {!isLoadingHistory && conversationHistory.map((message) => (
+                {conversationHistory.map((message) => (
                   <div key={message.id}>
                     {message.type === 'user' ? (
                       <UserQuestionBubble 
@@ -712,12 +607,11 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
               </div>
               
               {/* Fixed Bottom Input Box - Enhanced hover effects, removed submit button */}
-              {!isLoadingHistory && (
-                <div className={`bg-white border rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between transition-all duration-300 ${
+              <div className={`bg-white border rounded-2xl px-4 py-2 shadow-sm h-[120px] text-[12px] flex flex-col justify-between transition-all duration-300 ${
                 isInputFocused 
                   ? 'border-[#80A5E4] shadow-[0px_2px_15px_0px_rgba(128,165,228,0.15)]' 
                   : 'border-gray-300'
-                }`}>
+              }`}>
                 {/* Mode Selection Section - Only show if no mode is selected */}
                 {!conversationMode && (
                   <div className="flex items-center justify-between">
@@ -815,7 +709,6 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
                   </div>
                 )}
               </div>
-              )}
             </div>
 
             {/* Right Sidebar - 紧贴左侧文字，缩小间距 */}
