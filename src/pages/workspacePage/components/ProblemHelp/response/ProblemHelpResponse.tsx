@@ -32,6 +32,12 @@ interface ConversationMessage {
   streamingContent?: string;
 }
 
+// Interface for key concepts
+interface KeyConcept {
+  concept: string;
+  explanation: string;
+}
+
 function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
   const { error } = useToast();
   const [followUpQuestion, setFollowUpQuestion] = useState('');
@@ -45,6 +51,28 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
 
   // New state for conversation history
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+
+  // Helper function to extract key concepts from text
+  const extractKeyConcepts = (text: string): { cleanedText: string; concepts: KeyConcept[] } => {
+    const concepts: KeyConcept[] = [];
+    
+    // Regular expression to match <<concept::explanation>> format
+    const conceptRegex = /<<([^:]+)::([^>]+)>>/g;
+    
+    // Extract all concepts
+    let match;
+    while ((match = conceptRegex.exec(text)) !== null) {
+      concepts.push({
+        concept: match[1].trim(),
+        explanation: match[2].trim()
+      });
+    }
+    
+    // Replace concept markers with highlighted concept names
+    const cleanedText = text.replace(/<<([^:]+)::([^>]+)>>/g, '<mark class="bg-blue-100 text-blue-900 px-1 py-0.5 rounded font-medium">$1</mark>');
+    
+    return { cleanedText, concepts };
+  };
 
   // Load saved data for this tab and initialize conversation history
   useEffect(() => {
@@ -303,6 +331,9 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
     // Assistant message
     const contentToRender = message.streamingContent || '';
     
+    // Extract key concepts from the content
+    const { cleanedText, concepts } = extractKeyConcepts(contentToRender);
+    
     if (message.isStreaming && !contentToRender) {
       return (
         <div className="text-gray-500 italic mb-6">
@@ -324,7 +355,7 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
           {/* GPT Response - 65% with Markdown Support */}
           <div className="w-[65%]">
             <MarkdownRenderer 
-              content={contentToRender}
+              content={cleanedText}
               variant="response"
               className="text-sm leading-relaxed"
             />
@@ -387,25 +418,12 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
             )}
           </div>
 
-          {/* Concept Cards - 35% */}
+          {/* Key Concept Cards - 35% */}
           <div className="w-[35%] space-y-4">
-            {[
-              {
-                title: "Kinetic Friction",
-                explanation: "Kinetic friction is the resistive force that acts against the motion of two surfaces that are already in relative motion. When an object is sliding or moving, kinetic friction tries to slow it down or oppose its motion along the surface."
-              },
-              {
-                title: "Free-body Diagram (FBD)",
-                explanation: "A free-body diagram (FBD) is a simple, essential tool in physics used to analyze the forces acting on an object. It is a diagram that shows all the external forces acting on one object, isolated from everything else."
-              },
-              {
-                title: "Applied Force",
-                explanation: "An applied force is any force that is deliberately exerted on an object by a person, machine, or another object to move it, hold it, or change its motion."
-              }
-            ].map((concept, index) => (
+            {concepts.map((concept, index) => (
               <div key={index} className="bg-[#f2f7ff] rounded-lg p-4 border-l-4 border-[#90BBFF]">
                 <h4 className="font-semibold text-sm text-black font-['Inter',Helvetica] mb-2">
-                  {concept.title}
+                  {concept.concept}
                 </h4>
                 <p className="text-xs text-black font-['Inter',Helvetica] leading-relaxed">
                   {concept.explanation}
