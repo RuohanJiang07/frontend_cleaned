@@ -98,14 +98,20 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
       const historyData = await getDeepLearningHistory();
       
       if (historyData.success) {
-        setHistoryConversations(historyData.deep_learning_conversations.items);
+        // Handle case where deep_learning_conversations might be undefined or items might be undefined
+        const conversations = historyData.deep_learning_conversations?.items || [];
+        setHistoryConversations(conversations);
         console.log('📚 Loaded history conversations:', historyData.deep_learning_conversations.items.length);
       } else {
-        error('Failed to load conversation history');
+        // Don't show error for empty history, just set empty array
+        setHistoryConversations([]);
+        console.log('📚 No conversation history found or failed to load');
       }
     } catch (err) {
       console.error('Error loading history:', err);
-      error('Failed to load conversation history. Please try again.');
+      // Don't show error for empty history, just set empty array
+      setHistoryConversations([]);
+      console.log('📚 Error loading history, setting empty state');
     } finally {
       setIsLoadingHistory(false);
     }
@@ -306,7 +312,6 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
           inputText.trim(),
           webSearchEnabled,
           additionalComments.trim() || undefined,
-          'profile-default',
           null,
           (data: string) => {
             // Update streaming content in localStorage
@@ -348,7 +353,6 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
           inputText.trim(),
           webSearchEnabled,
           additionalComments.trim() || undefined,
-          'profile-default',
           null,
           (data) => {
             // For deep learn, completely replace the content each time
@@ -657,10 +661,44 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
               ))
             ) : (
               // Empty state
-              <div className="col-span-4 flex flex-col items-center justify-center py-12">
-                <div className="text-gray-500 text-lg mb-2">No conversation history found</div>
-                <div className="text-gray-400 text-sm">
-                  Start a new deep learning session to see your conversations here
+              <div className="col-span-4 flex flex-col items-center justify-center py-16">
+                {/* Beautiful empty state illustration */}
+                <div className="w-24 h-24 mb-6 relative">
+                  <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
+                    <svg className="w-12 h-12 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+                  {/* Floating sparkles */}
+                  <div className="absolute -top-2 -right-2 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                  <div className="absolute -bottom-1 -left-2 w-2 h-2 bg-blue-400 rounded-full animate-pulse delay-300"></div>
+                  <div className="absolute top-1 -left-3 w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse delay-700"></div>
+                </div>
+                
+                {/* Main message */}
+                <h3 className="font-['Inter',Helvetica] font-semibold text-xl text-gray-800 mb-3 text-center">
+                  Begin Your Learning Journey
+                </h3>
+                
+                {/* Subtitle */}
+                <p className="font-['Inter',Helvetica] text-gray-600 text-center mb-8 max-w-md leading-relaxed">
+                  Start exploring topics with our AI-powered deep learning system. Your conversation history will appear here as you learn.
+                </p>
+                
+                {/* Call to action */}
+                <div className="flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 font-['Inter',Helvetica]">
+                    <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                    <span>Ask a question above to get started</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 font-['Inter',Helvetica]">
+                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
+                    <span>Choose between Deep Learn and Quick Search modes</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 font-['Inter',Helvetica]">
+                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                    <span>Enable web search for the latest information</span>
+                  </div>
                 </div>
               </div>
             )}

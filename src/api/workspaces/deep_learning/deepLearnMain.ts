@@ -25,7 +25,6 @@ export interface QuickSearchRequest {
   web_search: boolean;
   user_query: string;
   user_additional_comment?: string | null;
-  profile_selected?: string | null;
   references_selected?: string[] | null;
 }
 
@@ -119,7 +118,6 @@ export const submitQuickSearchQuery = async (
   query: string,
   webSearch: boolean,
   additionalComments?: string,
-  profile?: string,
   references?: string[] | null,
   onData: (data: string) => void,
   onError: (error: string) => void,
@@ -149,7 +147,6 @@ export const submitQuickSearchQuery = async (
       user_query: query,
       new_conversation: isNewConversation,
       user_additional_comment: additionalComments || null,
-      profile_selected: profile || null,
       references_selected: references || []
     };
 

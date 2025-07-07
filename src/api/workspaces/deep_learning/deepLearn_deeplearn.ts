@@ -123,7 +123,6 @@ export interface DeepLearnDeepRequest {
     query: string,
     webSearch: boolean,
     additionalComments?: string,
-    profile?: string,
     references?: string[] | null,
     onData: (data: DeepLearnStreamingData) => void,
     onError: (error: string) => void,
@@ -152,7 +151,6 @@ export interface DeepLearnDeepRequest {
         user_query: query,
         new_conversation: isNewConversation,
         user_additional_comment: additionalComments || null,
-        profile_selected: profile || null,
         references_selected: references || null
       };
 

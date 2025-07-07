@@ -499,7 +499,6 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             queryToSubmit,
             webSearchEnabled, // Use the web search state
             undefined, // no additional comments
-            'profile-default',
             null, // no references
             (data: string) => {
               // Update the streaming content for the current assistant message
@@ -536,7 +535,6 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
             queryToSubmit,
             webSearchEnabled, // Use the web search state
             undefined, // no additional comments
-            'profile-default',
             null, // no references
             (data) => {
               // Update the deep learn data for the current assistant message

@@ -49,21 +49,29 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
       const historyData = await getDocumentChatHistory();
       
       if (historyData.success) {
-        setHistoryConversations(historyData.document_chat_conversations.items);
+        // Handle case where document_chat_conversations might be undefined or items might be undefined
+        const conversations = historyData.document_chat_conversations?.items || [];
+        setHistoryConversations(conversations);
         console.log('📚 Loaded document chat history conversations:', historyData.document_chat_conversations.items.length);
       } else {
-        error('Failed to load conversation history');
+        // Don't show error for empty history, just set empty array
+        setHistoryConversations([]);
+        console.log('📚 No document chat conversation history found or failed to load');
       }
     } catch (err) {
       console.error('Error loading document chat history:', err);
-      error('Failed to load conversation history. Please try again.');
+      // Don't show error for empty history, just set empty array
+      setHistoryConversations([]);
+      console.log('📚 Error loading document chat history, setting empty state');
     } finally {
       setIsLoadingHistory(false);
     }
   };
 
   useEffect(() => {
-    const filtered = historyConversations.filter(item =>
+    // Ensure historyConversations is an array before filtering
+    const conversationsArray = Array.isArray(historyConversations) ? historyConversations : [];
+    const filtered = conversationsArray.filter(item =>
       item.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredItems(filtered);
@@ -447,10 +455,44 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
               })
             ) : (
               // Empty state
-              <div className="col-span-4 flex flex-col items-center justify-center py-12">
-                <div className="text-gray-500 text-lg mb-2">No conversation history found</div>
-                <div className="text-gray-400 text-sm">
-                  Start a new document chat to see your conversations here
+              <div className="col-span-4 flex flex-col items-center justify-center py-16">
+                {/* Beautiful empty state illustration */}
+                <div className="w-24 h-24 mb-6 relative">
+                  <div className="w-full h-full bg-gradient-to-br from-green-100 to-blue-100 rounded-full flex items-center justify-center">
+                    <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  {/* Floating sparkles */}
+                  <div className="absolute -top-2 -right-2 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                  <div className="absolute -bottom-1 -left-2 w-2 h-2 bg-green-400 rounded-full animate-pulse delay-300"></div>
+                  <div className="absolute top-1 -left-3 w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse delay-700"></div>
+                </div>
+                
+                {/* Main message */}
+                <h3 className="font-['Inter',Helvetica] font-semibold text-xl text-gray-800 mb-3 text-center">
+                  Begin Your Document Journey
+                </h3>
+                
+                {/* Subtitle */}
+                <p className="font-['Inter',Helvetica] text-gray-600 text-center mb-8 max-w-md leading-relaxed">
+                  Upload documents and start chatting with your files. Your conversation history will appear here as you explore.
+                </p>
+                
+                {/* Call to action */}
+                <div className="flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 font-['Inter',Helvetica]">
+                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                    <span>Upload documents using the area above</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 font-['Inter',Helvetica]">
+                    <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                    <span>Ask questions about your uploaded files</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 font-['Inter',Helvetica]">
+                    <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
+                    <span>Create new chats to organize your conversations</span>
+                  </div>
                 </div>
               </div>
             )}
