@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../../../../../components/ui/button';
 import {
   ChevronDownIcon,
@@ -9,13 +9,7 @@ import {
 } from 'lucide-react';
 import { submitProblemSolverSolution } from '../../../../../api/workspaces/problem_help/ProblemHelpMain';
 import { useToast } from '../../../../../hooks/useToast';
-
-interface ProblemHistoryItem {
-  id: number;
-  problem: string;
-  date: string;
-  type: 'Step-by-step' | 'Solution';
-}
+import { getProblemSolverHistory, ProblemSolverConversation, getProblemSolverHistoryConversation } from '../../../../../api/workspaces/problem_help/getHistory';
 
 interface ProblemSolverProps {
   onBack?: () => void;
@@ -31,61 +25,62 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [historyConversations, setHistoryConversations] = useState<ProblemSolverConversation[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [filteredItems, setFilteredItems] = useState<ProblemSolverConversation[]>([]);
 
-  // Sample history data
-  const historyItems: ProblemHistoryItem[] = [
-    {
-      id: 1,
-      problem: "What's the derivation of x^2",
-      date: "Apr 18, 2025, 12:56 PM",
-      type: "Step-by-step"
-    },
-    {
-      id: 2,
-      problem: "Why does a rainbow contain a pure spread...",
-      date: "Apr 18, 2025, 12:56 PM",
-      type: "Solution"
-    },
-    {
-      id: 3,
-      problem: "Why does a rainbow contain a pure spread...",
-      date: "Apr 18, 2025, 12:56 PM",
-      type: "Solution"
-    },
-    {
-      id: 4,
-      problem: "What's the derivation of x^2",
-      date: "Apr 18, 2025, 12:56 PM",
-      type: "Step-by-step"
-    },
-    {
-      id: 5,
-      problem: "Why does a rainbow contain a pure spread...",
-      date: "Apr 18, 2025, 12:56 PM",
-      type: "Step-by-step"
-    },
-    {
-      id: 6,
-      problem: "Why does a rainbow contain a pure spread...",
-      date: "Apr 18, 2025, 12:56 PM",
-      type: "Solution"
-    },
-    {
-      id: 7,
-      problem: "What's the derivation of x^2",
-      date: "Apr 18, 2025, 12:56 PM",
-      type: "Step-by-step"
+  // Load history when component mounts
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      setIsLoadingHistory(true);
+      const historyData = await getProblemSolverHistory();
+      
+      if (historyData.success) {
+        // Handle case where problem_solver_conversations might be undefined or items might be undefined
+        const conversations = historyData.problem_solver_conversations?.items || [];
+        setHistoryConversations(conversations);
+        setFilteredItems(conversations);
+        console.log('📚 Loaded problem solver history conversations:', historyData.problem_solver_conversations.items.length);
+      } else {
+        // Don't show error for empty history, just set empty array
+        setHistoryConversations([]);
+        setFilteredItems([]);
+        console.log('📚 No problem solver conversation history found or failed to load');
+      }
+    } catch (err) {
+      console.error('Error loading problem solver history:', err);
+      // Don't show error for empty history, just set empty array
+      setHistoryConversations([]);
+      setFilteredItems([]);
+      console.log('📚 Error loading problem solver history, setting empty state');
+    } finally {
+      setIsLoadingHistory(false);
     }
-  ];
+  };
+
+  // Update filtered items when search query or history changes
+  useEffect(() => {
+    // Ensure historyConversations is an array before filtering
+    const conversationsArray = Array.isArray(historyConversations) ? historyConversations : [];
+    const filtered = conversationsArray.filter(item =>
+      item.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredItems(filtered);
+    setCurrentPage(1); // Reset to first page when search changes
+  }, [searchQuery, historyConversations]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
-  const totalPages = Math.ceil(historyItems.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
   const getCurrentPageItems = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return historyItems.slice(startIndex, endIndex);
+    return filteredItems.slice(startIndex, endIndex);
   };
 
   // Helper function to generate UUID
@@ -146,6 +141,11 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
       // Clear related content when starting a new conversation
       clearRelatedContent();
 
+      // Clear any history loaded flag to ensure we're starting fresh
+      const tabId = window.location.pathname + window.location.search;
+      localStorage.removeItem(`problemhelp_history_loaded_${tabId}`);
+      localStorage.removeItem(`problemhelp_history_data_${tabId}`);
+
       // Generate conversation ID for new conversation
       const conversationId = generateConversationId();
       
@@ -162,7 +162,6 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
       saveTabData(conversationId, problemText.trim(), selectedMode);
 
       // For solution mode, use the problem solver solution endpoint
-      const tabId = window.location.pathname + window.location.search;
       localStorage.setItem(`problemhelp_query_${tabId}`, problemText.trim());
       localStorage.setItem(`problemhelp_mode_${tabId}`, selectedMode);
       localStorage.setItem(`problemhelp_streaming_content_${tabId}`, ''); // Clear previous content
@@ -209,9 +208,50 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
     }
   };
 
-  const handleHistoryItemClick = (item: ProblemHistoryItem) => {
-    // Notify parent component to change view to response
-    onViewChange?.('problem-help-response');
+  const handleHistoryItemClick = (conversation: ProblemSolverConversation) => {
+    // Load the historical conversation data
+    loadHistoryConversation(conversation);
+  };
+
+  const loadHistoryConversation = async (conversation: ProblemSolverConversation) => {
+    try {
+      console.log('📖 Loading problem solver history conversation:', conversation.conversation_id);
+      
+      // Fetch the conversation history
+      const historyData = await getProblemSolverHistoryConversation(conversation.conversation_id);
+      
+      if (historyData.success && historyData.conversation_json.length > 0) {
+        const tabId = window.location.pathname + window.location.search;
+        
+        // Clear ALL existing conversation data for this tab
+        localStorage.removeItem(`problemhelp_streaming_content_${tabId}`);
+        localStorage.removeItem(`problemhelp_streaming_complete_${tabId}`);
+        localStorage.removeItem(`problemhelp_conversation_${tabId}`);
+        localStorage.removeItem(`problemhelp_query_${tabId}`);
+        localStorage.removeItem(`problemhelp_mode_${tabId}`);
+        
+        // Save the conversation data for loading in response view
+        localStorage.setItem(`problemhelp_conversation_${tabId}`, conversation.conversation_id);
+        localStorage.setItem(`problemhelp_query_${tabId}`, conversation.title);
+        localStorage.setItem(`problemhelp_mode_${tabId}`, conversation.type || 'solution');
+        
+        // Store the full conversation history
+        localStorage.setItem(`problemhelp_history_data_${tabId}`, JSON.stringify(historyData.conversation_json));
+        
+        // Mark as history conversation loaded
+        localStorage.setItem(`problemhelp_history_loaded_${tabId}`, 'true');
+        
+        console.log('✅ Successfully loaded and stored problem solver history conversation data');
+        
+        // NOW navigate to response view after all data is properly stored
+        onViewChange?.('problem-help-response');
+      } else {
+        error('Failed to load conversation history');
+      }
+    } catch (err) {
+      console.error('❌ Error loading problem solver history conversation:', err);
+      error('Failed to load conversation history. Please try again.');
+    }
   };
 
   const handleBackToEntry = () => {
@@ -420,61 +460,101 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
                 <div className="w-[920px] h-[1px] bg-[#D9D9D9] mb-0"></div>
 
                 {/* Table rows */}
-                <div className="divide-y divide-[#D9D9D9]">
-                  {getCurrentPageItems().map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center h-[41px] hover:bg-[#f5f5f5] cursor-pointer transition-colors"
-                      onClick={() => handleHistoryItemClick(item)}
-                    >
-                      <div className="w-[35px] flex justify-center">
-                        <PaperclipIcon className="w-4 h-4 text-gray-600" />
+                {isLoadingHistory ? (
+                  // Loading state
+                  <div className="divide-y divide-[#D9D9D9]">
+                    {Array.from({ length: 7 }, (_, index) => (
+                      <div key={index} className="flex items-center h-[41px] animate-pulse">
+                        <div className="w-[35px] flex justify-center">
+                          <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                        </div>
+                        <div className="w-[427px] pl-[11px]">
+                          <div className="h-4 bg-gray-200 rounded w-[70%]"></div>
+                        </div>
+                        <div className="w-[256px] flex justify-center">
+                          <div className="h-4 bg-gray-200 rounded w-[120px]"></div>
+                        </div>
+                        <div className="flex-1 flex justify-center">
+                          <div className="h-6 w-[80px] bg-gray-200 rounded-lg"></div>
+                        </div>
                       </div>
-                      <div className="w-[427px] pl-[11px]">
-                        <span className="text-black font-['Inter',Helvetica] text-[15px] font-normal leading-normal">
-                          {item.problem}
-                        </span>
+                    ))}
+                  </div>
+                ) : filteredItems.length > 0 ? (
+                  // History items
+                  <div className="divide-y divide-[#D9D9D9]">
+                    {getCurrentPageItems().map((item) => (
+                      <div
+                        key={item.conversation_id}
+                        className="flex items-center h-[41px] hover:bg-[#f5f5f5] cursor-pointer transition-colors"
+                        onClick={() => handleHistoryItemClick(item)}
+                      >
+                        <div className="w-[35px] flex justify-center">
+                          <PaperclipIcon className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div className="w-[427px] pl-[11px]">
+                          <span className="text-black font-['Inter',Helvetica] text-[15px] font-normal leading-normal">
+                            {item.title}
+                          </span>
+                        </div>
+                        <div className="w-[256px] flex justify-center">
+                          <span className="text-black font-['Inter',Helvetica] text-[15px] font-normal leading-normal">
+                            {new Date(item.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex-1 flex justify-center">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-lg font-['Inter',Helvetica] text-[14px] font-medium leading-normal ${
+                              item.type === 'step-by-step'
+                                ? 'bg-[#D5EBF3] text-[#1e40af]'
+                                : 'bg-[#D5DAF3] text-[#6b21a8]'
+                            }`}
+                          >
+                            {item.type === 'step-by-step' ? 'Step-by-step' : 'Solution'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="w-[256px] flex justify-center">
-                        <span className="text-black font-['Inter',Helvetica] text-[15px] font-normal leading-normal">
-                          {item.date}
-                        </span>
-                      </div>
-                      <div className="flex-1 flex justify-center">
-                        <span
-                          className={`inline-block px-3 py-1 rounded-lg font-['Inter',Helvetica] text-[14px] font-medium leading-normal ${
-                            item.type === 'Step-by-step'
-                              ? 'bg-[#D5EBF3] text-[#1e40af]'
-                              : 'bg-[#D5DAF3] text-[#6b21a8]'
-                          }`}
-                        >
-                          {item.type}
-                        </span>
-                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  // Empty state
+                  <div className="py-12 flex flex-col items-center justify-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
                     </div>
-                  ))}
-                </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1 font-['Inter',Helvetica]">No problem history yet</h3>
+                    <p className="text-sm text-gray-500 font-['Inter',Helvetica] text-center max-w-md">
+                      {searchQuery 
+                        ? 'No results match your search. Try different keywords.' 
+                        : 'Start solving problems to build your history. Your solved problems will appear here.'}
+                    </p>
+                  </div>
+                )}
 
                 {/* Pagination - matching Document Chat style with 38px top margin */}
-                <div className="flex justify-center items-center gap-[9px] mt-[38px]">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                {!isLoadingHistory && totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-[9px] mt-[38px]">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-[19px] h-[20px] font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal ${
+                          currentPage === pageNum ? 'bg-[#ECF1F6] rounded-[6px]' : ''
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
                     <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`w-[19px] h-[20px] font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal ${
-                        currentPage === pageNum ? 'bg-[#ECF1F6] rounded-[6px]' : ''
-                      }`}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className="w-[45px] h-[23px] bg-[#ECF1F6] rounded-[6px] font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal ml-[9px]"
                     >
-                      {pageNum}
+                      Next
                     </button>
-                  ))}
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    className="w-[45px] h-[23px] bg-[#ECF1F6] rounded-[6px] font-['Inter',Helvetica] text-[14px] font-medium text-black leading-normal ml-[9px]"
-                  >
-                    Next
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

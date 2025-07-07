@@ -3,6 +3,7 @@ import { Button } from '../../../../../components/ui/button';
 import { ArrowLeftIcon, ShareIcon, PrinterIcon, MoreHorizontalIcon, CheckIcon, ThumbsUpIcon, ThumbsDownIcon, CopyIcon, PaperclipIcon, FolderIcon } from 'lucide-react';
 import { submitProblemSolverSolution } from '../../../../../api/workspaces/problem_help/ProblemHelpMain';
 import { useToast } from '../../../../../hooks/useToast';
+import { ProblemSolverHistoryItem } from '../../../../../api/workspaces/problem_help/getHistory';
 import { MarkdownRenderer } from '../../../../../components/ui/markdown';
 
 interface ProblemHelpResponseProps {
@@ -52,6 +53,10 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
   // New state for conversation history
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
 
+  // New state for loaded history data
+  const [loadedHistoryData, setLoadedHistoryData] = useState<ProblemSolverHistoryItem[] | null>(null);
+  const [isHistoryConversation, setIsHistoryConversation] = useState(false);
+
   // Helper function to extract key concepts from text
   const extractKeyConcepts = (text: string): { cleanedText: string; concepts: KeyConcept[] } => {
     const concepts: KeyConcept[] = [];
@@ -77,6 +82,64 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
   // Load saved data for this tab and initialize conversation history
   useEffect(() => {
     const tabId = window.location.pathname + window.location.search;
+    // Clear any existing history loaded flag for new questions
+    const isNewQuestion = !localStorage.getItem(`problemhelp_history_loaded_${tabId}`);
+    const historyDataString = localStorage.getItem(`problemhelp_history_data_${tabId}`);
+    const isHistoryLoaded = localStorage.getItem(`problemhelp_history_loaded_${tabId}`) === 'true';
+
+    // Check if this is a loaded history conversation
+    if (isHistoryLoaded && historyDataString && !isNewQuestion) {
+      console.log('📂 Loading problem solver history conversation data for tab:', tabId);
+      
+      try {
+        const historyData: ProblemSolverHistoryItem[] = JSON.parse(historyDataString);
+        setLoadedHistoryData(historyData);
+        setIsHistoryConversation(true);
+        
+        const savedConversationId = localStorage.getItem(`problemhelp_conversation_${tabId}`);
+        if (savedConversationId) {
+          setConversationId(savedConversationId);
+        }
+        
+        // Convert history data to conversation messages
+        const messages: ConversationMessage[] = [];
+        
+        historyData.forEach((item, index) => {
+          // Add user message
+          messages.push({
+            id: `history-user-${index}`,
+            type: 'user',
+            content: item.user_query,
+            timestamp: new Date(item.time).toLocaleString(),
+          });
+          
+          // Add assistant message
+          messages.push({
+            id: `history-assistant-${index}`,
+            type: 'assistant',
+            content: item.user_query,
+            timestamp: 'Assistant',
+            isStreaming: false,
+            streamingContent: item.llm_response,
+          });
+        });
+        
+        setConversationHistory(messages);
+        console.log('✅ Loaded problem solver history conversation with', messages.length, 'messages');
+        
+        // Exit early for history conversations - don't load any streaming data
+        return;
+      } catch (error) {
+        console.error('❌ Error parsing problem solver history data:', error);
+        // If parsing fails, clear the history flags and fall through to normal loading
+        localStorage.removeItem(`problemhelp_history_data_${tabId}`);
+        localStorage.removeItem(`problemhelp_history_loaded_${tabId}`);
+      }
+    }
+    
+    // This code only runs for NON-history conversations (new streaming conversations)
+    console.log('📂 Loading saved problem solver streaming data for new question, tab:', tabId);
+    
     const savedConversationId = localStorage.getItem(`problemhelp_conversation_${tabId}`);
     const savedQuery = localStorage.getItem(`problemhelp_query_${tabId}`);
     const savedStreamingContent = localStorage.getItem(`problemhelp_streaming_content_${tabId}`) || '';
@@ -116,6 +179,7 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
       setConversationHistory([initialUserMessage, initialAssistantMessage]);
       
       if (savedStreamingContent) {
+        // For new questions, we should use the streaming content
         setStreamingContent(savedStreamingContent);
         parseStreamingContent(savedStreamingContent);
       }
@@ -155,9 +219,12 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
       window.addEventListener('problemhelp-streaming-complete', handleStreamingComplete as EventListener);
 
       return () => {
+        // Clean up event listeners
         window.removeEventListener('problemhelp-streaming-update', handleStreamingUpdate as EventListener);
         window.removeEventListener('problemhelp-streaming-complete', handleStreamingComplete as EventListener);
       };
+    } else {
+      console.log('No saved query found, waiting for first question');
     }
   }, []);
 
@@ -444,13 +511,14 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
           <Button
             variant="ghost"
             size="icon"
+            title="Back"
             onClick={onBack}
             className="p-2"
           >
             <ArrowLeftIcon className="w-5 h-5" />
           </Button>
           <h1 className="font-medium text-base text-black font-['Inter',Helvetica]">
-            Problem Solution: {userQuery.substring(0, 50)}{userQuery.length > 50 ? '...' : ''}
+            Problem Solution: {isHistoryConversation && loadedHistoryData ? loadedHistoryData[0]?.user_query.substring(0, 50) + (loadedHistoryData[0]?.user_query.length > 50 ? '...' : '') : (userQuery.substring(0, 50) + (userQuery.length > 50 ? '...' : ''))}
           </h1>
         </div>
 
