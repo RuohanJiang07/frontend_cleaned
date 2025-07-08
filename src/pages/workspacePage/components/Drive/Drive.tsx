@@ -5,18 +5,25 @@ import {
   SearchIcon,
   ChevronDownIcon,
   PlusIcon,
-  UploadIcon,
+  UploadIcon, 
+  ExternalLinkIcon,
   EditIcon,
   TrashIcon,
-  MoreHorizontalIcon,
-  FolderIcon,
-  FileTextIcon,
-  FileIcon,
-  ImageIcon,
-  ChevronRightIcon
+  MoreHorizontalIcon, 
+  FolderIcon, 
+  FileTextIcon, 
+  FileIcon, 
+  ImageIcon, 
+  ChevronRightIcon,
+  ClockIcon,
+  StarIcon,
+  UsersIcon,
+  TrashIcon as TrashIcon2
 } from 'lucide-react';
 import { getDriveFiles, DriveFileItem } from '../../../../api/workspaces/drive/getFiles';
 import { uploadFileWithProgress } from '../../../../api/workspaces/drive/uploadFiles';
+import { GoogleDriveModal } from '../../../../components/workspacePage/googleDriveModal';
+import { checkGoogleDriveAuthorization } from '../../../../api/workspaces/drive/googleDrive';
 import { useToast } from '../../../../hooks/useToast';
 
 interface FileItem {
@@ -52,11 +59,11 @@ interface DriveProps {
 
 function Drive({ onBack }: DriveProps) {
   const { error } = useToast();
+  const [workspaceName, setWorkspaceName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('By Name');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [workspaceName, setWorkspaceName] = useState('');
   const [statistics, setStatistics] = useState({
     total_items: 0,
     file_count: 0,
@@ -64,6 +71,8 @@ function Drive({ onBack }: DriveProps) {
   });
   const [currentFolderId, setCurrentFolderId] = useState('root');
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
+  const [isGoogleDriveModalOpen, setIsGoogleDriveModalOpen] = useState(false);
+  const [isGoogleDriveAuthorized, setIsGoogleDriveAuthorized] = useState<boolean | null>(null);
 
   // Ref for file input
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -71,7 +80,19 @@ function Drive({ onBack }: DriveProps) {
   // Load drive files on component mount
   useEffect(() => {
     loadDriveFiles();
+    checkGoogleDriveAuth();
   }, []);
+
+  const checkGoogleDriveAuth = async () => {
+    try {
+      const isAuthorized = await checkGoogleDriveAuthorization();
+      setIsGoogleDriveAuthorized(isAuthorized);
+      console.log('Google Drive authorization status:', isAuthorized);
+    } catch (err) {
+      console.error('Error checking Google Drive authorization:', err);
+      setIsGoogleDriveAuthorized(false);
+    }
+  };
 
   const loadDriveFiles = async () => {
     try {
@@ -366,13 +387,24 @@ function Drive({ onBack }: DriveProps) {
     return <FileIcon className="w-5 h-5 text-gray-600" />;
   };
 
+  // Handler for Google Drive import
+  const handleGoogleDriveImport = (files: any[]) => {
+    console.log('Imported files from Google Drive:', files);
+    
+    // Refresh the file list
+    loadDriveFiles();
+    
+    // Close the modal
+    setIsGoogleDriveModalOpen(false);
+  };
+
   // Helper function to extract file extension from a string
   const getFileExtension = (filename: string): string => {
     return filename.split('.').pop()?.toLowerCase() || '';
   };
 
   return (
-    <div className="h-full flex bg-gray-50">
+    <div className="h-screen flex bg-gray-50 overflow-hidden">
       {/* Left Sidebar */}
       <div className="w-[180px] bg-white border-r border-gray-200 flex flex-col">
         {/* New and Upload buttons */}
@@ -387,6 +419,13 @@ function Drive({ onBack }: DriveProps) {
           >
             <UploadIcon className="w-4 h-4" />
             Upload
+          </Button>
+          <Button 
+            className="w-full h-10 bg-white border border-gray-300 text-gray-700 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 font-['Inter',Helvetica] text-sm py-2 px-3 whitespace-normal"
+            onClick={() => setIsGoogleDriveModalOpen(true)}
+          >
+            <ExternalLinkIcon className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">Import from Google Drive</span>
           </Button>
           <input
             ref={fileInputRef}
@@ -404,24 +443,24 @@ function Drive({ onBack }: DriveProps) {
         {/* Navigation Menu */}
         <nav className="flex-1 px-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-black bg-gray-100 rounded-lg font-['Inter',Helvetica]">
+            <div className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-black bg-gray-100 rounded-lg font-['Inter',Helvetica] mb-1">
               <FolderIcon className="w-4 h-4" />
               Workspace Drive
             </div>
-            <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg cursor-pointer font-['Inter',Helvetica]">
-              <FileIcon className="w-4 h-4" />
+            <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg cursor-pointer font-['Inter',Helvetica] mb-1">
+              <ClockIcon className="w-4 h-4" />
               Recent
             </div>
-            <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg cursor-pointer font-['Inter',Helvetica]">
-              <FileIcon className="w-4 h-4" />
+            <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg cursor-pointer font-['Inter',Helvetica] mb-1">
+              <StarIcon className="w-4 h-4" />
               Starred
             </div>
-            <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg cursor-pointer font-['Inter',Helvetica]">
-              <FileIcon className="w-4 h-4" />
+            <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg cursor-pointer font-['Inter',Helvetica] mb-1">
+              <UsersIcon className="w-4 h-4" />
               Shared
             </div>
             <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg cursor-pointer font-['Inter',Helvetica]">
-              <FileIcon className="w-4 h-4" />
+              <TrashIcon2 className="w-4 h-4" />
               Trash
             </div>
           </div>
@@ -440,21 +479,23 @@ function Drive({ onBack }: DriveProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             {/* Header with icon and title */}
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-400 via-yellow-400 to-green-400 rounded-lg flex items-center justify-center">
-                <FolderIcon className="w-6 h-6 text-white" />
-              </div>
+              <img
+                className="w-10 h-10"
+                alt="Workspace Drive icon"
+                src="/workspace/folders.png"
+              />
               <div>
-                <h1 className="font-semibold text-black text-xl font-['Inter',Helvetica]">
+                <h1 className="font-semibold text-black text-xl font-['Outfit',Helvetica]">
                   Workspace Drive
                 </h1>
-                <p className="text-sm text-gray-600 font-['Inter',Helvetica]">
-                  {workspaceName ? `${workspaceName} - ` : ''}all files enabled with smart assistant
+                <p className="text-sm text-gray-600 font-['Outfit',Helvetica] text-center">
+                  all files enabled with smart assistant
                 </p>
               </div>
             </div>
@@ -462,30 +503,31 @@ function Drive({ onBack }: DriveProps) {
         </div>
 
         {/* Breadcrumb and controls */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3">
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600 font-['Inter',Helvetica]">
               {/* Clickable Breadcrumb Navigation */}
               <div className="flex items-center">
+                <span className="text-gray-900 font-medium mr-2">
+                  My Drive
+                </span>
+                <ChevronRightIcon className="w-4 h-4 mx-1 text-gray-400" />
+                <span className="text-gray-900 font-medium mr-2">
+                  Workspace:
+                </span>
                 {breadcrumbs.map((breadcrumb, index) => (
                   <React.Fragment key={breadcrumb.id}>
-                    {breadcrumb.id === 'my-drive' ? (
-                      <span className="text-gray-900 font-medium">
-                        {breadcrumb.name}
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => navigateToBreadcrumb(breadcrumb.id)}
-                        className={`hover:text-blue-600 transition-colors ${
-                          index === breadcrumbs.length - 1 
-                            ? 'text-gray-900 font-medium cursor-default' 
-                            : 'text-blue-600 hover:underline'
-                        }`}
-                        disabled={index === breadcrumbs.length - 1}
-                      >
-                        {breadcrumb.name}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => navigateToBreadcrumb(breadcrumb.id)}
+                      className={`hover:text-blue-600 transition-colors ${
+                        index === breadcrumbs.length - 1 
+                          ? 'text-gray-900 font-medium cursor-default' 
+                          : 'text-blue-600 hover:underline'
+                      }`}
+                      disabled={index === breadcrumbs.length - 1}
+                    >
+                      {breadcrumb.name}
+                    </button>
                     {index < breadcrumbs.length - 1 && (
                       <ChevronRightIcon className="w-4 h-4 mx-2 text-gray-400" />
                     )}
@@ -536,7 +578,7 @@ function Drive({ onBack }: DriveProps) {
         </div>
 
         {/* File Table */}
-        <div className="flex-1 bg-white overflow-auto">
+        <div className="flex-1 bg-white overflow-y-auto">
           <div className="w-full">
             {/* Table header */}
             <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 sticky top-0">
@@ -560,8 +602,12 @@ function Drive({ onBack }: DriveProps) {
             {/* Loading State */}
             {loading && (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-600 font-['Inter',Helvetica]">Loading files...</span>
+                <div className="flex space-x-2">
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                  <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                </div>
+                <span className="ml-3 text-gray-600 font-['Inter',Helvetica]">Loading files</span>
               </div>
             )}
 
@@ -696,6 +742,13 @@ function Drive({ onBack }: DriveProps) {
           </div>
         </div>
       </div>
+      
+      {/* Google Drive Modal */}
+      <GoogleDriveModal
+        isOpen={isGoogleDriveModalOpen}
+        onClose={() => setIsGoogleDriveModalOpen(false)}
+        onImport={handleGoogleDriveImport}
+      />
     </div>
   );
 }

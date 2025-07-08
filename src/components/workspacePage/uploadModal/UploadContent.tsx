@@ -200,9 +200,11 @@ const UploadContent: React.FC<UploadContentProps> = ({ onFileSelection, selected
     switch (file.uploadStatus) {
       case 'uploading':
       case 'processing':
-        return (
-          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        );
+        return <div className="flex space-x-1">
+          <div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div>
+          <div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div>
+          <div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div>
+        </div>;
       case 'completed':
         return <CheckIcon className="w-5 h-5 text-green-600" />;
       case 'error':

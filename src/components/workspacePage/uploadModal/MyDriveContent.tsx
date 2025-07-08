@@ -344,8 +344,12 @@ const MyDriveContent: React.FC<MyDriveContentProps> = ({ onFileSelection, select
         {loading ? (
           // Loading state
           <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-600 font-['Inter',Helvetica]">Loading files...</span>
+            <div className="flex space-x-2">
+              <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+              <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+            </div>
+            <span className="ml-3 text-gray-600 font-['Inter',Helvetica]">Loading files</span>
           </div>
         ) : filteredFiles.length === 0 ? (
           // Empty state

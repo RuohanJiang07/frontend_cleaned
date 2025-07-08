@@ -5,8 +5,9 @@ import MyDriveContent from './MyDriveContent';
 import UploadContent from './UploadContent';
 import WebsitesContent from './WebsitesContent';
 import PasteContent from './PasteContent';
+import GoogleDriveContent from './GoogleDriveContent';
 
-export type SourceType = 'My Drive' | 'Upload' | 'Websites' | 'Paste';
+export type SourceType = 'My Drive' | 'Upload' | 'Websites' | 'Paste' | 'Google Drive';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) 
 
   if (!isOpen) return null;
 
-  const sources: SourceType[] = ['My Drive', 'Upload', 'Websites', 'Paste'];
+  const sources: SourceType[] = ['My Drive', 'Upload', 'Websites', 'Paste', 'Google Drive'];
 
   const handleFileSelection = (files: any[]) => {
     setSelectedFiles(files);
@@ -55,6 +56,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) 
         return <WebsitesContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} />;
       case 'Paste':
         return <PasteContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} />;
+      case 'Google Drive':
+        return <GoogleDriveContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} />;
       default:
         return <MyDriveContent onFileSelection={handleFileSelection} selectedFiles={selectedFiles} uploadedFileIds={uploadedFileIds} />;
     }
@@ -139,6 +142,13 @@ const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload }) 
                       <circle cx="12" cy="12" r="10" />
                       <line x1="2" y1="12" x2="22" y2="12" />
                       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    </svg>
+                  )}
+                  {source === 'Google Drive' && (
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 11l-8 14h16l-8-14z" fill="#4285F4" />
+                      <path d="M8 3l8 14H0L8 3z" fill="#FBBC05" />
+                      <path d="M16 3H8l12 21 4-7-8-14z" fill="#34A853" />
                     </svg>
                   )}
                   {source === 'Paste' && <FileTextIcon className="w-4 h-4" />}
