@@ -657,19 +657,20 @@ function Drive({ onBack }: DriveProps) {
                         {/* Show processing status if available */}
                         {file.processed && (
                           <div className="flex items-center gap-1 mt-1">
-                            <div className={`w-3 h-3 rounded-full ${
-                              file.processed.text_extracted.done ? 'bg-green-400' : 'bg-gray-300'
-                            }`} title={file.processed.text_extracted.done ? 'Text extracted' : 'Text extraction pending'}>
+                            <div className={`w-5 h-5 rounded flex items-center justify-center ${
+                              file.processed.text_extracted.done ? 'bg-green-100' : 'bg-gray-200'
+                            }`}>
+                              <span className={`text-xs font-bold ${
+                                file.processed.text_extracted.done ? 'text-green-600' : 'text-gray-400'
+                              }`}>T</span>
                             </div>
-                            <div className={`w-3 h-3 rounded-full ${
-                              file.processed.embeddings_generated.done ? 'bg-green-400' : 'bg-gray-300'
-                            }`} title={file.processed.embeddings_generated.done ? 'Embeddings generated' : 'Embeddings pending'}>
+                            <div className={`w-5 h-5 rounded flex items-center justify-center ${
+                              file.processed.embeddings_generated.done ? 'bg-green-100' : 'bg-gray-200'
+                            }`}>
+                              <span className={`text-xs font-bold ${
+                                file.processed.embeddings_generated.done ? 'text-green-600' : 'text-gray-400'
+                              }`}>E</span>
                             </div>
-                            <span className="text-xs text-gray-500 ml-1">
-                              {file.processed.text_extracted.done && file.processed.embeddings_generated.done 
-                                ? 'Processed' 
-                                : 'Processing...'}
-                            </span>
                           </div>
                         )}
                         {file.type === 'note' && (
