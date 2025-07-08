@@ -14,6 +14,7 @@ const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({ isOpen, onClose, on
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [pageSize, setPageSize] = useState(20);
 
   // Check Google Drive authorization status when modal opens
   useEffect(() => {
@@ -77,6 +78,9 @@ const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({ isOpen, onClose, on
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-black font-['Inter',Helvetica]">
             Google Drive
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              Import files directly from your Google Drive
+            </span>
           </h2>
           <Button
             variant="ghost"

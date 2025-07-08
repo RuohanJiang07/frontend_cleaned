@@ -5,6 +5,14 @@ export interface GoogleDriveFile {
   modifiedTime: string;
 }
 
+export interface ListGoogleDriveFilesResponse {
+  files: GoogleDriveFile[];
+  count: number;
+  next_page_token: string | null;
+  has_more_pages: boolean;
+  page_size: number;
+}
+
 export interface CheckAuthorizationResponse {
   authorized: boolean;
 }
@@ -59,9 +67,19 @@ export const checkGoogleDriveAuthorization = async (): Promise<boolean> => {
   }
 };
 
-export const listGoogleDriveFiles = async (): Promise<GoogleDriveFile[]> => {
+export const listGoogleDriveFiles = async (
+  pageSize: number = 20,
+  pageToken?: string
+): Promise<ListGoogleDriveFilesResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/google_drive_auth/list_google_drive_files`, {
+    // Build URL with query parameters
+    const url = new URL(`${API_BASE_URL}/api/v1/google_drive_auth/list_google_drive_files`);
+    url.searchParams.append('page_size', pageSize.toString());
+    if (pageToken) {
+      url.searchParams.append('page_token', pageToken);
+    }
+    
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: createAuthHeaders(),
     });
@@ -74,7 +92,11 @@ export const listGoogleDriveFiles = async (): Promise<GoogleDriveFile[]> => {
     }
 
     const data = await response.json();
-    console.log('✅ Successfully fetched Google Drive files:', data);
+    console.log('✅ Successfully fetched Google Drive files:', {
+      count: data.count,
+      hasMorePages: data.has_more_pages,
+      nextPageToken: data.next_page_token ? data.next_page_token.substring(0, 20) + '...' : null
+    });
     return data;
   } catch (error) {
     console.error('❌ Error fetching Google Drive files:', error);

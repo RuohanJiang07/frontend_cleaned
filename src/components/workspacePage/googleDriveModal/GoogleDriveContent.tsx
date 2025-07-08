@@ -36,6 +36,10 @@ const GoogleDriveContent: React.FC<GoogleDriveContentProps> = ({
   const [driveFiles, setDriveFiles] = useState<GoogleDriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [pageSize, setPageSize] = useState(20);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [hasMorePages, setHasMorePages] = useState(false);
+  const [loadingMoreFiles, setLoadingMoreFiles] = useState(false);
 
   // Load Google Drive files when authorized
   useEffect(() => {
@@ -46,12 +50,29 @@ const GoogleDriveContent: React.FC<GoogleDriveContentProps> = ({
     }
   }, [isAuthorized]);
 
-  const loadGoogleDriveFiles = async () => {
+  const loadGoogleDriveFiles = async (pageToken?: string) => {
     try {
-      setLoading(true);
-      const files = await listGoogleDriveFiles();
-      setDriveFiles(files);
-      console.log('📁 Loaded Google Drive files:', files.length, 'items');
+      if (pageToken) {
+        setLoadingMoreFiles(true);
+      } else {
+        setLoading(true);
+      }
+      
+      const response = await listGoogleDriveFiles(pageSize, pageToken);
+      
+      if (pageToken) {
+        // Append new files to existing ones
+        setDriveFiles(prev => [...prev, ...response.files]);
+      } else {
+        // Replace files with new ones
+        setDriveFiles(response.files);
+      }
+      
+      // Update pagination state
+      setNextPageToken(response.next_page_token);
+      setHasMorePages(response.has_more_pages);
+      
+      console.log('📁 Loaded Google Drive files:', response.files.length, 'items');
     } catch (err) {
       console.error('Error loading Google Drive files:', err);
       error('Failed to load Google Drive files. Please try again.');
@@ -64,7 +85,18 @@ const GoogleDriveContent: React.FC<GoogleDriveContentProps> = ({
         onAuthStatusChange(false);
       }
     } finally {
-      setLoading(false);
+      if (pageToken) {
+        setLoadingMoreFiles(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Load more files when user scrolls to bottom
+  const handleLoadMore = () => {
+    if (hasMorePages && nextPageToken && !loadingMoreFiles) {
+      loadGoogleDriveFiles(nextPageToken);
     }
   };
 
@@ -293,7 +325,16 @@ const GoogleDriveContent: React.FC<GoogleDriveContentProps> = ({
       </div>
 
       {/* File List */}
-      <div className="flex-1 overflow-y-auto">
+      <div 
+        className="flex-1 overflow-y-auto"
+        onScroll={(e) => {
+          const target = e.target as HTMLDivElement;
+          // If scrolled to bottom (with a small buffer), load more files
+          if (target.scrollHeight - target.scrollTop - target.clientHeight < 100) {
+            handleLoadMore();
+          }
+        }}
+      >
         {loading ? (
           // Loading state
           <div className="flex items-center justify-center h-32">
@@ -376,15 +417,70 @@ const GoogleDriveContent: React.FC<GoogleDriveContentProps> = ({
             </div>
           ))
         )}
+        
+        {/* Loading more indicator */}
+        {loadingMoreFiles && (
+          <div className="flex items-center justify-center py-4">
+            <div className="flex space-x-2">
+              <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+              <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+              <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+            </div>
+            <span className="ml-3 text-xs text-gray-500 font-['Inter',Helvetica]">Loading more files</span>
+          </div>
+        )}
+        
+        {/* End of list indicator */}
+        {!loading && !loadingMoreFiles && !hasMorePages && filteredFiles.length > 0 && (
+          <div className="text-center py-4">
+            <span className="text-xs text-gray-500 font-['Inter',Helvetica]">End of files</span>
+          </div>
+        )}
       </div>
 
       {/* Statistics Footer */}
       {!loading && filteredFiles.length > 0 && (
         <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
-          <span className="text-xs text-gray-500 font-['Inter',Helvetica]">
-            Showing {filteredFiles.length} items
-            {searchQuery && ` matching "${searchQuery}"`}
-          </span>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-500 font-['Inter',Helvetica]">
+              Showing {filteredFiles.length} items
+              {searchQuery && ` matching "${searchQuery}"`}
+            </span>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 font-['Inter',Helvetica]">Items per page:</span>
+              <select 
+                value={pageSize}
+                onChange={(e) => {
+                  const newSize = parseInt(e.target.value);
+                  setPageSize(newSize);
+                  // Reset and reload with new page size
+                  setDriveFiles([]);
+                  setNextPageToken(null);
+                  setHasMorePages(false);
+                  loadGoogleDriveFiles();
+                }}
+                className="text-xs border border-gray-300 rounded px-2 py-1"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              
+              {hasMorePages && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 px-2 py-0 text-xs"
+                  onClick={handleLoadMore}
+                  disabled={loadingMoreFiles}
+                >
+                  {loadingMoreFiles ? 'Loading...' : 'Load More'}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
