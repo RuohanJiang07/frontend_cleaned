@@ -131,16 +131,29 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
   const handleCreateNewChat = () => {
     // Check if any documents are selected
     if (selectedDocuments.length === 0) {
-      // You could show a toast or alert here
-      console.warn('No documents selected for chat');
+      error('Please select at least one document for chat');
       return;
     }
     
     // Set a flag in sessionStorage to indicate this is a new chat session
     sessionStorage.setItem('documentchat_new_session', 'true');
     
+    // Clear any existing history data in localStorage for this tab
+    const tabId = window.location.pathname + window.location.search;
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(`documentchat_`) && key.includes(tabId)) {
+        localStorage.removeItem(key);
+      }
+    });
+    
+    // Explicitly remove history loaded flag
+    localStorage.removeItem(`documentchat_history_loaded_${tabId}`);
+    localStorage.removeItem(`documentchat_history_data_${tabId}`);
+    
     // Store selected documents for the chat session
     sessionStorage.setItem('documentchat_selected_files', JSON.stringify(selectedDocuments));
+    
+    console.log('🆕 Starting new document chat with selected files:', selectedDocuments);
     
     // Notify parent component to change view to response
     onViewChange?.('document-chat-response');

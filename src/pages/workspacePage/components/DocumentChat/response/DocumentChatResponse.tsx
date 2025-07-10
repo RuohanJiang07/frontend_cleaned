@@ -287,13 +287,18 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
     // Check if we're coming from "Create New Chat" by looking for a special flag
     const isNewChatSession = sessionStorage.getItem('documentchat_new_session') === 'true';
     if (isNewChatSession) {
-      console.log('🆕 Detected new chat session, clearing all data');
+      console.log('🆕 Detected new chat session, clearing all existing data');
       // Clear all localStorage keys related to document chat for this tab
       Object.keys(localStorage).forEach(key => {
         if (key.startsWith(`documentchat_`) && key.includes(tabId)) {
           localStorage.removeItem(key);
         }
       });
+      
+      // Explicitly remove history loaded flag
+      localStorage.removeItem(`documentchat_history_loaded_${tabId}`);
+      localStorage.removeItem(`documentchat_history_data_${tabId}`);
+      
       sessionStorage.removeItem('documentchat_new_session');
       
       // Start fresh with new conversation ID
@@ -301,6 +306,8 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
       setConversationId(newConversationId);
       setConversationHistory([]);
       setIsStreaming(false);
+      setIsHistoryConversation(false);
+      setLoadedHistoryData(null);
       console.log('🆔 Generated new conversation ID for fresh start:', newConversationId);
       return;
     }
@@ -308,11 +315,13 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
     // For non-history, non-new chat sessions, we might be in the middle of a streaming response
     // Check if we have streaming data
     const savedConversationId = localStorage.getItem(`documentchat_conversation_${tabId}`);
-    const savedQuery = localStorage.getItem(`documentchat_query_${tabId}`);
-    const savedStreamingContent = localStorage.getItem(`documentchat_streaming_content_${tabId}`) || '';
-    const isStreamingComplete = localStorage.getItem(`documentchat_streaming_complete_${tabId}`) === 'true';
+    
+    // Only proceed with loading existing conversation if we have a saved ID
+    if (savedConversationId) {
+      const savedQuery = localStorage.getItem(`documentchat_query_${tabId}`);
+      const savedStreamingContent = localStorage.getItem(`documentchat_streaming_content_${tabId}`) || '';
+      const isStreamingComplete = localStorage.getItem(`documentchat_streaming_complete_${tabId}`) === 'true';
 
-    if (savedQuery && savedConversationId) {
       console.log('📂 Resuming existing document chat conversation:', {
         tabId,
         conversationId: savedConversationId,
@@ -384,13 +393,16 @@ function DocumentChatResponse({ onBack, isSplit = false }: DocumentChatResponseP
         window.removeEventListener('documentchat-streaming-update', handleStreamingUpdate as EventListener);
         window.removeEventListener('documentchat-streaming-complete', handleStreamingComplete as EventListener);
       };
-    } else {
+    } 
+    else {
       // If no saved query, this means we're starting a new conversation
       // Generate a conversation ID and wait for the first question
       const newConversationId = generateConversationId();
       setConversationId(newConversationId);
       setConversationHistory([]);
       setIsStreaming(false);
+      setIsHistoryConversation(false);
+      setLoadedHistoryData(null);
       console.log('🆔 Generated new conversation ID for fresh start:', newConversationId);
     }
   }, []);
