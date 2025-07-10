@@ -137,23 +137,21 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
       }
     }
     
-    // This code only runs for NON-history conversations (new streaming conversations)
-    console.log('📂 Loading saved problem solver streaming data for new question, tab:', tabId);
-    
+    // For non-history conversations, check if we have streaming data
     const savedConversationId = localStorage.getItem(`problemhelp_conversation_${tabId}`);
     const savedQuery = localStorage.getItem(`problemhelp_query_${tabId}`);
     const savedStreamingContent = localStorage.getItem(`problemhelp_streaming_content_${tabId}`) || '';
     const isStreamingComplete = localStorage.getItem(`problemhelp_streaming_complete_${tabId}`) === 'true';
-
-    console.log('📂 Loading saved problem help data for tab:', {
-      tabId,
-      conversationId: savedConversationId,
-      query: savedQuery,
-      streamingContentLength: savedStreamingContent.length,
-      isStreamingComplete
-    });
-
+    
     if (savedQuery) {
+      console.log('📂 Resuming existing problem solver conversation:', {
+        tabId,
+        conversationId: savedConversationId,
+        query: savedQuery,
+        streamingContentLength: savedStreamingContent.length,
+        isStreamingComplete
+      });
+      
       setUserQuery(savedQuery);
       if (savedConversationId) {
         setConversationId(savedConversationId);

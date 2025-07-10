@@ -116,9 +116,12 @@ function ProblemSolver({ onBack, onViewChange }: ProblemSolverProps) {
   // Helper function to clear related content for new conversations
   const clearRelatedContent = () => {
     const tabId = window.location.pathname + window.location.search;
-    // Clear all related content data for this tab
-    localStorage.removeItem(`problemhelp_streaming_content_${tabId}`);
-    localStorage.removeItem(`problemhelp_streaming_complete_${tabId}`);
+    // Clear all localStorage keys related to problem help for this tab
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(`problemhelp_`) && key.includes(tabId)) {
+        localStorage.removeItem(key);
+      }
+    });
     
     console.log('🧹 Cleared related content for new problem help conversation');
   };

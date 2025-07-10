@@ -150,12 +150,12 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
   // Helper function to clear related content for new conversations
   const clearRelatedContent = () => {
     const tabId = window.location.pathname + window.location.search;
-    // Clear all related content data for this tab
-    localStorage.removeItem(`deeplearn_interactive_${tabId}`);
-    localStorage.removeItem(`deeplearn_streaming_content_${tabId}`);
-    localStorage.removeItem(`deeplearn_streaming_complete_${tabId}`);
-    localStorage.removeItem(`deeplearn_deep_content_${tabId}`);
-    localStorage.removeItem(`deeplearn_deep_complete_${tabId}`);
+    // Clear all localStorage keys related to deep learn for this tab
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(`deeplearn_`) && key.includes(tabId)) {
+        localStorage.removeItem(key);
+      }
+    });
     
     console.log('🧹 Cleared related content for new conversation');
   };

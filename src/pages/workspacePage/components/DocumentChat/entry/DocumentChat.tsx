@@ -162,10 +162,12 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
         const tabId = window.location.pathname + window.location.search;
         
         // Clear ALL existing conversation data for this tab
-        localStorage.removeItem(`documentchat_streaming_content_${tabId}`);
-        localStorage.removeItem(`documentchat_streaming_complete_${tabId}`);
-        localStorage.removeItem(`documentchat_conversation_${tabId}`);
-        localStorage.removeItem(`documentchat_query_${tabId}`);
+        // Clear all localStorage keys related to document chat for this tab
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith(`documentchat_`) && key.includes(tabId)) {
+            localStorage.removeItem(key);
+          }
+        });
         
         // Save the conversation data for loading in response view
         localStorage.setItem(`documentchat_conversation_${tabId}`, conversation.conversation_id);

@@ -296,9 +296,7 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
       }
     }
     
-    // This code only runs for NON-history conversations (new streaming conversations)
-    console.log('📂 Loading saved streaming data for NON-history conversation, tab:', tabId);
-    
+    // For non-history conversations, check if we have streaming data
     const savedConversationId = localStorage.getItem(`deeplearn_conversation_${tabId}`);
     const savedQuery = localStorage.getItem(`deeplearn_query_${tabId}`);
     const savedMode = localStorage.getItem(`deeplearn_mode_${tabId}`) as 'deep-learn' | 'quick-search';
@@ -306,19 +304,19 @@ function DeepLearnResponse({ onBack, isSplit = false }: DeepLearnResponseProps) 
     const savedDeepContent = localStorage.getItem(`deeplearn_deep_content_${tabId}`);
     const isStreamingComplete = localStorage.getItem(`deeplearn_streaming_complete_${tabId}`) === 'true';
     const isDeepComplete = localStorage.getItem(`deeplearn_deep_complete_${tabId}`) === 'true';
-
-    console.log('📂 Streaming data found:', {
-      tabId,
-      conversationId: savedConversationId,
-      query: savedQuery,
-      mode: savedMode,
-      streamingContentLength: savedStreamingContent.length,
-      hasDeepContent: !!savedDeepContent,
-      isStreamingComplete,
-      isDeepComplete
-    });
-
+    
     if (savedQuery) {
+      console.log('📂 Resuming existing deep learn conversation:', {
+        tabId,
+        conversationId: savedConversationId,
+        query: savedQuery,
+        mode: savedMode,
+        streamingContentLength: savedStreamingContent.length,
+        hasDeepContent: !!savedDeepContent,
+        isStreamingComplete,
+        isDeepComplete
+      });
+      
       if (savedMode) {
         setSelectedMode(savedMode);
       }
