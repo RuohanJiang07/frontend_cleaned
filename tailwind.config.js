@@ -11,7 +11,11 @@ export default {
         'inter': ['Inter', 'sans-serif'],
         'quicksand': ['Quicksand', 'sans-serif'],
         'outfit': ['Outfit', 'sans-serif'],
+       'function-header': ['Outfit', 'sans-serif'],
       },
+     colors: {
+       'theme-secondary': '#4C6694',
+     },
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
