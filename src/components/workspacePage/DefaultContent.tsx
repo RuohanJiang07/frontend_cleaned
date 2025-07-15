@@ -23,6 +23,7 @@ import Note from "../../pages/workspacePage/components/Note/entry/Note";
 import NoteEditor from "../../pages/workspacePage/components/Note/response/NoteEditor";
 import Drive from "../../pages/workspacePage/components/Drive/Drive";
 import DocumentChatResponse from "../../pages/workspacePage/components/DocumentChat/response/DocumentChatResponse";
+import ProblemHelp from "../../pages/workspacePage/components/ProblemHelp/entry/ProblemHelp";
 
 interface DefaultContentProps {
   tabId: string;
@@ -175,7 +176,7 @@ export const DefaultContent: React.FC<DefaultContentProps> = ({ isSplit, activeV
   }
 
   if (activeView === "problem-help") {
-    return <ProblemSolver onBack={handleBackToDefault} onViewChange={onViewChange} />;
+    return <ProblemHelp onBack={handleBackToDefault} onViewChange={onViewChange} />;
   }
 
   if (activeView === "problem-help-response") {
