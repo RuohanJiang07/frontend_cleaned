@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -36,6 +36,7 @@ interface NoteEditorProps {
 function NoteEditor({ onBack }: NoteEditorProps) {
   const [pageCount, setPageCount] = useState(1);
   const [editorHeight, setEditorHeight] = useState(0);
+  const [generatedNotes, setGeneratedNotes] = useState('');
 
   const editor = useEditor({
     extensions: [
@@ -96,6 +97,43 @@ function NoteEditor({ onBack }: NoteEditorProps) {
       setPageCount(calculatedPages);
     },
   });
+
+  // Listen for note-copilot-text events to update the editor with generated notes
+  useEffect(() => {
+    const handleNoteCopilotText = (event: CustomEvent<{ text: string }>) => {
+      if (editor && event.detail && event.detail.text) {
+        const newText = event.detail.text;
+        setGeneratedNotes(prevText => {
+          // Only update if the text has changed
+          if (newText !== prevText) {
+            // Insert the text at the current cursor position or at the end
+            const currentContent = editor.getHTML();
+            
+            // If this is the first time receiving text, replace the editor content
+            if (!prevText) {
+              editor.commands.setContent(newText);
+            } else {
+              // For subsequent updates, append only the new content
+              const newContent = newText.replace(prevText, '').trim();
+              if (newContent) {
+                // Move cursor to the end and insert the new content
+                editor.commands.focus('end');
+                editor.commands.insertContent(newContent);
+              }
+            }
+            return newText;
+          }
+          return prevText;
+        });
+      }
+    };
+
+    window.addEventListener('note-copilot-text', handleNoteCopilotText as EventListener);
+    
+    return () => {
+      window.removeEventListener('note-copilot-text', handleNoteCopilotText as EventListener);
+    };
+  }, [editor]);
 
   // Update page count when editor content changes
   useEffect(() => {

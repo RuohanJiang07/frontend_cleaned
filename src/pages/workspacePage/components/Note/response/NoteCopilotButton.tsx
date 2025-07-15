@@ -139,11 +139,7 @@ function NoteCopilotButton({ className = '' }: NoteCopilotButtonProps) {
   // Function to insert text into the editor
   const insertTextIntoEditor = (text: string) => {
     try {
-      // Find the editor element - this is a simple implementation
-      // In a real app, you might want to use a ref or a more sophisticated approach
-      const editor = document.querySelector('.ProseMirror');
-      
-      if (editor && text) {
+      if (text) {
         console.log('📝 Inserting text into editor:', text.substring(0, 50) + '...');
         
         // Create a custom event that the editor component can listen for
@@ -152,13 +148,7 @@ function NoteCopilotButton({ className = '' }: NoteCopilotButtonProps) {
         });
         window.dispatchEvent(event);
         
-        // For testing purposes, also log to console
-        console.log('📝 GENERATED NOTES CONTENT:');
-        console.log('---------------------------');
-        console.log(text);
-        console.log('---------------------------');
-      } else {
-        console.warn('⚠️ Editor element not found or text is empty');
+        console.log('📝 Dispatched note-copilot-text event with content');
       }
     } catch (error) {
       console.error('❌ Error inserting text into editor:', error);
