@@ -36,7 +36,6 @@ interface NoteEditorProps {
 function NoteEditor({ onBack }: NoteEditorProps) {
   const [pageCount, setPageCount] = useState(1);
   const [editorHeight, setEditorHeight] = useState(0);
-  const [generatedNotes, setGeneratedNotes] = useState('');
 
   const editor = useEditor({
     extensions: [
@@ -101,30 +100,22 @@ function NoteEditor({ onBack }: NoteEditorProps) {
   // Listen for note-copilot-text events to update the editor with generated notes
   useEffect(() => {
     const handleNoteCopilotText = (event: CustomEvent<{ text: string }>) => {
-      if (editor && event.detail && event.detail.text) {
-        const newText = event.detail.text;
-        setGeneratedNotes(prevText => {
-          // Only update if the text has changed
-          if (newText !== prevText) {
-            // Insert the text at the current cursor position or at the end
-            const currentContent = editor.getHTML();
+      if (editor && event.detail?.text) {
+        // REPLACE all content with the new text instead of comparing/appending
+        editor.commands.setContent(event.detail.text);
+        
+        // Force recalculation of page count after content update
+        setTimeout(() => {
+          if (editor && editor.view && editor.view.dom) {
+            const contentHeight = editor.view.dom.scrollHeight;
+            setEditorHeight(contentHeight);
             
-            // If this is the first time receiving text, replace the editor content
-            if (!prevText) {
-              editor.commands.setContent(newText);
-            } else {
-              // For subsequent updates, append only the new content
-              const newContent = newText.replace(prevText, '').trim();
-              if (newContent) {
-                // Move cursor to the end and insert the new content
-                editor.commands.focus('end');
-                editor.commands.insertContent(newContent);
-              }
-            }
-            return newText;
+            // Calculate pages needed (assuming ~1000px per page with margins)
+            const pageHeight = 1000; // Approximate content height per page
+            const calculatedPages = Math.max(1, Math.ceil(contentHeight / pageHeight));
+            setPageCount(calculatedPages);
           }
-          return prevText;
-        });
+        }, 100);
       }
     };
 
@@ -371,7 +362,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
       <div className="flex-1 bg-gray-50 overflow-hidden relative">
         {/* Page numbers sidebar and editor content */}
         <div className="flex h-full">
-          {/* Restored original line number indicator - simple sequential numbers */}
+          {/* Line number indicator - simple sequential numbers */}
           <div className="w-10 bg-gray-100 border-r border-gray-200 flex flex-col items-center py-4 text-xs text-gray-500 font-inter flex-shrink-0">
             {Array.from({ length: 50 }, (_, i) => (
               <div key={i + 1} className="h-5 flex items-center">
@@ -381,34 +372,28 @@ function NoteEditor({ onBack }: NoteEditorProps) {
           </div>
 
           {/* Editor content - Multiple pages with proper spacing */}
-          <div className="flex-1 flex justify-center py-6 px-6 overflow-y-auto">
-            <div className="flex flex-col gap-8"> {/* Increased gap from 6 to 8 for better spacing */}
-              {/* Render multiple pages based on content */}
-              {Array.from({ length: pageCount }, (_, pageIndex) => (
-                <div 
-                  key={pageIndex} 
-                  className="w-[816px] min-h-[1056px] bg-white shadow-lg px-10 py-12 relative mb-8" // Added mb-8 for bottom spacing
-                  style={{
-                    pageBreakAfter: pageIndex < pageCount - 1 ? 'always' : 'auto'
-                  }}
+          <div className="flex-1 overflow-y-auto py-6 px-6">
+            <div className="flex flex-col items-center gap-8">
+              <EditorContent 
+                editor={editor} 
+                className="w-[816px] min-h-[1056px] bg-white shadow-lg px-10 py-12 relative font-inter"
+              />
+              
+              {/* Add additional blank pages if needed */}
+              {pageCount > 1 && Array.from({ length: pageCount - 1 }, (_, pageIndex) => (
+                <div
+                  key={pageIndex + 1}
+                  className="w-[816px] min-h-[1056px] bg-white shadow-lg px-10 py-12 relative"
                 >
-                  {/* Only render editor content in the first page */}
-                  {pageIndex === 0 && (
-                    <EditorContent 
-                      editor={editor} 
-                      className="h-full font-inter w-full max-w-none"
-                    />
-                  )}
-                  
                   {/* Page number at bottom */}
                   <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-xs text-gray-400 font-inter">
-                    {pageIndex + 1}
+                    {pageIndex + 2}
                   </div>
                 </div>
               ))}
               
-              {/* Extra spacing at the end for visual breathing room */}
-              <div className="h-32"></div>
+              {/* Extra spacing at the end */}
+              <div className="h-20"></div>
             </div>
           </div>
         </div>
@@ -424,19 +409,19 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         .ProseMirror {
           font-family: 'Inter', sans-serif !important;
           font-size: 14px !important;
-          line-height: 1.6 !important;
+          line-height: 1.7 !important;
           max-width: none !important;
           width: 100% !important;
           margin: 0 !important;
           padding: 0 !important;
-          min-height: 1000px !important;
+          min-height: 900px !important;
           overflow: visible !important;
         }
         
         .ProseMirror h1 {
           font-family: 'Inter', sans-serif !important;
           font-size: 24px !important;
-          font-weight: 600 !important;
+          font-weight: 700 !important;
           margin-bottom: 16px !important;
           margin-top: 0 !important;
           page-break-after: avoid !important;
@@ -445,7 +430,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         .ProseMirror h2 {
           font-family: 'Inter', sans-serif !important;
           font-size: 20px !important;
-          font-weight: 600 !important;
+          font-weight: 700 !important;
           margin-bottom: 12px !important;
           margin-top: 24px !important;
           page-break-after: avoid !important;
@@ -454,7 +439,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         .ProseMirror h3 {
           font-family: 'Inter', sans-serif !important;
           font-size: 18px !important;
-          font-weight: 600 !important;
+          font-weight: 700 !important;
           margin-bottom: 8px !important;
           margin-top: 20px !important;
           page-break-after: avoid !important;
@@ -463,7 +448,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         .ProseMirror p {
           font-family: 'Inter', sans-serif !important;
           font-size: 14px !important;
-          margin-bottom: 12px !important;
+          margin-bottom: 14px !important;
           margin-top: 0 !important;
           page-break-inside: avoid !important;
         }
@@ -471,7 +456,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         .ProseMirror ul, .ProseMirror ol {
           font-family: 'Inter', sans-serif !important;
           font-size: 14px !important;
-          margin-bottom: 12px !important;
+          margin-bottom: 14px !important;
           padding-left: 24px !important;
           page-break-inside: avoid !important;
         }
@@ -479,13 +464,13 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         .ProseMirror li {
           font-family: 'Inter', sans-serif !important;
           font-size: 14px !important;
-          margin-bottom: 4px !important;
+          margin-bottom: 6px !important;
           page-break-inside: avoid !important;
         }
         
         .ProseMirror strong {
           font-family: 'Inter', sans-serif !important;
-          font-weight: 600 !important;
+          font-weight: 700 !important;
         }
         
         .ProseMirror em {
@@ -496,7 +481,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         .ProseMirror code {
           font-family: 'Inter', monospace !important;
           font-size: 13px !important;
-          background-color: #f3f4f6 !important;
+          background-color: #f5f7fa !important;
           padding: 2px 4px !important;
           border-radius: 3px !important;
         }
@@ -504,7 +489,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         .ProseMirror blockquote {
           font-family: 'Inter', sans-serif !important;
           font-size: 14px !important;
-          border-left: 4px solid #e5e7eb !important;
+          border-left: 4px solid #d1d5db !important;
           padding-left: 16px !important;
           margin: 16px 0 !important;
           font-style: italic !important;
@@ -523,7 +508,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         /* Page break styles for better pagination */
         @media print {
           .ProseMirror {
-            page-break-inside: auto !important;
+            page-break-inside: avoid !important;
           }
           
           .ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
@@ -533,8 +518,8 @@ function NoteEditor({ onBack }: NoteEditorProps) {
           
           .ProseMirror p, .ProseMirror li {
             page-break-inside: avoid !important;
-            orphans: 2 !important;
-            widows: 2 !important;
+            orphans: 3 !important;
+            widows: 3 !important;
           }
         }
       `}</style>
