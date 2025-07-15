@@ -63,6 +63,7 @@ export class NoteCopilotRecorder {
   constructor(options: AudioRecorderOptions = {}) {
     this.options = options;
     this.conversationId = generateConversationId();
+    console.log('🆔 Generated conversation ID:', this.conversationId);
   }
 
   // Convert Float32Array to PCM16 Int16Array

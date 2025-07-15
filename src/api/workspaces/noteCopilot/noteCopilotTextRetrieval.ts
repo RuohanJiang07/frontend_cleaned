@@ -83,6 +83,8 @@ export class NoteCopilotTextRetrieval {
         throw new Error('No workspace ID found. Please select a workspace first.');
       }
 
+      console.log(`🔄 Fetching generated notes for conversation: ${this.conversationId}`);
+
       // Create form data
       const formData = new FormData();
       formData.append('workspace_id', workspaceId);
@@ -107,6 +109,13 @@ export class NoteCopilotTextRetrieval {
       }
 
       const data: GeneratedNotesResponse = await response.json();
+      console.log(`📥 Received response for generated notes:`, {
+        success: data.success,
+        conversation_id: data.conversation_id,
+        notes_count: data.notes_count,
+        has_markdown: !!data.generated_notes_markdown,
+        message: data.message
+      });
 
       if (data.success && data.generated_notes_markdown) {
         // Only call the callback if the text has changed
@@ -114,9 +123,15 @@ export class NoteCopilotTextRetrieval {
           this.lastFetchedText = data.generated_notes_markdown;
           this.onTextReceived(data.generated_notes_markdown);
           console.log(`📝 Received updated notes (${data.notes_count} sections) for conversation: ${this.conversationId}`);
+          console.log(`📝 GENERATED NOTES CONTENT (first 200 chars):`);
+          console.log(data.generated_notes_markdown.substring(0, 200) + '...');
+        } else {
+          console.log(`📝 No changes in generated notes since last fetch`);
         }
       } else if (!data.success) {
         console.warn(`⚠️ API returned success: false - ${data.message}`);
+      } else {
+        console.log(`📝 No generated notes available yet`);
       }
     } catch (error) {
       console.error('❌ Error fetching generated notes:', error);

@@ -22,32 +22,35 @@ function NoteCopilotButton({ className = '' }: NoteCopilotButtonProps) {
   const [recordingStatus, setRecordingStatus] = useState<'idle' | 'recording' | 'processing' | 'error'>('idle');
   const [transcription, setTranscription] = useState('');
   const [generatedNotes, setGeneratedNotes] = useState('');
-  const recorderRef = useRef<{ toggleRecording: () => void; isCurrentlyRecording: () => boolean } | null>(null);
+  const recorderRef = useRef<any>(null);
   const textRetrieverRef = useRef<NoteCopilotTextRetrieval | null>(null);
+  const conversationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const initializeRecorder = async () => {
       try {
-        // Import the NoteCopilotRecorder class
+        // Dynamically import the NoteCopilotRecorder class
         const { NoteCopilotRecorder } = await import('../../../../../api/workspaces/noteCopilot/noteCopilotCore');
         
         // Create a new instance with callbacks
         const recorder = new NoteCopilotRecorder({
           onTranscriptionReceived: (text) => {
-            console.log('Received transcription:', text);
+            console.log('📝 Received transcription:', text);
             setTranscription(text);
             
             // Insert transcription into editor
             insertTextIntoEditor(text);
           },
           onStatusChange: (status) => {
-            console.log('Recording status changed:', status);
+            console.log('🎙️ Recording status changed:', status);
             setRecordingStatus(status);
             setIsRecording(status === 'recording');
             
-            // Start polling for generated notes when recording stops
-            if (status === 'idle' && recorderRef.current) {
+            // If recording started, start polling for generated notes
+            if (status === 'recording' && recorderRef.current) {
               const conversationId = recorderRef.current.getConversationId();
+              conversationIdRef.current = conversationId;
+              console.log('🆔 Using conversation ID for text retrieval:', conversationId);
               initializeTextRetriever(conversationId);
             }
           },
@@ -55,16 +58,16 @@ function NoteCopilotButton({ className = '' }: NoteCopilotButtonProps) {
             setRecordingTime(time);
           },
           onError: (error) => {
-            console.error('Recording error:', error);
+            console.error('❌ Recording error:', error);
             // You could show a toast notification here
           }
         });
         
         // Store the recorder instance in the ref
         recorderRef.current = recorder;
-        console.log('NoteCopilotRecorder initialized successfully');
+        console.log('✅ NoteCopilotRecorder initialized successfully');
       } catch (error) {
-        console.error('Failed to load NoteCopilotRecorder:', error);
+        console.error('❌ Failed to load NoteCopilotRecorder:', error);
       }
     };
     
@@ -74,17 +77,17 @@ function NoteCopilotButton({ className = '' }: NoteCopilotButtonProps) {
     return () => {
       try {
         if (recorderRef.current && recorderRef.current.isCurrentlyRecording()) {
-          console.log('Cleaning up recorder on unmount');
+          console.log('🧹 Cleaning up recorder on unmount');
           recorderRef.current.toggleRecording();
         }
         
         // Stop polling for text when component unmounts
         if (textRetrieverRef.current) {
-          console.log('Stopping text polling on unmount');
+          console.log('🧹 Stopping text polling on unmount');
           textRetrieverRef.current.stopPolling();
         }
       } catch (error) {
-        console.error('Error during cleanup:', error);
+        console.error('❌ Error during cleanup:', error);
       }
     };
   }, []);
@@ -97,18 +100,20 @@ function NoteCopilotButton({ className = '' }: NoteCopilotButtonProps) {
         textRetrieverRef.current.stopPolling();
       }
       
+      console.log('🔄 Initializing text retriever for conversation ID:', conversationId);
+      
       // Create new retriever
       const retriever = new NoteCopilotTextRetrieval(
         conversationId,
         (text) => {
-          console.log('Received generated notes:', text.substring(0, 100) + '...');
+          console.log('📝 Received generated notes:', text.substring(0, 100) + '...');
           setGeneratedNotes(text);
           
           // Insert the generated notes into the editor
           insertTextIntoEditor(text);
         },
         (error) => {
-          console.error('Text retrieval error:', error);
+          console.error('❌ Text retrieval error:', error);
         }
       );
       
@@ -116,9 +121,18 @@ function NoteCopilotButton({ className = '' }: NoteCopilotButtonProps) {
       retriever.startPolling(5000);
       textRetrieverRef.current = retriever;
       
-      console.log('Started polling for generated notes with conversation ID:', conversationId);
+      console.log('🔄 Started polling for generated notes with conversation ID:', conversationId);
+      
+      // Force an immediate fetch
+      retriever.fetchNow().then(text => {
+        if (text) {
+          console.log('📝 Initial fetch returned notes:', text.substring(0, 100) + '...');
+        } else {
+          console.log('📝 Initial fetch returned no notes');
+        }
+      });
     } catch (error) {
-      console.error('Failed to initialize text retriever:', error);
+      console.error('❌ Failed to initialize text retriever:', error);
     }
   }, []);
 
@@ -130,21 +144,24 @@ function NoteCopilotButton({ className = '' }: NoteCopilotButtonProps) {
       const editor = document.querySelector('.ProseMirror');
       
       if (editor && text) {
-        // For now, we'll just log that we would insert text
-        console.log('Would insert text into editor:', text.substring(0, 50) + '...');
+        console.log('📝 Inserting text into editor:', text.substring(0, 50) + '...');
         
-        // In a real implementation, you would use the editor's API to insert text
-        // For example, with TipTap:
-        // editor.commands.insertContent(text);
-        
-        // For testing purposes, we'll create a custom event that the editor component can listen for
+        // Create a custom event that the editor component can listen for
         const event = new CustomEvent('note-copilot-text', { 
           detail: { text } 
         });
         window.dispatchEvent(event);
+        
+        // For testing purposes, also log to console
+        console.log('📝 GENERATED NOTES CONTENT:');
+        console.log('---------------------------');
+        console.log(text);
+        console.log('---------------------------');
+      } else {
+        console.warn('⚠️ Editor element not found or text is empty');
       }
     } catch (error) {
-      console.error('Error inserting text into editor:', error);
+      console.error('❌ Error inserting text into editor:', error);
     }
   };
 
@@ -154,35 +171,39 @@ function NoteCopilotButton({ className = '' }: NoteCopilotButtonProps) {
 
   const toggleRecording = useCallback(() => {
     if (recorderRef.current) {
+      console.log('🎙️ Toggling recording state');
       recorderRef.current.toggleRecording();
       
-      // If we're stopping recording, start polling for generated notes
+      // If we're stopping recording, make sure polling continues
       if (recorderRef.current.isCurrentlyRecording()) {
+        console.log('🎙️ Recording started');
         // We're currently recording, so this toggle will stop it
         // We'll start polling in the onStatusChange callback
       } else {
+        console.log('🎙️ Recording stopped');
         // We're not recording, so this toggle will start it
-        // Stop any existing text polling
-        if (textRetrieverRef.current) {
-          textRetrieverRef.current.stopPolling();
+        // Make sure polling continues if we have a conversation ID
+        if (conversationIdRef.current && textRetrieverRef.current) {
+          console.log('🔄 Ensuring polling continues after recording stops');
+          textRetrieverRef.current.startPolling(5000);
         }
       }
     } else {
-      console.error('Recorder not initialized');
+      console.error('❌ Recorder not initialized');
     }
   }, []);
 
   // Effect to log when transcription changes
   useEffect(() => {
     if (transcription) {
-      console.log('Transcription updated:', transcription.substring(0, 50) + '...');
+      console.log('📝 Transcription updated:', transcription.substring(0, 50) + '...');
     }
   }, [transcription]);
 
   // Effect to log when generated notes change
   useEffect(() => {
     if (generatedNotes) {
-      console.log('Generated notes updated:', generatedNotes.substring(0, 50) + '...');
+      console.log('📝 Generated notes updated:', generatedNotes.substring(0, 50) + '...');
     }
   }, [generatedNotes]);
 
