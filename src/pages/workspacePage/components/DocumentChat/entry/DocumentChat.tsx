@@ -204,7 +204,14 @@ function DocumentChat({ isSplit = false, onBack, onViewChange }: DocumentChatPro
       {/* History Content Section */}
       <div className={`document-chat-cards-container ${isSplit ? 'split' : ''}`}>
         {SAMPLE_DOCUMENT_HISTORY.map((item) => (
-          <div key={item.id} className="document-chat-card">
+          <div 
+            key={item.id} 
+            className="document-chat-card cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              // Navigate to document chat response page
+              onViewChange?.('document-chat-response');
+            }}
+          >
             <div className="document-chat-card-title">
               {item.title}
             </div>
