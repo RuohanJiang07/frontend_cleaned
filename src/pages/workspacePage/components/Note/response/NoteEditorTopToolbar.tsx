@@ -14,6 +14,42 @@ interface NoteEditorTopToolbarProps {
 }
 
 function NoteEditorTopToolbar({ onBack, editor, onZoomIn, onZoomOut }: NoteEditorTopToolbarProps) {
+  const handleHeadingChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    
+    switch (value) {
+      case 'Normal':
+        editor?.chain().focus().setParagraph().run();
+        break;
+      case 'Heading 1':
+        editor?.chain().focus().toggleHeading({ level: 1 }).run();
+        break;
+      case 'Heading 2':
+        editor?.chain().focus().toggleHeading({ level: 2 }).run();
+        break;
+      case 'Heading 3':
+        editor?.chain().focus().toggleHeading({ level: 3 }).run();
+        break;
+      case 'Quote':
+        editor?.chain().focus().toggleBlockquote().run();
+        break;
+      case 'Code':
+        editor?.chain().focus().toggleCodeBlock().run();
+        break;
+      default:
+        editor?.chain().focus().setParagraph().run();
+    }
+  };
+
+  const getCurrentHeading = () => {
+    if (editor?.isActive('heading', { level: 1 })) return 'Heading 1';
+    if (editor?.isActive('heading', { level: 2 })) return 'Heading 2';
+    if (editor?.isActive('heading', { level: 3 })) return 'Heading 3';
+    if (editor?.isActive('blockquote')) return 'Quote';
+    if (editor?.isActive('codeBlock')) return 'Code';
+    return 'Normal';
+  };
+
   return (
     <>
       {/* Header - Reduced height and aligned menu items with title */}
@@ -72,7 +108,11 @@ function NoteEditorTopToolbar({ onBack, editor, onZoomIn, onZoomOut }: NoteEdito
           {/* Style Dropdown */}
           <div className="flex items-center px-2">
             <div className="relative">
-              <select className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-1 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <select 
+                className="appearance-none bg-white border border-gray-300 rounded-md px-3 py-1 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                value={getCurrentHeading()}
+                onChange={handleHeadingChange}
+              >
                 <option>Normal</option>
                 <option>Heading 1</option>
                 <option>Heading 2</option>

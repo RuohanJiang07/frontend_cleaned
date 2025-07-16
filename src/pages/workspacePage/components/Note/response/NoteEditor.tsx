@@ -15,9 +15,51 @@ interface NoteEditorProps {
 }
 
 function NoteEditor({ onBack }: NoteEditorProps) {
-  const [pageCount, setPageCount] = useState(1);
-  const [editorHeight, setEditorHeight] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [lineCount, setLineCount] = useState(1);
+  const [lineHeights, setLineHeights] = useState<number[]>([]);
+
+  const updateLineCount = (editor: Editor) => {
+    const dom = editor.view.dom;
+    const elements = dom.querySelectorAll('p, h1, h2, h3, li, blockquote, pre');
+    
+    let totalLines = 0;
+    const heights: number[] = [];
+    
+    elements.forEach((element) => {
+      const rect = element.getBoundingClientRect();
+      const elementHeight = rect.height;
+      
+      // Calculate line height for this element type
+      let lineHeight = 27.2; // default for 16px * 1.7
+      const computedStyle = window.getComputedStyle(element);
+      const fontSize = parseFloat(computedStyle.fontSize);
+      const lineHeightValue = parseFloat(computedStyle.lineHeight);
+      
+      if (!isNaN(lineHeightValue)) {
+        lineHeight = lineHeightValue;
+      } else {
+        // Fallback calculation based on element type
+        if (element.tagName === 'H1') lineHeight = fontSize * 1.2;
+        else if (element.tagName === 'H2') lineHeight = fontSize * 1.3;
+        else if (element.tagName === 'H3') lineHeight = fontSize * 1.4;
+        else lineHeight = fontSize * 1.7;
+      }
+      
+      // Calculate how many visual lines this element spans
+      const visualLines = Math.max(1, Math.round(elementHeight / lineHeight));
+      
+      // Add heights for each visual line
+      for (let i = 0; i < visualLines; i++) {
+        heights.push(lineHeight);
+      }
+      
+      totalLines += visualLines;
+    });
+    
+    setLineCount(totalLines || 1);
+    setLineHeights(heights.length > 0 ? heights : [27.2]);
+  };
 
   const editor = useEditor({
     extensions: [
@@ -30,273 +72,272 @@ function NoteEditor({ onBack }: NoteEditorProps) {
       Color,
       FontFamily,
     ],
-    content: `
-      <h1>Wait-Why Do Antibiotics Exist?</h1>
-      <p>Prof. Fabrizio Apagnolo</p>
-      <p>Crisper (?) -> CRISPR</p>
-      <br>
-      <h2>1. History</h2>
-      <p>Dawn of Modern Medicine: (1800s)</p>
-      <ul>
-        <li>Paul Erhlich: began working on microbial staining for microscopy; note that stains can easily enter bacterial</li>
-        <li>First time the possibility of chemotherapy for infectious diseases is seriously pursued</li>
-      </ul>
-      <p>First True Antibiotic</p>
-      <ul>
-        <li>1928, Alexander Fleming: penicillin, the first true antibiotic (quite an accident!)</li>
-        <li>1940: first experimentally used to treat an infection. Clinical approved in 1943. Also, resistance to penicillin was reported in the literature by Chain & a colleague</li>
-        <li>1945: Fleming shared the Nobel Prize with two of the chemists</li>
-      </ul>
-      <p><strong>2. Antibiotic Resistance - is not New</strong></p>
-      <ul>
-        <li>Antibiotic resistance genes (ARGs) are common!</li>
-        <li>Antibiotic resistance genes found mostly on plasmids (part of DNA): ARGs often on plasmids paired with genes needed for antibiotic synthesis</li>
-      </ul>
-      <p>Why haven't microbes made antibiotic weapons useless?</p>
-      <p>Why DO antibiotics exist?</p>
-      <p>- Differences in Concentration</p>
-      <ul>
-        <li>Concentration has been a key factor in the success of antibiotic treatments from penicillin onward: this is why Fleming needed chemists to help purify and concentrate penicillin</li>
-        <li>Modern antibiotic therapy uses a PK/PD approach</li>
-      </ul>
-      <p>-Scale</p>
-    `,
+    content: '',
     editorProps: {
       attributes: {
         class: 'prose prose-sm focus:outline-none font-inter text-sm leading-relaxed',
+        style: 'overflow: visible; min-height: 100%;'
       },
     },
     onUpdate: ({ editor }) => {
-      // Calculate content height and update page count
-      const editorElement = editor.view.dom;
-      const contentHeight = editorElement.scrollHeight;
-      setEditorHeight(contentHeight);
-      
-      // Calculate pages needed (assuming ~1000px per page with margins)
-      const pageHeight = 1000; // Approximate content height per page
-      const calculatedPages = Math.max(1, Math.ceil(contentHeight / pageHeight));
-      setPageCount(calculatedPages);
+      updateLineCount(editor);
+    },
+    onCreate: ({ editor }) => {
+      updateLineCount(editor);
     },
   });
 
-  // Listen for note-copilot-text events to update the editor with generated notes
   useEffect(() => {
     const handleNoteCopilotText = (event: CustomEvent<{ text: string }>) => {
       if (editor && event.detail?.text) {
-        // REPLACE all content with the new text instead of comparing/appending
         editor.commands.setContent(event.detail.text);
-        
-        // Force recalculation of page count after content update
-        setTimeout(() => {
-          if (editor && editor.view && editor.view.dom) {
-            const contentHeight = editor.view.dom.scrollHeight;
-            setEditorHeight(contentHeight);
-            
-            // Calculate pages needed (assuming ~1000px per page with margins)
-            const pageHeight = 1000; // Approximate content height per page
-            const calculatedPages = Math.max(1, Math.ceil(contentHeight / pageHeight));
-            setPageCount(calculatedPages);
-          }
-        }, 100);
+        setTimeout(() => updateLineCount(editor), 100);
       }
     };
 
     window.addEventListener('note-copilot-text', handleNoteCopilotText as EventListener);
-    
     return () => {
       window.removeEventListener('note-copilot-text', handleNoteCopilotText as EventListener);
     };
   }, [editor]);
 
-  // Update page count when editor content changes
+  // Listen for changes in editor content to recalculate line heights
   useEffect(() => {
     if (editor) {
-      const editorElement = editor.view.dom;
-      const contentHeight = editorElement.scrollHeight;
-      setEditorHeight(contentHeight);
+      const updateHeights = () => {
+        setTimeout(() => updateLineCount(editor), 10);
+      };
       
-      // Calculate pages needed
-      const pageHeight = 1000;
-      const calculatedPages = Math.max(1, Math.ceil(contentHeight / pageHeight));
-      setPageCount(calculatedPages);
+      editor.on('transaction', updateHeights);
+      editor.on('focus', updateHeights);
+      editor.on('blur', updateHeights);
+      
+      return () => {
+        editor.off('transaction', updateHeights);
+        editor.off('focus', updateHeights);
+        editor.off('blur', updateHeights);
+      };
     }
   }, [editor]);
 
-  // Handle zoom in
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.1, 2));
-  };
+  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2));
+  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
 
-  // Handle zoom out
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+  const generateLineNumbers = () => {
+    return Array.from({ length: lineCount }, (_, i) => (
+      <div 
+        key={i} 
+        className="line-number"
+        style={{ 
+          height: `${lineHeights[i] || 27.2}px`,
+          minHeight: `${lineHeights[i] || 27.2}px`,
+          maxHeight: `${lineHeights[i] || 27.2}px`
+        }}
+      >
+        {i + 1}
+      </div>
+    ));
   };
 
   return (
     <div className="h-[calc(100vh-88px)] flex flex-col bg-white font-inter overflow-hidden">
-      {/* Top Toolbar Component - Pass editor instance */}
       <NoteEditorTopToolbar 
         onBack={onBack} 
         editor={editor} 
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
       />
-
-      {/* Main Editor Area - Fixed height with proper overflow and pagination */}
-      <div className="flex-1 bg-white overflow-hidden relative">
-        {/* Editor content - Multiple pages with proper spacing */}
-        <div className="flex-1 overflow-y-auto py-12 px-6 w-full">
-          <div className="flex flex-col items-center gap-8">
-            <EditorContent 
-              editor={editor} 
-              className="w-[816px] min-h-[1056px] bg-white shadow-lg px-10 py-12 relative font-inter transition-transform"
-              style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
-            />
-            
-            {/* Add additional blank pages if needed */}
-            {pageCount > 1 && Array.from({ length: pageCount - 1 }, (_, pageIndex) => (
-              <div
-                key={pageIndex + 1}
-                className="w-[816px] min-h-[1056px] bg-white shadow-lg px-10 py-12 relative"
-                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
-              >
-                {/* Page number at bottom */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-xs text-gray-400 font-inter">
-                  {pageIndex + 2}
-                </div>
+      <div className="flex-1 bg-white relative overflow-hidden">
+        <div className="flex-1 overflow-y-auto w-full h-full scrollbar-hide">
+          <div className="flex justify-center items-start w-full">
+            <div className="obsidian-editor-container" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}>
+              <div className="line-numbers">{generateLineNumbers()}</div>
+              <div className="editor-content-area">
+                <EditorContent editor={editor} className="editor-content" />
               </div>
-            ))}
-            
-            {/* Extra spacing at the end */}
-            <div className="h-20"></div>
+            </div>
           </div>
         </div>
-
-        {/* NoteCopilotButton - Fixed position at bottom center */}
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
           <NoteCopilotButton />
         </div>
       </div>
 
-      {/* Enhanced custom styles for the editor content with pagination */}
-      <style jsx global>{`
+      {/* Styling fix included */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .obsidian-editor-container {
+          display: flex !important;
+          width: 50% !important;
+          min-height: 100vh !important;
+          background: white !important;
+          padding: 4vh 0 !important;
+          max-width: 800px !important;
+        }
+
+        .line-numbers {
+          width: 60px !important;
+          padding: 0 16px 0 20px !important;
+          font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace !important;
+          font-size: 16px !important;
+          color: #9ca3af !important;
+          user-select: none !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: flex-end !important;
+          background: white !important;
+          flex-shrink: 0 !important;
+          line-height: 1.7 !important;
+        }
+
+        .line-number {
+          padding: 0 8px 0 0 !important;
+          text-align: right !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: flex-end !important;
+          font-size: 16px !important;
+          margin: 0 !important;
+          box-sizing: border-box !important;
+          flex-shrink: 0 !important;
+        }
+
+        .editor-content-area {
+          flex: 1 !important;
+          padding: 0 20px 0 0 !important;
+          min-height: 100% !important;
+          background: white !important;
+        }
+
+        .editor-content {
+          width: 100% !important;
+          min-height: 100% !important;
+          background: white !important;
+        }
+
         .ProseMirror {
           font-family: 'Inter', sans-serif !important;
           font-size: 16px !important;
           line-height: 1.7 !important;
-          max-width: none !important;
+          max-width: 100% !important;
           width: 100% !important;
           margin: 0 !important;
           padding: 0 !important;
-          min-height: 900px !important;
+          min-height: 100% !important;
           overflow: visible !important;
+          color: #374151 !important;
+          word-break: break-word !important;
+          background: white !important;
         }
-        
-        .ProseMirror h1 {
-          font-family: 'Inter', sans-serif !important;
-          font-size: 24px !important;
-          font-weight: 700 !important;
-          margin-bottom: 16px !important;
-          margin-top: 0 !important;
-          page-break-after: avoid !important;
-        }
-        
-        .ProseMirror h2 {
-          font-family: 'Inter', sans-serif !important;
-          font-size: 20px !important;
-          font-weight: 700 !important;
-          margin-bottom: 12px !important;
-          margin-top: 24px !important;
-          page-break-after: avoid !important;
-        }
-        
-        .ProseMirror h3 {
-          font-family: 'Inter', sans-serif !important;
-          font-size: 18px !important;
-          font-weight: 700 !important;
-          margin-bottom: 8px !important;
-          margin-top: 20px !important;
-          page-break-after: avoid !important;
-        }
-        
+
         .ProseMirror p {
-          font-family: 'Inter', sans-serif !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.7 !important;
+          min-height: 1.7em !important;
+          box-sizing: border-box !important;
           font-size: 16px !important;
-          margin-bottom: 14px !important;
-          margin-top: 0 !important;
-          page-break-inside: avoid !important;
         }
-        
-        .ProseMirror ul, .ProseMirror ol {
-          font-family: 'Inter', sans-serif !important;
-          font-size: 16px !important;
-          margin-bottom: 14px !important;
-          padding-left: 24px !important;
-          page-break-inside: avoid !important;
-        }
-        
-        .ProseMirror li {
-          font-family: 'Inter', sans-serif !important;
-          font-size: 16px !important;
-          margin-bottom: 6px !important;
-          page-break-inside: avoid !important;
-        }
-        
-        .ProseMirror strong {
-          font-family: 'Inter', sans-serif !important;
+
+        .ProseMirror h1 {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.2 !important;
+          font-size: 32px !important;
           font-weight: 700 !important;
+          color: #111827 !important;
+          box-sizing: border-box !important;
+        }
+
+        .ProseMirror h2 {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.3 !important;
+          font-size: 24px !important;
+          font-weight: 600 !important;
+          color: #111827 !important;
+          box-sizing: border-box !important;
+        }
+
+        .ProseMirror h3 {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.4 !important;
+          font-size: 20px !important;
+          font-weight: 600 !important;
+          color: #111827 !important;
+          box-sizing: border-box !important;
+        }
+
+        .ProseMirror li,
+        .ProseMirror blockquote,
+        .ProseMirror pre {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.7 !important;
+          min-height: 1.7em !important;
+          box-sizing: border-box !important;
+          font-size: 16px !important;
         }
         
+        .ProseMirror p:empty::before {
+          content: '';
+          display: inline-block;
+          height: 1.7em;
+          width: 0;
+        }
+
+        .ProseMirror ul, .ProseMirror ol {
+          padding-left: 24px !important;
+        }
+
+        .ProseMirror strong {
+          font-weight: 700 !important;
+          color: #111827 !important;
+        }
+
         .ProseMirror em {
-          font-family: 'Inter', sans-serif !important;
           font-style: italic !important;
+          color: #374151 !important;
         }
-        
+
         .ProseMirror code {
-          font-family: 'Inter', monospace !important;
+          font-family: 'SF Mono', monospace !important;
           font-size: 15px !important;
-          background-color: #f5f7fa !important;
+          background-color: #f3f4f6 !important;
           padding: 2px 4px !important;
           border-radius: 3px !important;
         }
-        
+
         .ProseMirror blockquote {
-          font-family: 'Inter', sans-serif !important;
-          font-size: 16px !important;
           border-left: 4px solid #d1d5db !important;
           padding-left: 16px !important;
-          margin: 16px 0 !important;
           font-style: italic !important;
-          page-break-inside: avoid !important;
         }
-        
-        /* Remove prose max-width constraints */
-        .prose {
-          max-width: none !important;
-        }
-        
-        .prose-sm {
+
+        .prose, .prose-sm {
           max-width: none !important;
         }
 
-        /* Page break styles for better pagination */
-        @media print {
-          .ProseMirror {
-            page-break-inside: avoid !important;
-          }
-          
-          .ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
-            page-break-after: avoid !important;
-            page-break-inside: avoid !important;
-          }
-          
-          .ProseMirror p, .ProseMirror li {
-            page-break-inside: avoid !important;
-            orphans: 3 !important;
-            widows: 3 !important;
-          }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
         }
-      `}</style>
+
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        .ProseMirror a {
+          color: #2563eb !important;
+          border-bottom: 1px dotted #2563eb !important;
+          text-decoration: none !important;
+        }
+
+        .ProseMirror a:hover {
+          color: #1d4ed8 !important;
+          border-bottom: 1px solid #1d4ed8 !important;
+        }
+      `}} />
     </div>
   );
 }
