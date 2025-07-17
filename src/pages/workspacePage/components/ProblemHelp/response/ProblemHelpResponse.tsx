@@ -1,26 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '../../../../../components/ui/button';
-import { ArrowLeftIcon, ShareIcon, PrinterIcon, MoreHorizontalIcon, CheckIcon, ThumbsUpIcon, ThumbsDownIcon, CopyIcon, PaperclipIcon, FolderIcon } from 'lucide-react';
-import { submitProblemSolverSolution } from '../../../../../api/workspaces/problem_help/ProblemHelpMain';
-import { useToast } from '../../../../../hooks/useToast';
-import { ProblemSolverHistoryItem } from '../../../../../api/workspaces/problem_help/getHistory';
+import React, { useState, useRef } from 'react';
+import './ProblemHelpResponse.css';
 import { MarkdownRenderer } from '../../../../../components/ui/markdown';
 
 interface ProblemHelpResponseProps {
   onBack: () => void;
-}
-
-// Interface for parsing the streaming response
-interface ProblemSolverResponse {
-  steps?: Array<{
-    title: string;
-    content: string;
-  }>;
-  concepts?: Array<{
-    title: string;
-    explanation: string;
-  }>;
-  rawContent?: string;
 }
 
 // Conversation message interface
@@ -29,350 +12,129 @@ interface ConversationMessage {
   type: 'user' | 'assistant';
   content: string;
   timestamp: string;
-  isStreaming?: boolean;
-  streamingContent?: string;
-}
-
-// Interface for key concepts
-interface KeyConcept {
-  concept: string;
-  explanation: string;
+  concepts?: Array<{
+    title: string;
+    explanation: string;
+  }>;
 }
 
 function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
-  const { error } = useToast();
   const [followUpQuestion, setFollowUpQuestion] = useState('');
-  const [userQuery, setUserQuery] = useState('');
-  const [conversationId, setConversationId] = useState('');
-  const [streamingContent, setStreamingContent] = useState('');
-  const [isStreaming, setIsStreaming] = useState(true);
-  const [parsedResponse, setParsedResponse] = useState<ProblemSolverResponse>({});
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // New state for conversation history
-  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+  // Refs for scroll handling
+  const conversationMainRef = useRef<HTMLDivElement>(null);
+  const scrollbarThumbRef = useRef<HTMLDivElement>(null);
 
-  // New state for loaded history data
-  const [loadedHistoryData, setLoadedHistoryData] = useState<ProblemSolverHistoryItem[] | null>(null);
-  const [isHistoryConversation, setIsHistoryConversation] = useState(false);
+  // Placeholder conversation data
+  const conversationHistory: ConversationMessage[] = [
+    {
+      id: 'user-1',
+      type: 'user',
+      content: 'Problem 2.2: A 5.0 kg box is initially at rest on a horizontal surface. A horizontal force of 30 N is applied to it. The coefficient of kinetic friction between the box and the surface is 0.2. (a) Will the box move? (b) If it moves, what is its acceleration?',
+      timestamp: 'Me, Jun 1, 9:50 PM'
+    },
+    {
+      id: 'assistant-1',
+      type: 'assistant',
+      content: `**(a) Will the box move?**
 
-  // Helper function to extract key concepts from text
-  const extractKeyConcepts = (text: string): { cleanedText: string; concepts: KeyConcept[] } => {
-    const concepts: KeyConcept[] = [];
-    
-    // Regular expression to match <<concept::explanation>> format
-    const conceptRegex = /<<([^:]+)::([^>]+)>>/g;
-    
-    // Extract all concepts
-    let match;
-    while ((match = conceptRegex.exec(text)) !== null) {
-      concepts.push({
-        concept: match[1].trim(),
-        explanation: match[2].trim()
-      });
-    }
-    
-    // Replace concept markers with highlighted concept names
-    const cleanedText = text.replace(/<<([^:]+)::([^>]+)>>/g, '<mark class="bg-blue-100 text-blue-900 px-1 py-0.5 rounded font-medium">$1</mark>');
-    
-    return { cleanedText, concepts };
-  };
+To determine if the box will move, we need to compare the applied force with the maximum static friction force.
 
-  // Load saved data for this tab and initialize conversation history
-  useEffect(() => {
-    const tabId = window.location.pathname + window.location.search;
-    // Clear any existing history loaded flag for new questions
-    const isNewQuestion = !localStorage.getItem(`problemhelp_history_loaded_${tabId}`);
-    const historyDataString = localStorage.getItem(`problemhelp_history_data_${tabId}`);
-    const isHistoryLoaded = localStorage.getItem(`problemhelp_history_loaded_${tabId}`) === 'true';
+**Step 1: Calculate the normal force**
+N = mg = 5.0 kg × 9.8 m/s² = 49 N
 
-    // Check if this is a loaded history conversation
-    if (isHistoryLoaded && historyDataString && !isNewQuestion) {
-      console.log('📂 Loading problem solver history conversation data for tab:', tabId);
-      
-      try {
-        const historyData: ProblemSolverHistoryItem[] = JSON.parse(historyDataString);
-        setLoadedHistoryData(historyData);
-        setIsHistoryConversation(true);
-        
-        const savedConversationId = localStorage.getItem(`problemhelp_conversation_${tabId}`);
-        if (savedConversationId) {
-          setConversationId(savedConversationId);
-        }
-        
-        // Convert history data to conversation messages
-        const messages: ConversationMessage[] = [];
-        
-        historyData.forEach((item, index) => {
-          // Add user message
-          messages.push({
-            id: `history-user-${index}`,
-            type: 'user',
-            content: item.user_query,
-            timestamp: new Date(item.time).toLocaleString(),
-          });
-          
-          // Add assistant message
-          messages.push({
-            id: `history-assistant-${index}`,
-            type: 'assistant',
-            content: item.user_query,
-            timestamp: 'Assistant',
-            isStreaming: false,
-            streamingContent: item.llm_response,
-          });
-        });
-        
-        setConversationHistory(messages);
-        console.log('✅ Loaded problem solver history conversation with', messages.length, 'messages');
-        
-        // Exit early for history conversations - don't load any streaming data
-        return;
-      } catch (error) {
-        console.error('❌ Error parsing problem solver history data:', error);
-        // If parsing fails, clear the history flags and fall through to normal loading
-        localStorage.removeItem(`problemhelp_history_data_${tabId}`);
-        localStorage.removeItem(`problemhelp_history_loaded_${tabId}`);
-      }
-    }
-    
-    // For non-history conversations, check if we have streaming data
-    const savedConversationId = localStorage.getItem(`problemhelp_conversation_${tabId}`);
-    const savedQuery = localStorage.getItem(`problemhelp_query_${tabId}`);
-    const savedStreamingContent = localStorage.getItem(`problemhelp_streaming_content_${tabId}`) || '';
-    const isStreamingComplete = localStorage.getItem(`problemhelp_streaming_complete_${tabId}`) === 'true';
-    
-    if (savedQuery) {
-      console.log('📂 Resuming existing problem solver conversation:', {
-        tabId,
-        conversationId: savedConversationId,
-        query: savedQuery,
-        streamingContentLength: savedStreamingContent.length,
-        isStreamingComplete
-      });
-      
-      setUserQuery(savedQuery);
-      if (savedConversationId) {
-        setConversationId(savedConversationId);
-      }
+**Step 2: Calculate the maximum static friction force**
+f_s_max = μ_s × N = 0.2 × 49 N = 9.8 N
 
-      // Initialize conversation history with the first message
-      const initialUserMessage: ConversationMessage = {
-        id: 'initial-user',
-        type: 'user',
-        content: savedQuery,
-        timestamp: 'Me, ' + new Date().toLocaleString()
-      };
+**Step 3: Compare forces**
+Applied force (30 N) > Maximum static friction (9.8 N)
 
-      const initialAssistantMessage: ConversationMessage = {
-        id: 'initial-assistant',
-        type: 'assistant',
-        content: savedQuery,
-        timestamp: 'Assistant',
-        isStreaming: !isStreamingComplete,
-        streamingContent: savedStreamingContent
-      };
+**Conclusion:** Yes, the box will move because the applied force exceeds the maximum static friction.
 
-      setConversationHistory([initialUserMessage, initialAssistantMessage]);
-      
-      if (savedStreamingContent) {
-        // For new questions, we should use the streaming content
-        setStreamingContent(savedStreamingContent);
-        parseStreamingContent(savedStreamingContent);
-      }
-      setIsStreaming(!isStreamingComplete);
+**(b) If it moves, what is its acceleration?**
 
-      // Listen for streaming updates
-      const handleStreamingUpdate = (event: CustomEvent) => {
-        if (event.detail.tabId === tabId) {
-          setStreamingContent(event.detail.content);
-          parseStreamingContent(event.detail.content);
-          
-          // Update conversation history
-          setConversationHistory(prev => 
-            prev.map(msg => 
-              msg.id === 'initial-assistant'
-                ? { ...msg, streamingContent: event.detail.content }
-                : msg
-            )
-          );
-        }
-      };
+Once the box starts moving, kinetic friction takes over.
 
-      const handleStreamingComplete = (event: CustomEvent) => {
-        if (event.detail.tabId === tabId) {
-          setIsStreaming(false);
-          setConversationHistory(prev => 
-            prev.map(msg => 
-              msg.id === 'initial-assistant'
-                ? { ...msg, isStreaming: false }
-                : msg
-            )
-          );
-        }
-      };
+**Step 1: Calculate kinetic friction force**
+f_k = μ_k × N = 0.2 × 49 N = 9.8 N
 
-      window.addEventListener('problemhelp-streaming-update', handleStreamingUpdate as EventListener);
-      window.addEventListener('problemhelp-streaming-complete', handleStreamingComplete as EventListener);
+**Step 2: Calculate net force**
+F_net = F_applied - f_k = 30 N - 9.8 N = 20.2 N
 
-      return () => {
-        // Clean up event listeners
-        window.removeEventListener('problemhelp-streaming-update', handleStreamingUpdate as EventListener);
-        window.removeEventListener('problemhelp-streaming-complete', handleStreamingComplete as EventListener);
-      };
-    } else {
-      console.log('No saved query found, waiting for first question');
-    }
-  }, []);
+**Step 3: Calculate acceleration**
+a = F_net / m = 20.2 N / 5.0 kg = 4.04 m/s²
 
-  // Parse streaming content to extract steps and concepts
-  const parseStreamingContent = (content: string) => {
-    try {
-      // Try to extract structured information from the streaming content
-      const steps: Array<{title: string; content: string}> = [];
-      const concepts: Array<{title: string; explanation: string}> = [];
-
-      // Look for step patterns in the content
-      const stepMatches = content.match(/Step \d+:([^\n]+)\n([\s\S]*?)(?=Step \d+:|$)/g);
-      if (stepMatches) {
-        stepMatches.forEach(stepMatch => {
-          const titleMatch = stepMatch.match(/Step \d+:\s*(.+)/);
-          const contentMatch = stepMatch.replace(/Step \d+:[^\n]+\n/, '').trim();
-          if (titleMatch) {
-            steps.push({
-              title: titleMatch[1].trim(),
-              content: contentMatch
-            });
-          }
-        });
-      }
-
-      // Look for concept explanations (this is a simple heuristic)
-      const conceptPatterns = [
-        'Kinetic Friction',
-        'Free-body Diagram',
-        'Applied Force',
-        'Static Friction',
-        'Normal Force'
-      ];
-
-      conceptPatterns.forEach(concept => {
-        if (content.includes(concept)) {
-          // Extract explanation for this concept (simplified)
-          const conceptRegex = new RegExp(`${concept}[:\\s]*([^\\n]{50,200})`, 'i');
-          const match = content.match(conceptRegex);
-          if (match) {
-            concepts.push({
-              title: concept,
-              explanation: match[1].trim()
-            });
-          }
-        }
-      });
-
-      setParsedResponse({
-        steps: steps.length > 0 ? steps : undefined,
-        concepts: concepts.length > 0 ? concepts : undefined,
-        rawContent: content
-      });
-    } catch (error) {
-      console.error('Error parsing streaming content:', error);
-      setParsedResponse({ rawContent: content });
-    }
-  };
-
-  // Handle submitting follow-up question
-  const handleSubmitFollowUp = async () => {
-    if (!followUpQuestion.trim() || isSubmitting) {
-      return;
-    }
-
-    if (!conversationId) {
-      error('No conversation ID found. Please start a new conversation.');
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      
-      console.log('🔄 Submitting follow-up question in existing conversation:', {
-        conversationId,
-        query: followUpQuestion.trim(),
-        isNewConversation: false
-      });
-      
-      // Add user message to conversation history
-      const newUserMessage: ConversationMessage = {
-        id: `user-${Date.now()}`,
-        type: 'user',
-        content: followUpQuestion.trim(),
-        timestamp: new Date().toLocaleString()
-      };
-
-      // Add assistant message placeholder
-      const newAssistantMessage: ConversationMessage = {
-        id: `assistant-${Date.now()}`,
-        type: 'assistant',
-        content: followUpQuestion.trim(),
-        timestamp: 'Assistant',
-        isStreaming: true,
-        streamingContent: ''
-      };
-
-      setConversationHistory(prev => [...prev, newUserMessage, newAssistantMessage]);
-      
-      // Clear input immediately after submission
-      const queryToSubmit = followUpQuestion.trim();
-      setFollowUpQuestion('');
-
-      // Start problem solver with existing conversation ID (new_conversation = false)
-      await submitProblemSolverSolution(
-        queryToSubmit,
-        'profile-default',
-        null,
-        (data: string) => {
-          // Update the streaming content for the current assistant message
-          setConversationHistory(prev => 
-            prev.map(msg => 
-              msg.id === newAssistantMessage.id
-                ? { ...msg, streamingContent: (msg.streamingContent || '') + data }
-                : msg
-            )
-          );
+**Answers:**
+1. Yes, the 30 N force overcomes friction, so the box moves.
+2. Once sliding, its acceleration is about 4.0 m/s² (directed along the applied force).`,
+      timestamp: 'Answer, GPT-4o',
+      concepts: [
+        {
+          title: 'Kinetic Friction',
+          explanation: 'Kinetic friction is the resistive force that acts against the motion of two surfaces that are already sliding against each other. Once an object starts moving, kinetic friction tries to slow it down or oppose its motion along the surface.'
         },
-        (errorMsg: string) => {
-          console.error('Problem solver follow-up streaming error:', errorMsg);
-          error(`Streaming error: ${errorMsg}`);
-          setIsSubmitting(false);
+        {
+          title: 'Free Body Diagram (FBD)',
+          explanation: 'A free-body diagram (FBD) is a simple, essential tool in physics used to analyze the forces acting on a single object. It is a diagram that shows all the external forces acting on one object, isolated from everything else.'
+        }
+      ]
+    },
+    {
+      id: 'user-2',
+      type: 'user',
+      content: 'What if the coefficient of static friction is different from the coefficient of kinetic friction? How would that change the analysis?',
+      timestamp: 'Me, Jun 1, 10:15 PM'
+    },
+    {
+      id: 'assistant-2',
+      type: 'assistant',
+      content: `**Great follow-up question!** The coefficients of static and kinetic friction are indeed typically different, and this significantly affects the analysis.
+
+**Key Differences:**
+- **Static friction coefficient (μ_s)**: Usually higher than kinetic friction coefficient (μ_k)
+- **Kinetic friction coefficient (μ_k)**: Lower than static friction, typically 70-90% of static friction
+
+**How this changes the analysis:**
+
+**Step 1: Check if the box moves**
+- Use μ_s for the initial "will it move?" calculation
+- f_s_max = μ_s × N (where μ_s > μ_k)
+
+**Step 2: Calculate acceleration once moving**
+- Use μ_k for the acceleration calculation
+- f_k = μ_k × N (where μ_k < μ_s)
+
+**Example with different coefficients:**
+If μ_s = 0.3 and μ_k = 0.2:
+- Static friction: f_s_max = 0.3 × 49 N = 14.7 N
+- Since 30 N > 14.7 N, the box still moves
+- Kinetic friction: f_k = 0.2 × 49 N = 9.8 N
+- Net force: F_net = 30 N - 9.8 N = 20.2 N
+- Acceleration: a = 20.2 N / 5.0 kg = 4.04 m/s²
+
+**Important insight:** The acceleration remains the same once moving, but the threshold force to start motion increases with higher static friction.`,
+      timestamp: 'Answer, GPT-4o',
+      concepts: [
+        {
+          title: 'Static vs Kinetic Friction',
+          explanation: 'Static friction prevents motion and is typically higher than kinetic friction. Once an object starts moving, kinetic friction takes over and is usually lower, which is why it\'s easier to keep something moving than to start it moving.'
         },
-        () => {
-          console.log('Problem solver follow-up streaming completed');
-          setConversationHistory(prev => 
-            prev.map(msg => 
-              msg.id === newAssistantMessage.id
-                ? { ...msg, isStreaming: false }
-                : msg
-            )
-          );
-          setIsSubmitting(false);
-        },
-        conversationId, // Pass existing conversation ID
-        conversationId // Also pass as the generated conversation ID parameter
-      );
-      
-    } catch (err) {
-      console.error('Error submitting follow-up question:', err);
-      error('Failed to submit follow-up question. Please try again.');
-      setIsSubmitting(false);
+        {
+          title: 'Friction Coefficients',
+          explanation: 'The coefficient of friction is a dimensionless scalar value that describes the ratio of the force of friction between two bodies and the normal force pressing them together. Different materials have different coefficients.'
+        }
+      ]
     }
-  };
+  ];
 
   // Handle Enter key press
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmitFollowUp();
+      // Placeholder for submit functionality
+      console.log('Submit:', followUpQuestion);
+      setFollowUpQuestion('');
     }
   };
 
@@ -380,240 +142,211 @@ function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
   const renderMessageContent = (message: ConversationMessage) => {
     if (message.type === 'user') {
       return (
-        <div className="flex flex-col items-end mb-6">
-          <span className="text-xs text-gray-500 font-['Inter',Helvetica] mb-2">
+        <div className="problem-help-response-question">
+          <span className="problem-help-response-question-date">
             {message.timestamp}
           </span>
-          <div className="bg-[#E8F4FD] rounded-lg p-4 w-full max-w-4xl border border-[#B3D9FF]">
-            <div className="text-sm text-black font-['Inter',Helvetica]">
+          <div className="problem-help-response-question-box">
+            <span className="problem-help-response-question-text">
               {message.content}
-            </div>
+            </span>
           </div>
         </div>
       );
     }
 
     // Assistant message
-    const contentToRender = message.streamingContent || '';
-    
-    // Extract key concepts from the content
-    const { cleanedText, concepts } = extractKeyConcepts(contentToRender);
-    
-    if (message.isStreaming && !contentToRender) {
-      return (
-        <div className="text-gray-500 italic mb-6">
-          Loading response...
-        </div>
-      );
-    }
-
     return (
-      <div className="w-full max-w-4xl ml-auto mb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-sm text-gray-600 font-['Inter',Helvetica]">
-            Answer, GPT-4o
-          </span>
+      <div className="problem-help-response-answer">
+        <div className="problem-help-response-answer-header">
+          <span className="problem-help-response-answer-title">{message.timestamp}</span>
+          <div className="problem-help-response-solution-tag">Solution</div>
         </div>
-
-        {/* Main Response Container - 65% left, 35% right */}
-        <div className="flex gap-6">
-          {/* GPT Response - 65% with Markdown Support */}
-          <div className="w-[65%]">
+        
+        <div className="problem-help-response-answer-content">
+          {/* Main Solution - No box wrapper */}
+          <div className="problem-help-response-solution">
             <MarkdownRenderer 
-              content={cleanedText}
+              content={message.content}
               variant="response"
               className="text-sm leading-relaxed"
             />
-            
-            {/* Streaming indicator */}
-            {message.isStreaming && (
-              <span className="inline-block w-2 h-4 bg-gray-400 ml-1 animate-pulse"></span>
-            )}
-
-            {/* Action Buttons - Only show for completed messages */}
-            {!message.isStreaming && (
-              <div className="flex justify-end mt-6">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-3 bg-[#ECF1F6] text-xs text-gray-600 hover:bg-[#e2e8f0] font-['Inter',Helvetica] rounded-lg"
-                  >
-                    <CheckIcon className="w-3 h-3 mr-1" />
-                    Check Answer
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-3 bg-[#ECF1F6] text-xs text-gray-600 hover:bg-[#e2e8f0] font-['Inter',Helvetica] rounded-lg"
-                  >
-                    <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                    Regenerate
-                  </Button>
-
-                  <div className="flex items-center gap-1 ml-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 text-gray-600 hover:text-gray-800"
-                    >
-                      <ThumbsUpIcon className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 text-gray-600 hover:text-gray-800"
-                    >
-                      <ThumbsDownIcon className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="w-8 h-8 text-gray-600 hover:text-gray-800"
-                    >
-                      <CopyIcon className="w-4 h-4" />
-                    </Button>
+          </div>
+          
+          {/* Key Concepts Sidebar */}
+          {message.concepts && message.concepts.length > 0 && (
+            <div className="problem-help-response-concepts">
+              {message.concepts.map((concept, index) => (
+                <div key={index} className="problem-help-response-concept-box">
+                  <div className="problem-help-response-concept-header">
+                    <img
+                      src="/workspace/problemSolver/related-concepts.svg"
+                      alt="Related concepts"
+                      className="problem-help-response-concept-icon"
+                    />
+                    <span className="problem-help-response-concept-title">{concept.title}</span>
+                  </div>
+                  <div className="problem-help-response-concept-body">
+                    <p className="problem-help-response-concept-text">
+                      {concept.explanation}
+                    </p>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Key Concept Cards - 35% */}
-          <div className="w-[35%] space-y-4">
-            {concepts.map((concept, index) => (
-              <div key={index} className="bg-[#f2f7ff] rounded-lg p-4 border-l-4 border-[#90BBFF]">
-                <h4 className="font-semibold text-sm text-black font-['Inter',Helvetica] mb-2">
-                  {concept.concept}
-                </h4>
-                <p className="text-xs text-black font-['Inter',Helvetica] leading-relaxed">
-                  {concept.explanation}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="problem-help-response-actions">
+          <button className="problem-help-response-action-button">
+            <img
+              src="/workspace/copy.svg"
+              alt="Copy"
+              className="problem-help-response-action-icon"
+            />
+          </button>
+          <button className="problem-help-response-action-button">
+            <img
+              src="/workspace/documentChat/thumbsup.svg"
+              alt="Thumbs up"
+              className="problem-help-response-action-icon"
+            />
+          </button>
+          <button className="problem-help-response-action-button">
+            <img
+              src="/workspace/documentChat/thumbsdown.svg"
+              alt="Thumbs down"
+              className="problem-help-response-action-icon"
+            />
+          </button>
         </div>
       </div>
     );
   };
 
   return (
-    <div className=" flex flex-col bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-white">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Back"
+    <div className="problem-help-response">
+      {/* Header Section */}
+      <header className="problem-help-response-header">
+        {/* Left-aligned elements */}
+        <div className="problem-help-response-header-left">
+          {/* Back Arrow */}
+          <button
             onClick={onBack}
-            className="p-2"
+            className="problem-help-response-back-button"
+            aria-label="Go back to problem help entry"
           >
-            <ArrowLeftIcon className="w-5 h-5" />
-          </Button>
-          <h1 className="font-medium text-base text-black font-['Inter',Helvetica]">
-            Problem Solution: {isHistoryConversation && loadedHistoryData ? loadedHistoryData[0]?.user_query.substring(0, 50) + (loadedHistoryData[0]?.user_query.length > 50 ? '...' : '') : (userQuery.substring(0, 50) + (userQuery.length > 50 ? '...' : ''))}
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path 
+                d="M17.4168 10.9999H4.5835M4.5835 10.9999L11.0002 17.4166M4.5835 10.9999L11.0002 4.58325" 
+                stroke="#00276C" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          {/* Conversation Title */}
+          <h1 className="problem-help-response-title">
+            Problem Help: Solving the derivatives
           </h1>
+
+          {/* Conversation Tag */}
+          <div className="problem-help-response-tag">
+            <span className="problem-help-response-tag-text">
+              Conversation
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button className="bg-[#6B94E4] hover:bg-[#5a82d1] text-white rounded-lg px-4 py-2 flex items-center gap-2 font-['Inter',Helvetica] text-sm">
-            Publish to Community
-            <ShareIcon className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="p-2"
+        {/* Right-aligned elements */}
+        <div className="problem-help-response-header-right">
+          {/* Share Icon */}
+          <button
+            className="problem-help-response-action-button"
+            aria-label="Share conversation"
           >
-            <ShareIcon className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="p-2"
-          >
-            <PrinterIcon className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="p-2"
-          >
-            <MoreHorizontalIcon className="w-5 h-5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex flex-col h-[calc(100vh-320px)] bg-white">
-        <div className="flex-1 overflow-y-auto max-w-6xl mx-auto px-8 py-6">
-          {/* Render conversation history */}
-          {conversationHistory.map((message) => (
-            <div key={message.id}>
-              {renderMessageContent(message)}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Fixed Bottom Input Area - Enhanced hover effects matching Deep Learn */}
-      <div className="bg-white">
-        <div className="max-w-4xl mx-auto">
-          {/* Input container with enhanced hover effects exactly like Deep Learn */}
-          <div className={`relative bg-white border rounded-2xl h-32 p-4 transition-all duration-300 ${
-            isInputFocused 
-              ? 'border-[#80A5E4] shadow-[0px_2px_20px_0px_rgba(128,165,228,0.15)]' 
-              : 'border-gray-300'
-          }`}>
-            <textarea
-              className={`w-full h-full border-0 resize-none outline-none bg-transparent font-['Inter',Helvetica] text-sm placeholder:text-gray-500 pr-16 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] transition-all duration-300 ${
-                isInputFocused ? 'caret-[#80A5E4]' : ''
-              }`}
-              placeholder="Continue to ask; provide more details..."
-              value={followUpQuestion}
-              onChange={(e) => setFollowUpQuestion(e.target.value)}
-              onFocus={() => setIsInputFocused(true)}
-              onBlur={() => setIsInputFocused(false)}
-              onKeyPress={handleKeyPress}
-              disabled={isSubmitting}
+            <img
+              src="/workspace/share.svg"
+              alt="Share"
+              className="problem-help-response-action-icon"
             />
+          </button>
 
-            {/* Icons positioned in bottom right corner */}
-            <div className="absolute bottom-4 right-4 flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-6 h-6 p-0 text-gray-400 hover:text-gray-600"
-                disabled={isSubmitting}
-              >
-                <PaperclipIcon className="w-5 h-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-6 h-6 p-0 text-gray-400 hover:text-gray-600"
-                disabled={isSubmitting}
-              >
-                <FolderIcon className="w-5 h-5" />
-              </Button>
-              
-              {/* Submit button - only show when there's text */}
-              {followUpQuestion.trim() && (
-                <Button
-                  onClick={handleSubmitFollowUp}
-                  disabled={isSubmitting}
-                  className="bg-[#80A5E4] hover:bg-[#6b94d6] text-white rounded-lg px-3 py-1 text-xs font-['Inter',Helvetica] ml-2"
-                >
-                  {isSubmitting ? 'Solving...' : 'Ask'}
-                </Button>
-              )}
+          {/* Print Icon */}
+          <button
+            className="problem-help-response-action-button"
+            aria-label="Print conversation"
+          >
+            <img
+              src="/workspace/print.svg"
+              alt="Print"
+              className="problem-help-response-action-icon"
+            />
+          </button>
+
+          {/* Publish to Community Button */}
+          <button
+            className="problem-help-response-publish-button"
+            aria-label="Publish to community"
+          >
+            <img
+              src="/workspace/publish.svg"
+              alt="Publish"
+              className="problem-help-response-publish-icon"
+            />
+            <span className="problem-help-response-publish-text">
+              Publish to Community
+            </span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content Section */}
+      <div className="problem-help-response-main">
+        <div className="problem-help-response-content">
+          {/* Conversation Section */}
+          <div className="problem-help-response-conversation">
+            {/* Conversation Main Section */}
+            <div className="problem-help-response-conversation-main" ref={conversationMainRef}>
+              {/* Render conversation history */}
+              <div className="problem-help-response-conversation-groups">
+                {conversationHistory.map((message) => (
+                  <div key={message.id} className="problem-help-response-conversation-group">
+                    {renderMessageContent(message)}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Input Box Section */}
+            <div className="problem-help-response-input-section">
+              {/* Input Area */}
+              <div className={`problem-help-response-input-box ${isInputFocused ? 'focused' : ''}`}>
+                <textarea
+                  className="problem-help-response-input"
+                  placeholder="Follow up on this question or start a new one..."
+                  value={followUpQuestion}
+                  onChange={(e) => setFollowUpQuestion(e.target.value)}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => setIsInputFocused(false)}
+                  onKeyPress={handleKeyPress}
+                />
+              </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Custom scrollbar positioned at tab level */}
+      <div className="problem-help-response-custom-scrollbar">
+        <div className="problem-help-response-custom-scrollbar-track">
+          <div 
+            className="problem-help-response-custom-scrollbar-thumb"
+            ref={scrollbarThumbRef}
+          />
         </div>
       </div>
     </div>
