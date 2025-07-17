@@ -481,6 +481,47 @@
   caret-color: #80A5E4;
 }
 
+/* Button container styles */
+.problem-help-response-buttons {
+  position: absolute;
+  bottom: 13px;
+  right: 16px;
+  display: flex;
+  gap: 7px;
+}
+
+.problem-help-response-button {
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.2px solid #B5B5B5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.problem-help-response-button:hover {
+  border-color: #4C6694;
+}
+
+.problem-help-response-button.selected {
+  background: #4C6694;
+  border-color: #4C6694;
+}
+
+.problem-help-response-button-icon {
+  width: 21px;
+  height: 21px;
+  transition: filter 0.2s ease;
+}
+
+.problem-help-response-button.selected .problem-help-response-button-icon {
+  filter: brightness(0) invert(1);
+}
+
 .problem-help-response-submit-button {
   display: flex;
   align-items: center;

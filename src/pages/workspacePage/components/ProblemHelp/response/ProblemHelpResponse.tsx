@@ -21,6 +21,8 @@ interface ConversationMessage {
 function ProblemHelpResponse({ onBack }: ProblemHelpResponseProps) {
   const [followUpQuestion, setFollowUpQuestion] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [profileSelected, setProfileSelected] = useState(false);
+  const [referenceSelected, setReferenceSelected] = useState(false);
 
   // Refs for scroll handling
   const conversationMainRef = useRef<HTMLDivElement>(null);
@@ -136,6 +138,14 @@ If μ_s = 0.3 and μ_k = 0.2:
       console.log('Submit:', followUpQuestion);
       setFollowUpQuestion('');
     }
+  };
+
+  const toggleProfile = () => {
+    setProfileSelected(!profileSelected);
+  };
+
+  const toggleReference = () => {
+    setReferenceSelected(!referenceSelected);
   };
 
   // Render the main response content for a message
@@ -323,18 +333,49 @@ If μ_s = 0.3 and μ_k = 0.2:
 
             {/* Input Box Section */}
             <div className="problem-help-response-input-section">
-              {/* Input Area */}
-              <div className={`problem-help-response-input-box ${isInputFocused ? 'focused' : ''}`}>
-                <textarea
-                  className="problem-help-response-input"
-                  placeholder="Follow up on this question or start a new one..."
-                  value={followUpQuestion}
-                  onChange={(e) => setFollowUpQuestion(e.target.value)}
-                  onFocus={() => setIsInputFocused(true)}
-                  onBlur={() => setIsInputFocused(false)}
-                  onKeyPress={handleKeyPress}
-                />
+                          {/* Input Area */}
+            <div className={`problem-help-response-input-box ${isInputFocused ? 'focused' : ''}`}>
+              <textarea
+                className="problem-help-response-input"
+                placeholder="Follow up on this question or start a new one..."
+                value={followUpQuestion}
+                onChange={(e) => setFollowUpQuestion(e.target.value)}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
+                onKeyPress={handleKeyPress}
+              />
+              
+              {/* Buttons at the bottom right */}
+              <div className="problem-help-response-buttons">
+                {/* Profile Select Button */}
+                <button 
+                  className={`problem-help-response-button ${profileSelected ? 'selected' : ''}`}
+                  onClick={toggleProfile}
+                  title="Select Profile" 
+                >
+                  <img 
+                    src="/workspace/deepLearn/contacts-line.svg" 
+                    alt="Profile" 
+                    className="problem-help-response-button-icon"
+                    style={{ filter: profileSelected ? 'brightness(0) invert(1)' : 'brightness(0) saturate(100%) invert(39%) sepia(0%) saturate(0%) hue-rotate(147deg) brightness(94%) contrast(87%)' }}
+                  />
+                </button>
+                
+                {/* Reference Select Button */}
+                <button 
+                  className={`problem-help-response-button ${referenceSelected ? 'selected' : ''}`}
+                  onClick={toggleReference}
+                  title="Select References" 
+                >
+                  <img 
+                    src="/workspace/deepLearn/folder.svg" 
+                    alt="References" 
+                    className="problem-help-response-button-icon"
+                    style={{ filter: referenceSelected ? 'brightness(0) invert(1)' : 'brightness(0) saturate(100%) invert(39%) sepia(0%) saturate(0%) hue-rotate(147deg) brightness(94%) contrast(87%)' }}
+                  />
+                </button>
               </div>
+            </div>
             </div>
           </div>
         </div>
