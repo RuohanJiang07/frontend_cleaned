@@ -26,6 +26,7 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
   const [profileSelected, setProfileSelected] = useState(false);
   const [referenceSelected, setReferenceSelected] = useState(false);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
+  const [historyItems, setHistoryItems] = useState<any[]>([]);
 
   // Load trending topics on component mount
   useEffect(() => {
@@ -76,6 +77,30 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
     ];
     
     setTrendingTopics(mockTrendingTopics);
+
+    // Mock history items
+    const mockHistoryItems = [
+      {
+        id: '1',
+        title: 'Machine Learning Fundamentals',
+        date: '2024-01-15',
+        query: 'What are the basics of machine learning?'
+      },
+      {
+        id: '2',
+        title: 'Quantum Computing Explained',
+        date: '2024-01-10',
+        query: 'How does quantum computing work?'
+      },
+      {
+        id: '3',
+        title: 'Blockchain Technology',
+        date: '2024-01-05',
+        query: 'What is blockchain and how does it work?'
+      }
+    ];
+    
+    setHistoryItems(mockHistoryItems);
   }, []);
 
   const toggleMode = (mode: 'deep-learn' | 'quick-search') => {
@@ -96,6 +121,25 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
 
   const toggleTab = (tab: 'trending' | 'history') => {
     setSelectedTab(tab);
+  };
+
+  // Handle navigation to response page
+  const handleNavigateToResponse = () => {
+    if (inputValue.trim()) {
+      onViewChange?.('deep-learn-response');
+    }
+  };
+
+  // Handle history item click
+  const handleHistoryItemClick = (historyItem: any) => {
+    onViewChange?.('deep-learn-response');
+  };
+
+  // Handle trending topic click
+  const handleTrendingTopicClick = (topic: TrendingTopic) => {
+    setInputValue(topic.title);
+    // Optionally navigate to response page immediately
+    // onViewChange?.('deep-learn-response');
   };
 
   return (
@@ -171,6 +215,12 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
             onChange={(e) => setInputValue(e.target.value)}
             onFocus={() => setIsInputFocused(true)}
             onBlur={() => setIsInputFocused(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && inputValue.trim()) {
+                e.preventDefault();
+                handleNavigateToResponse();
+              }
+            }}
           />
           
           {/* Buttons at the bottom right */}
@@ -200,6 +250,23 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
                 alt="References" 
                 className="deep-learn-button-icon"
                 style={{ filter: referenceSelected ? 'brightness(0) invert(1)' : 'brightness(0) saturate(100%) invert(39%) sepia(0%) saturate(0%) hue-rotate(147deg) brightness(94%) contrast(87%)' }}
+              />
+            </button>
+
+            {/* Separator Line */}
+            <div className="deep-learn-button-separator"></div>
+
+            {/* Send Button */}
+            <button 
+              className={`deep-learn-send-button ${inputValue.trim() ? 'active' : ''}`}
+              onClick={handleNavigateToResponse}
+              disabled={!inputValue.trim()}
+              title="Send Query" 
+            >
+              <img 
+                src="/workspace/arrow-up.svg" 
+                alt="Send" 
+                className="deep-learn-send-icon"
               />
             </button>
           </div>
@@ -243,7 +310,7 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
               {/* First row of trending topics */}
               <div className="trending-row">
                 {trendingTopics.slice(0, 3).map((topic, index) => (
-                  <div key={topic.id} className="trending-card">
+                  <div key={topic.id} className="trending-card" onClick={() => handleTrendingTopicClick(topic)}>
                     <img 
                       src={topic.imageUrl} 
                       alt={topic.title} 
@@ -280,7 +347,7 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
               {/* Second row of trending topics */}
               <div className="trending-row">
                 {trendingTopics.slice(3, 6).map((topic, index) => (
-                  <div key={topic.id} className="trending-card">
+                  <div key={topic.id} className="trending-card" onClick={() => handleTrendingTopicClick(topic)}>
                     <img 
                       src={topic.imageUrl} 
                       alt={topic.title} 
@@ -315,8 +382,23 @@ function DeepLearn({ isSplit = false, onBack, onViewChange }: DeepLearnProps) {
               </div>
             </div>
             <div className="deep-learn-history-content" data-testid="history-content">
-              <div className="text-center py-12 text-gray-500">
-                <p className="font-['Inter'] text-sm">Your search history will appear here</p>
+              <div className="history-items">
+                {historyItems.map((item) => (
+                  <div key={item.id} className="history-item" onClick={() => handleHistoryItemClick(item)}>
+                    <div className="history-item-content">
+                      <div className="history-item-title">{item.title}</div>
+                      <div className="history-item-query">{item.query}</div>
+                      <div className="history-item-date">{item.date}</div>
+                    </div>
+                    <div className="history-item-arrow">
+                      <img 
+                        src="/workspace/deepLearn/arrow-right.svg" 
+                        alt="View" 
+                        className="history-item-arrow-icon"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
         </div>
