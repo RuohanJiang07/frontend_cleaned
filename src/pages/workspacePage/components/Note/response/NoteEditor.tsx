@@ -8,6 +8,7 @@ import Color from '@tiptap/extension-color';
 import FontFamily from '@tiptap/extension-font-family';
 import NoteCopilotButton from './NoteCopilotButton';
 import NoteEditorTopToolbar from './NoteEditorTopToolbar';
+import './style/NoteEditor.css';
 
 interface NoteEditorProps {
   onBack: () => void;
@@ -17,7 +18,6 @@ function NoteEditor({ onBack }: NoteEditorProps) {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [lineCount, setLineCount] = useState(1);
   const [lineHeights, setLineHeights] = useState<number[]>([]);
-  const [toolbarTopMargin, setToolbarTopMargin] = useState(30); // Default to 30px as you suggested
 
   const updateLineCount = (editor: Editor) => {
     const dom = editor.view.dom;
@@ -146,10 +146,6 @@ function NoteEditor({ onBack }: NoteEditorProps) {
     ));
   };
 
-  // Function to adjust toolbar margin
-  const increaseToolbarMargin = () => setToolbarTopMargin(prev => prev + 10);
-  const decreaseToolbarMargin = () => setToolbarTopMargin(prev => Math.max(0, prev - 10));
-
   return (
     <div className="h-[calc(100vh-88px)] flex flex-col bg-white overflow-hidden">
       <NoteEditorTopToolbar 
@@ -157,13 +153,12 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         editor={editor} 
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
-        toolbarTopMargin={toolbarTopMargin}
       />
       
       <div className="flex-1 relative overflow-hidden">
         <div className="flex-1 overflow-y-auto w-full h-full">
           <div className="flex justify-center w-full">
-            <div className="editor-container" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}>
+            <div className="editor-container editor-scroll-container" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}>
               <div className="line-numbers">{generateLineNumbers()}</div>
               <EditorContent editor={editor} className="editor-content" />
             </div>
@@ -175,200 +170,7 @@ function NoteEditor({ onBack }: NoteEditorProps) {
         </div>
       </div>
 
-      {/* Debug controls for toolbar margin - can be removed in production */}
-      <div className="fixed bottom-4 right-4 flex gap-2 bg-white p-2 rounded shadow-md z-50">
-        <button 
-          onClick={increaseToolbarMargin} 
-          className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          title="Move toolbar down"
-        >
-          ↓ Toolbar
-        </button>
-        <button 
-          onClick={decreaseToolbarMargin} 
-          className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          title="Move toolbar up"
-        >
-          ↑ Toolbar
-        </button>
-        <span className="px-2 py-1 bg-gray-100 rounded">{toolbarTopMargin}px</span>
-      </div>
 
-      {/* Updated styling to match the image */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        .editor-container {
-          display: flex;
-          width: 800px;
-          min-height: 100vh;
-          background: white;
-          padding: 0;
-          position: relative;
-          margin-top: 0px;
-        }
-
-        .line-numbers {
-          width: 50px;
-          padding: 0 10px;
-          font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-          font-size: 14px;
-          color: #9ca3af;
-          user-select: none;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          background: white;
-          flex-shrink: 0;
-          line-height: 1.7;
-        }
-
-        .line-number {
-          padding: 0 8px 0 0;
-          text-align: right;
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          font-size: 14px;
-          margin: 0;
-          box-sizing: border-box;
-          flex-shrink: 0;
-          color: #9ca3af;
-        }
-
-        .editor-content {
-          flex: 1;
-          padding: 0 20px 0 0;
-          min-height: 100%;
-          background: white;
-          width: 750px;
-        }
-
-        .ProseMirror {
-          font-family: 'Inter', sans-serif;
-          font-size: 16px;
-          line-height: 1.7;
-          max-width: 100%;
-          width: 100%;
-          margin: 0;
-          padding: 0;
-          min-height: 100%;
-          overflow: visible;
-          color: #374151;
-          word-break: break-word;
-          background: white;
-          outline: none;
-        }
-
-        .ProseMirror p {
-          margin: 0;
-          padding: 0;
-          line-height: 1.7;
-          min-height: 1.7em;
-          box-sizing: border-box;
-          font-size: 16px;
-        }
-
-        .ProseMirror h1 {
-          margin: 0;
-          padding: 0;
-          line-height: 1.2;
-          font-size: 32px;
-          font-weight: 700;
-          color: #111827;
-          box-sizing: border-box;
-        }
-
-        .ProseMirror h2 {
-          margin: 0;
-          padding: 0;
-          line-height: 1.3;
-          font-size: 24px;
-          font-weight: 600;
-          color: #111827;
-          box-sizing: border-box;
-        }
-
-        .ProseMirror h3 {
-          margin: 0;
-          padding: 0;
-          line-height: 1.4;
-          font-size: 20px;
-          font-weight: 600;
-          color: #111827;
-          box-sizing: border-box;
-        }
-
-        .ProseMirror li,
-        .ProseMirror blockquote,
-        .ProseMirror pre {
-          margin: 0;
-          padding: 0;
-          line-height: 1.7;
-          min-height: 1.7em;
-          box-sizing: border-box;
-          font-size: 16px;
-        }
-        
-        .ProseMirror p:empty::before {
-          content: '';
-          display: inline-block;
-          height: 1.7em;
-          width: 0;
-        }
-
-        .ProseMirror ul,
-        .ProseMirror ol {
-          padding-left: 24px;
-        }
-
-        .ProseMirror strong {
-          font-weight: 700;
-          color: #111827;
-        }
-
-        .ProseMirror em {
-          font-style: italic;
-          color: #374151;
-        }
-
-        .ProseMirror code {
-          font-family: 'SF Mono', monospace;
-          font-size: 15px;
-          background-color: #f3f4f6;
-          padding: 2px 4px;
-          border-radius: 3px;
-        }
-
-        .ProseMirror blockquote {
-          border-left: 4px solid #d1d5db;
-          padding-left: 16px;
-          font-style: italic;
-        }
-
-        .prose,
-        .prose-sm {
-          max-width: none;
-        }
-
-        ::-webkit-scrollbar {
-          display: none;
-        }
-
-        * {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-
-        .ProseMirror a {
-          color: #2563eb;
-          border-bottom: 1px dotted #2563eb;
-          text-decoration: none;
-        }
-
-        .ProseMirror a:hover {
-          color: #1d4ed8;
-          border-bottom: 1px solid #1d4ed8;
-        }
-      `}} />
     </div>
   );
 }
