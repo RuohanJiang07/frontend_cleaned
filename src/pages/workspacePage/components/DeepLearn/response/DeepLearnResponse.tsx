@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './DeepLearnResponse.css';
 
 interface DeepLearnResponseProps {
@@ -7,9 +7,49 @@ interface DeepLearnResponseProps {
 }
 
 const DeepLearnResponse: React.FC<DeepLearnResponseProps> = ({ isSplit = false, onBack }) => {
+  const [profileSelected, setProfileSelected] = useState(false);
+  const [referenceSelected, setReferenceSelected] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [hasFirstQuestion, setHasFirstQuestion] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<'follow-up' | 'new-topic' | null>(null);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  const [selectedResponseMode, setSelectedResponseMode] = useState<'deep-learn' | 'quick-search'>('deep-learn');
+
   const handleBackClick = () => {
     // Navigate back to deep learn entry page
     onBack?.();
+  };
+
+  const toggleProfile = () => {
+    setProfileSelected(!profileSelected);
+  };
+
+  const toggleReference = () => {
+    setReferenceSelected(!referenceSelected);
+  };
+
+  const handleFollowUp = () => {
+    setHasFirstQuestion(true);
+    setSelectedMode('follow-up');
+    // Additional logic for follow up mode
+  };
+
+  const handleNewTopic = () => {
+    setHasFirstQuestion(true);
+    setSelectedMode('new-topic');
+    // Additional logic for new topic mode
+  };
+
+  const handleModeChange = (newMode: 'follow-up' | 'new-topic') => {
+    setSelectedMode(newMode);
+  };
+
+  const toggleWebSearch = () => {
+    setWebSearchEnabled(!webSearchEnabled);
+  };
+
+  const toggleResponseMode = (mode: 'deep-learn' | 'quick-search') => {
+    setSelectedResponseMode(mode);
   };
 
   return (
@@ -309,10 +349,135 @@ const DeepLearnResponse: React.FC<DeepLearnResponseProps> = ({ isSplit = false, 
             <div className="deep-learn-response-input-section">
               {/* Input Area */}
               <div className="deep-learn-response-input-box">
-                <textarea
-                  className="deep-learn-response-input"
-                  placeholder="Type your question here..."
-                />
+                {!hasFirstQuestion ? (
+                  <div className="deep-learn-response-mode-selection">
+                    <span className="deep-learn-response-mode-text">Start a </span>
+                    <button 
+                      className="deep-learn-response-mode-button follow-up"
+                      onClick={handleFollowUp}
+                    >
+                      Follow Up
+                    </button>
+                    <span className="deep-learn-response-mode-text"> or </span>
+                    <button 
+                      className="deep-learn-response-mode-button new-topic"
+                      onClick={handleNewTopic}
+                    >
+                      New Topic
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <textarea
+                      className="deep-learn-response-input"
+                      placeholder="Type your question here..."
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                    />
+                    {selectedMode && (
+                      <div className="deep-learn-response-mode-change">
+                        <span className="deep-learn-response-mode-text">Change to </span>
+                        <button 
+                          className={`deep-learn-response-mode-button ${selectedMode === 'follow-up' ? 'new-topic' : 'follow-up'}`}
+                          onClick={() => handleModeChange(selectedMode === 'follow-up' ? 'new-topic' : 'follow-up')}
+                        >
+                          {selectedMode === 'follow-up' ? 'New Topic' : 'Follow Up'}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {/* Buttons at the bottom right */}
+                <div className="deep-learn-response-buttons">
+                  {/* Mode Toggle Button - Only show when New Topic is selected */}
+                  {selectedMode === 'new-topic' && (
+                                          <div className="deep-learn-response-mode-toggle">
+                        <div 
+                          className={`deep-learn-response-mode-toggle-option ${selectedResponseMode === 'deep-learn' ? 'selected' : 'unselected'}`}
+                          onClick={() => toggleResponseMode('deep-learn')}
+                          title="Deep Learn"
+                        >
+                          <img 
+                            src="/workspace/deepLearn/lens-stars.svg" 
+                            alt="Deep Learn Icon" 
+                            className="deep-learn-response-mode-toggle-icon"
+                            style={{ filter: selectedResponseMode === 'deep-learn' ? 'brightness(0) invert(1)' : 'brightness(0) saturate(100%) invert(32%) sepia(9%) saturate(2096%) hue-rotate(182deg) brightness(93%) contrast(87%)' }}
+                          />
+                        </div>
+                        <div 
+                          className={`deep-learn-response-mode-toggle-option ${selectedResponseMode === 'quick-search' ? 'selected' : 'unselected'}`}
+                          onClick={() => toggleResponseMode('quick-search')}
+                          title="Quick Search"
+                        >
+                          <img 
+                            src="/workspace/deepLearn/lens-check.svg" 
+                            alt="Quick Search Icon" 
+                            className="deep-learn-response-mode-toggle-icon"
+                            style={{ filter: selectedResponseMode === 'quick-search' ? 'brightness(0) invert(1)' : 'brightness(0) saturate(100%) invert(32%) sepia(9%) saturate(2096%) hue-rotate(182deg) brightness(93%) contrast(87%)' }}
+                          />
+                        </div>
+                      </div>
+                  )}
+
+                  {/* Web Search Toggle Button */}
+                  <button 
+                    className={`deep-learn-response-web-search ${webSearchEnabled ? 'selected' : 'unselected'}`}
+                    onClick={toggleWebSearch}
+                    title="Toggle Web Search" 
+                  >
+                    <img 
+                      src="/workspace/deepLearn/language.svg" 
+                      alt="Web Search" 
+                      className="deep-learn-response-web-search-icon"
+                      style={{ filter: webSearchEnabled ? 'brightness(0) saturate(100%) invert(32%) sepia(9%) saturate(2096%) hue-rotate(182deg) brightness(93%) contrast(87%)' : 'brightness(0) saturate(100%) invert(48%) sepia(0%) saturate(0%) hue-rotate(251deg) brightness(94%) contrast(92%)' }}
+                    />
+                  </button>
+
+                  {/* Profile Select Button */}
+                  <button 
+                    className={`deep-learn-response-button ${profileSelected ? 'selected' : ''}`}
+                    onClick={toggleProfile}
+                    title="Select Profile" 
+                  >
+                    <img 
+                      src="/workspace/deepLearn/contacts-line.svg" 
+                      alt="Profile" 
+                      className="deep-learn-response-button-icon"
+                      style={{ filter: profileSelected ? 'brightness(0) invert(1)' : 'brightness(0) saturate(100%) invert(39%) sepia(0%) saturate(0%) hue-rotate(147deg) brightness(94%) contrast(87%)' }}
+                    />
+                  </button>
+                  
+                  {/* Reference Select Button */}
+                  <button 
+                    className={`deep-learn-response-button ${referenceSelected ? 'selected' : ''}`}
+                    onClick={toggleReference}
+                    title="Select References" 
+                  >
+                    <img 
+                      src="/workspace/deepLearn/folder.svg" 
+                      alt="References" 
+                      className="deep-learn-response-button-icon"
+                      style={{ filter: referenceSelected ? 'brightness(0) invert(1)' : 'brightness(0) saturate(100%) invert(39%) sepia(0%) saturate(0%) hue-rotate(147deg) brightness(94%) contrast(87%)' }}
+                    />
+                  </button>
+
+                  {/* Separator Line */}
+                  <div className="deep-learn-response-button-separator"></div>
+
+                  {/* Send Button */}
+                  <button 
+                    className={`deep-learn-response-send-button ${inputValue.trim() ? 'active' : ''}`}
+                    disabled={!inputValue.trim()}
+                    title="Send Query" 
+                  >
+                    <img 
+                      src="/workspace/arrow-up.svg" 
+                      alt="Send" 
+                      className="deep-learn-response-send-icon"
+                    />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
