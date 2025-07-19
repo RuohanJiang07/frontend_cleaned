@@ -482,9 +482,161 @@ const DeepLearnResponse: React.FC<DeepLearnResponseProps> = ({ isSplit = false, 
             </div>
           </div>
 
-          {/* Interactive Section - Placeholder for now */}
+          {/* Interactive Section */}
           <div className="deep-learn-response-interactive">
-            {/* Interactive content will be added later */}
+            {/* Top Gray Box */}
+            <div className="deep-learn-response-interactive-box top-box">
+              <div className="deep-learn-response-interactive-content">
+                {/* Related Videos Section */}
+                <div className="deep-learn-response-related-videos">
+                  {/* Header */}
+                  <div className="deep-learn-response-related-header">
+                    <img 
+                      src="/workspace/deepLearn/related-videos.svg" 
+                      alt="Related Videos" 
+                      className="deep-learn-response-related-icon"
+                    />
+                    <span className="deep-learn-response-related-title">
+                      Related Videos
+                    </span>
+                  </div>
+                  
+                  {/* Video Content */}
+                  <div className="deep-learn-response-video-content">
+                    {/* Single Video Box */}
+                    <div className="deep-learn-response-video-box">
+                      {/* Image Section */}
+                      <div className="deep-learn-response-video-image-section">
+                        <img 
+                          src="https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=284&h=132&fit=crop" 
+                          alt="Universe video thumbnail" 
+                          className="deep-learn-response-video-image"
+                        />
+                      </div>
+                      
+                      {/* Text Section */}
+                      <div className="deep-learn-response-video-text-section">
+                        <h4 className="deep-learn-response-video-title">
+                          DNA and Gene Editing Using CRISPR Technology
+                        </h4>
+                        <div className="deep-learn-response-video-source">
+                          <img 
+                            src="/workspace/deepLearn/youtube.svg" 
+                            alt="YouTube" 
+                            className="deep-learn-response-youtube-icon"
+                          />
+                          <span className="deep-learn-response-source-text">
+                            Science Channel
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Related Webpages Section */}
+                <div className="deep-learn-response-related-webpages">
+                  {/* Header */}
+                  <div className="deep-learn-response-webpages-header">
+                    <img 
+                      src="/workspace/deepLearn/related-webpages.svg" 
+                      alt="Related Webpages" 
+                      className="deep-learn-response-webpages-icon"
+                    />
+                    <span className="deep-learn-response-webpages-title">
+                      Related Webpages
+                    </span>
+                  </div>
+                  
+                  {/* Webpages Content */}
+                  <div className="deep-learn-response-webpages-content">
+                    {/* First Webpage Box */}
+                    <div className="deep-learn-response-webpage-box">
+                      <h4 className="deep-learn-response-webpage-title">
+                        Related Webpages 1
+                      </h4>
+                      <p className="deep-learn-response-webpage-description">
+                        Discover Pinterest's best ideas and inspiration for Study icon. Get inspired and try out new things.
+                      </p>
+                    </div>
+                    
+                    {/* Second Webpage Box */}
+                    <div className="deep-learn-response-webpage-box">
+                      <h4 className="deep-learn-response-webpage-title">
+                        Related Webpages 1
+                      </h4>
+                      <p className="deep-learn-response-webpage-description">
+                        Discover Pinterest's best ideas and inspiration for Study icon. Get inspired and try out new things.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Bottom Gray Box */}
+            <div className="deep-learn-response-interactive-box bottom-box">
+              <div className="deep-learn-response-interactive-content">
+                {/* Concept Map Section */}
+                <div className="deep-learn-response-concept-map">
+                  {/* Header */}
+                  <div className="deep-learn-response-concept-map-header">
+                    <img 
+                      src="/workspace/deepLearn/concept-map.svg" 
+                      alt="Concept Map" 
+                      className="deep-learn-response-concept-map-icon"
+                    />
+                    <span className="deep-learn-response-concept-map-title">
+                      Concept Map
+                    </span>
+                  </div>
+                  
+                  {/* Concept Map Content */}
+                  <div className="deep-learn-response-concept-map-content">
+                    {/* Concept Map Box */}
+                    <div className="deep-learn-response-concept-map-box">
+                      {/* Concept Map visualization would go here */}
+                      <div className="deep-learn-response-concept-map-placeholder">
+                        <div className="deep-learn-response-concept-map-node black-hole-node">
+                          <div className="deep-learn-response-concept-map-node-dot"></div>
+                          <span className="deep-learn-response-concept-map-node-label">Black Hole</span>
+                        </div>
+                        <div className="deep-learn-response-concept-map-node white-dwarf-node">
+                          <div className="deep-learn-response-concept-map-node-dot"></div>
+                          <span className="deep-learn-response-concept-map-node-label">White dwarf</span>
+                        </div>
+                        <div className="deep-learn-response-concept-map-node supernova-node">
+                          <div className="deep-learn-response-concept-map-node-dot"></div>
+                          <span className="deep-learn-response-concept-map-node-label">Type I Supernova</span>
+                        </div>
+                        <div className="deep-learn-response-concept-map-node horizon-node">
+                          <div className="deep-learn-response-concept-map-node-dot"></div>
+                          <span className="deep-learn-response-concept-map-node-label">Stretched Horizon</span>
+                        </div>
+                        <div className="deep-learn-response-concept-map-node cosmology-node">
+                          <div className="deep-learn-response-concept-map-node-dot"></div>
+                          <span className="deep-learn-response-concept-map-node-label">Cosmology</span>
+                        </div>
+                        <div className="deep-learn-response-concept-map-node gravity-wave-node">
+                          <div className="deep-learn-response-concept-map-node-dot"></div>
+                          <span className="deep-learn-response-concept-map-node-label">Gravity Wave</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Current Selection Indicator */}
+                    <div className="deep-learn-response-concept-map-selection">
+                      <span className="deep-learn-response-concept-map-selection-text">
+                        You are currently at:
+                      </span>
+                      <div className="deep-learn-response-concept-map-selection-button">
+                        Black Hole
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
